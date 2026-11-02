@@ -1,6 +1,6 @@
 import 'fake-indexeddb/auto'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { db, deleteMemory, loadLocalData, saveConversation, saveMemory, updateMemory } from './db'
+import { db, deleteMemory, exportData, importData, loadLocalData, saveConversation, saveMemory, updateMemory } from './db'
 
 beforeEach(async () => { await db.delete(); await db.open() })
 
@@ -11,6 +11,15 @@ describe('local data repository', () => {
     const data = await loadLocalData()
     expect(data.conversations.lu?.[0].text).toBe('陆')
     expect(data.conversations.chen?.[0].text).toBe('陈')
+  })
+
+  it('exports and imports a versioned backup', async () => {
+    await saveConversation('lu', [{ id: 4, from: 'user', text: '备份内容', time: '现在' }])
+    const backup = await exportData()
+    await db.messages.clear()
+    await importData(backup)
+    expect((await loadLocalData()).conversations.lu?.[0].text).toBe('备份内容')
+    await expect(importData('{}')).rejects.toThrow('不是有效的 Aily 备份文件')
   })
 
   it('creates, edits and deletes confirmed memories', async () => {
