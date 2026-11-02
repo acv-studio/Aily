@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react'
 import { ArrowLeft, Bell, BookHeart, ChevronRight, CircleUserRound, Heart, Home, Image, MemoryStick, MessageCircle, MoreHorizontal, Plus, Send, ShieldCheck, ShoppingBag, Sparkles, Volume2 } from 'lucide-react'
 import { characters, memories, moments, starterMessages, type CharacterId } from './data'
+import { streamReply, type ChatMessage as Message, type ConfirmedMemory } from './chatService'
 
 type Tab = 'home' | 'moments' | 'memories' | 'profile'
-type Message = { id: number; from: string; text: string; time: string; memory?: boolean }
 
 const storageKey = 'aily-demo-state'
 function loadSaved() {
@@ -16,26 +16,44 @@ export default function App() {
   const [selected, setSelected] = useState<CharacterId>(saved.selected || 'lu')
   const [tab, setTab] = useState<Tab>('home')
   const [chatOpen, setChatOpen] = useState(false)
-  const [messages, setMessages] = useState<Message[]>(saved.messages || starterMessages)
+  const [conversations, setConversations] = useState<Record<CharacterId, Message[]>>(saved.conversations || { lu: saved.messages || starterMessages as Message[], chen: starterMessages.slice(0, 2) as Message[], gu: starterMessages.slice(0, 2) as Message[] })
+  const [confirmedMemories, setConfirmedMemories] = useState<ConfirmedMemory[]>(saved.confirmedMemories || [])
   const [draft, setDraft] = useState('')
-  const [remembered, setRemembered] = useState(Boolean(saved.remembered))
+  const [replying, setReplying] = useState(false)
+  const [chatError, setChatError] = useState('')
   const character = characters.find(c => c.id === selected) || characters[0]
+  const messages = conversations[selected] || []
+  const remembered = confirmedMemories.some(memory => memory.characterId === selected)
 
-  const persist = (extra: Record<string, unknown>) => localStorage.setItem(storageKey, JSON.stringify({ onboarded, selected, messages, remembered, ...extra }))
+  const persist = (extra: Record<string, unknown>) => localStorage.setItem(storageKey, JSON.stringify({ onboarded, selected, conversations, confirmedMemories, ...extra }))
   const finishOnboarding = () => { setOnboarded(true); persist({ onboarded: true, selected }) }
-  const send = () => {
-    const text = draft.trim(); if (!text) return
-    const next = [...messages, { id: Date.now(), from: 'user', text, time: '现在' }]
-    setMessages(next); setDraft('')
-    window.setTimeout(() => {
-      const reply: Message = { id: Date.now() + 1, from: 'character', text: text.includes('胃') ? '先去吃点热的，好不好？这件事要我替你记住吗？' : '我在。慢慢说，今天的时间都留给你。', time: '现在', memory: text.includes('胃') }
-      const updated = [...next, reply]; setMessages(updated); persist({ messages: updated })
-    }, 550)
+  const send = async (retryText?: string) => {
+    const text = (retryText || draft).trim(); if (!text || replying) return
+    const userMessage: Message = { id: Date.now(), from: 'user', text, time: '现在', status: 'sent' }
+    const next = retryText ? messages : [...messages, userMessage]
+    const assistantId = Date.now() + 1
+    const pending: Message = { id: assistantId, from: 'character', text: '', time: '现在', memory: text.includes('胃'), status: 'sending' }
+    const withPending = [...next, pending]
+    setDraft(''); setChatError(''); setReplying(true)
+    setConversations(current => ({ ...current, [selected]: withPending }))
+    let content = ''
+    try {
+      await streamReply({ characterId: selected, messages: next, memories: confirmedMemories, apiKey: import.meta.env.VITE_DEEPSEEK_API_KEY, endpoint: import.meta.env.VITE_DEEPSEEK_ENDPOINT, model: import.meta.env.VITE_DEEPSEEK_MODEL, onDelta: delta => { content += delta; setConversations(current => ({ ...current, [selected]: (current[selected] || []).map(item => item.id === assistantId ? { ...item, text: content } : item) })) } })
+      const completed = [...next, { ...pending, text: content, status: 'sent' as const }]
+      setConversations(current => ({ ...current, [selected]: completed })); persist({ conversations: { ...conversations, [selected]: completed } })
+    } catch (error) {
+      const failed = next.map(item => item.id === userMessage.id ? { ...item, status: 'failed' as const } : item)
+      setConversations(current => ({ ...current, [selected]: failed })); setChatError(error instanceof Error ? error.message : '回复失败，请稍后重试')
+    } finally { setReplying(false) }
   }
-  const saveMemory = () => { setRemembered(true); persist({ remembered: true }); }
+  const saveMemory = () => {
+    const memory: ConfirmedMemory = { id: crypto.randomUUID(), characterId: selected, text: '胃不舒服时先提醒我吃点热的', confirmedAt: new Date().toISOString() }
+    const updated = [...confirmedMemories.filter(item => item.characterId !== selected), memory]
+    setConfirmedMemories(updated); persist({ confirmedMemories: updated })
+  }
 
   if (!onboarded) return <Onboarding selected={selected} setSelected={setSelected} finish={finishOnboarding} />
-  if (chatOpen) return <Chat character={character} messages={messages} draft={draft} setDraft={setDraft} send={send} close={() => setChatOpen(false)} remembered={remembered} saveMemory={saveMemory} />
+  if (chatOpen) return <Chat character={character} messages={messages} draft={draft} setDraft={setDraft} send={send} close={() => setChatOpen(false)} remembered={remembered} saveMemory={saveMemory} replying={replying} error={chatError} />
 
   return <main className="app-shell">
     <div className="ambient ambient-one" /><div className="ambient ambient-two" />
@@ -67,8 +85,8 @@ function HomeScreen({selected,select,openChat}:{selected:CharacterId;select:(id:
  return <section className="screen home-screen"><article className="presence-card" style={{'--accent':current.accent} as React.CSSProperties}><div className="presence-art"><div className="moon"/><div className="portrait"><span>{current.avatar}</span></div><span className="online-dot"/></div><div className="presence-copy"><div><span className="status"><i/>{current.status}</span><h2>{current.name}</h2><p>“{current.quote}”</p></div><button className="talk-button" onClick={openChat}><MessageCircle size={20}/> 去找他</button></div></article><div className="section-title"><h3>最近消息</h3><button>全部</button></div><button className="conversation glass" onClick={openChat}><Avatar character={current}/><div><strong>{current.name}<small>AI</small></strong><p>那就好。答应你的庆祝，没忘。</p></div><time>22:09</time></button><div className="section-title"><h3>其他角色</h3><span>随时可以认识</span></div><div className="mini-characters">{characters.filter(c=>c.id!==selected).map(c=><button key={c.id} className="mini-card glass" onClick={()=>select(c.id)}><Avatar character={c}/><div><strong>{c.name}</strong><span>{c.status}</span></div><ChevronRight/></button>)}</div></section>
 }
 
-function Chat({character,messages,draft,setDraft,send,close,remembered,saveMemory}:{character:typeof characters[0];messages:Message[];draft:string;setDraft:(v:string)=>void;send:()=>void;close:()=>void;remembered:boolean;saveMemory:()=>void}) {
- return <main className="chat-screen"><header className="chat-header glass"><button className="icon-button" onClick={close}><ArrowLeft/></button><Avatar character={character}/><div><strong>{character.name}<small>AI 角色</small></strong><span><i/> 在线 · {character.status}</span></div><button className="icon-button"><MoreHorizontal/></button></header><section className="messages"><div className="date-pill">今天 22:08</div>{messages.map(m=><div key={m.id} className={`message-row ${m.from==='user'?'mine':''}`}>{m.from!=='user'&&<Avatar character={character}/>}<div><div className="bubble">{m.text}</div>{m.memory&&<div className="memory-signal"><MemoryStick size={14}/><span>{remembered?'已记住：胃不舒服时先提醒吃饭':'这似乎是件重要的小事'}</span>{!remembered&&<button onClick={saveMemory}>记住</button>}</div>}</div></div>)}</section><div className="quick-replies"><button onClick={()=>setDraft('今天胃有点不舒服')}>今天胃有点不舒服</button><button onClick={()=>setDraft('陪我聊一会儿')}>陪我聊一会儿</button></div><footer className="composer glass"><button><Plus/></button><input aria-label="发消息" value={draft} onChange={e=>setDraft(e.target.value)} onKeyDown={e=>e.key==='Enter'&&send()} placeholder="发消息…"/><button><Volume2/></button><button className="send" onClick={send}><Send/></button></footer></main>
+function Chat({character,messages,draft,setDraft,send,close,remembered,saveMemory,replying,error}:{character:typeof characters[0];messages:Message[];draft:string;setDraft:(v:string)=>void;send:(retryText?:string)=>void;close:()=>void;remembered:boolean;saveMemory:()=>void;replying:boolean;error:string}) {
+ return <main className="chat-screen"><header className="chat-header glass"><button className="icon-button" onClick={close}><ArrowLeft/></button><Avatar character={character}/><div><strong>{character.name}<small>AI 角色</small></strong><span><i/> {replying?'正在输入…':`在线 · ${character.status}`}</span></div><button className="icon-button"><MoreHorizontal/></button></header><section className="messages"><div className="date-pill">今天 22:08</div>{messages.map(m=><div key={m.id} className={`message-row ${m.from==='user'?'mine':''}`}>{m.from!=='user'&&<Avatar character={character}/>}<div><div className={`bubble ${m.status==='sending'?'streaming':''}`}>{m.text || '···'}</div>{m.status==='failed'&&<button className="retry" onClick={()=>send(m.text)}>发送失败 · 点击重试</button>}{m.memory&&m.status!=='sending'&&<div className="memory-signal"><MemoryStick size={14}/><span>{remembered?'已记住：胃不舒服时先提醒吃饭':'这似乎是件重要的小事'}</span>{!remembered&&<button onClick={saveMemory}>记住</button>}</div>}</div></div>)}{error&&<p className="chat-error">{error} · 你的消息已保存在本机</p>}</section><div className="quick-replies"><button onClick={()=>setDraft('今天胃有点不舒服')}>今天胃有点不舒服</button><button onClick={()=>setDraft('陪我聊一会儿')}>陪我聊一会儿</button></div><footer className="composer glass"><button><Plus/></button><input aria-label="发消息" value={draft} onChange={e=>setDraft(e.target.value)} onKeyDown={e=>e.key==='Enter'&&send()} placeholder="发消息…" disabled={replying}/><button><Volume2/></button><button className="send" onClick={()=>send()} disabled={replying}><Send/></button></footer></main>
 }
 
 function MomentsScreen(){return <section className="screen feed"><div className="feed-hero"><p>这一刻，他们也在生活</p><span>所有内容均由 AI 角色生成</span></div>{moments.map((m,i)=><article className="moment glass" key={m.id}><header><span className={`simple-avatar a${i}`}>{m.avatar}</span><div><strong>{m.character}<small>AI</small></strong><time>{m.time}</time></div><MoreHorizontal/></header><p>{m.text}</p><div className={`moment-visual ${m.visual}`}><span>{m.visual==='dinner'?'今晚的晚饭':'18:32 的天空'}</span></div><footer><button><Heart/> {m.likes}</button><button><MessageCircle/> {m.comments}</button><button><Send/></button></footer></article>)}</section>}
