@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { ArrowLeft, Bell, BookHeart, ChevronRight, CircleUserRound, Heart, Home, Image, MemoryStick, MessageCircle, MoreHorizontal, Plus, Send, ShieldCheck, ShoppingBag, Sparkles, Volume2 } from 'lucide-react'
 import { characters, memories, moments, starterMessages, type CharacterId } from './data'
 import { streamReply, type ChatMessage as Message, type ConfirmedMemory } from './chatService'
+import { deleteMemory, loadLocalData, saveConversation, saveMemory as persistMemory, saveSetting, updateMemory } from './db'
 
 type Tab = 'home' | 'moments' | 'memories' | 'profile'
 
@@ -25,8 +26,17 @@ export default function App() {
   const messages = conversations[selected] || []
   const remembered = confirmedMemories.some(memory => memory.characterId === selected)
 
+  useEffect(() => {
+    loadLocalData().then(data => {
+      if (Object.keys(data.conversations).length) setConversations(current => ({ ...current, ...data.conversations }))
+      if (data.memories.length) setConfirmedMemories(data.memories)
+      if (typeof data.settings.onboarded === 'boolean') setOnboarded(data.settings.onboarded)
+      if (typeof data.settings.selected === 'string') setSelected(data.settings.selected as CharacterId)
+    }).catch(() => undefined)
+  }, [])
+
   const persist = (extra: Record<string, unknown>) => localStorage.setItem(storageKey, JSON.stringify({ onboarded, selected, conversations, confirmedMemories, ...extra }))
-  const finishOnboarding = () => { setOnboarded(true); persist({ onboarded: true, selected }) }
+  const finishOnboarding = () => { setOnboarded(true); persist({ onboarded: true, selected }); void Promise.all([saveSetting('onboarded', true), saveSetting('selected', selected)]) }
   const send = async (retryText?: string) => {
     const text = (retryText || draft).trim(); if (!text || replying) return
     const userMessage: Message = { id: Date.now(), from: 'user', text, time: '现在', status: 'sent' }
@@ -40,7 +50,7 @@ export default function App() {
     try {
       await streamReply({ characterId: selected, messages: next, memories: confirmedMemories, apiKey: import.meta.env.VITE_DEEPSEEK_API_KEY, endpoint: import.meta.env.VITE_DEEPSEEK_ENDPOINT, model: import.meta.env.VITE_DEEPSEEK_MODEL, onDelta: delta => { content += delta; setConversations(current => ({ ...current, [selected]: (current[selected] || []).map(item => item.id === assistantId ? { ...item, text: content } : item) })) } })
       const completed = [...next, { ...pending, text: content, status: 'sent' as const }]
-      setConversations(current => ({ ...current, [selected]: completed })); persist({ conversations: { ...conversations, [selected]: completed } })
+      setConversations(current => ({ ...current, [selected]: completed })); persist({ conversations: { ...conversations, [selected]: completed } }); await saveConversation(selected, completed)
     } catch (error) {
       const failed = next.map(item => item.id === userMessage.id ? { ...item, status: 'failed' as const } : item)
       setConversations(current => ({ ...current, [selected]: failed })); setChatError(error instanceof Error ? error.message : '回复失败，请稍后重试')
@@ -49,7 +59,16 @@ export default function App() {
   const saveMemory = () => {
     const memory: ConfirmedMemory = { id: crypto.randomUUID(), characterId: selected, text: '胃不舒服时先提醒我吃点热的', confirmedAt: new Date().toISOString() }
     const updated = [...confirmedMemories.filter(item => item.characterId !== selected), memory]
-    setConfirmedMemories(updated); persist({ confirmedMemories: updated })
+    setConfirmedMemories(updated); persist({ confirmedMemories: updated }); void persistMemory(memory)
+  }
+  const editConfirmedMemory = (id: string, text: string) => {
+    const clean = text.trim(); if (!clean) return
+    const updated = confirmedMemories.map(memory => memory.id === id ? { ...memory, text: clean } : memory)
+    setConfirmedMemories(updated); persist({ confirmedMemories: updated }); void updateMemory(id, clean)
+  }
+  const removeConfirmedMemory = (id: string) => {
+    const updated = confirmedMemories.filter(memory => memory.id !== id)
+    setConfirmedMemories(updated); persist({ confirmedMemories: updated }); void deleteMemory(id)
   }
 
   if (!onboarded) return <Onboarding selected={selected} setSelected={setSelected} finish={finishOnboarding} />
@@ -60,7 +79,7 @@ export default function App() {
     <header className="topbar"><div><p className="eyebrow">晚上好，艳艳</p><h1>{tab === 'home' ? '有人一直记得你' : tab === 'moments' ? '他们的此刻' : tab === 'memories' ? '我们的回忆' : '我的 Aily'}</h1></div><button className="icon-button" aria-label="通知"><Bell size={20}/><i /></button></header>
     {tab === 'home' && <HomeScreen selected={selected} select={setSelected} openChat={() => setChatOpen(true)} />}
     {tab === 'moments' && <MomentsScreen />}
-    {tab === 'memories' && <MemoriesScreen remembered={remembered} />}
+    {tab === 'memories' && <MemoriesScreen memories={confirmedMemories} editMemory={editConfirmedMemory} deleteMemory={removeConfirmedMemory} />}
     {tab === 'profile' && <ProfileScreen />}
     <nav className="bottom-nav glass">
       <NavButton active={tab==='home'} icon={<MessageCircle/>} label="消息" onClick={()=>setTab('home')}/>
@@ -90,7 +109,7 @@ function Chat({character,messages,draft,setDraft,send,close,remembered,saveMemor
 }
 
 function MomentsScreen(){return <section className="screen feed"><div className="feed-hero"><p>这一刻，他们也在生活</p><span>所有内容均由 AI 角色生成</span></div>{moments.map((m,i)=><article className="moment glass" key={m.id}><header><span className={`simple-avatar a${i}`}>{m.avatar}</span><div><strong>{m.character}<small>AI</small></strong><time>{m.time}</time></div><MoreHorizontal/></header><p>{m.text}</p><div className={`moment-visual ${m.visual}`}><span>{m.visual==='dinner'?'今晚的晚饭':'18:32 的天空'}</span></div><footer><button><Heart/> {m.likes}</button><button><MessageCircle/> {m.comments}</button><button><Send/></button></footer></article>)}</section>}
-function MemoriesScreen({remembered}:{remembered:boolean}){return <section className="screen memory-page"><div className="relation glass"><div className="relation-ring"><span>21</span><small>天</small></div><div><span>陆听澜 · 熟悉</span><h2>一起写下的第 3 个星期</h2><p>3 个共同事件 · 7 条被珍藏的小事</p></div></div>{remembered&&<article className="timeline-item"><div className="timeline-dot"/><time>刚刚</time><div className="memory-card glass"><span>✦</span><div><h3>照顾胃的小约定</h3><p>胃不舒服时，先提醒你吃点热的。</p><small><ShieldCheck/> 由你确认保存 · 仅在本机</small></div></div></article>}{memories.map(m=><article className="timeline-item" key={m.title}><div className="timeline-dot" style={{background:m.color}}/><time>{m.date}</time><div className="memory-card glass"><span style={{color:m.color}}>{m.icon}</span><div><h3>{m.title}</h3><p>{m.detail}</p><button>查看那一天 <ChevronRight/></button></div></div></article>)}</section>}
+function MemoriesScreen({memories:confirmed,editMemory,deleteMemory:remove}:{memories:ConfirmedMemory[];editMemory:(id:string,text:string)=>void;deleteMemory:(id:string)=>void}){const [editing,setEditing]=useState<string|null>(null);const [value,setValue]=useState('');return <section className="screen memory-page"><div className="relation glass"><div className="relation-ring"><span>21</span><small>天</small></div><div><span>陆听澜 · 熟悉</span><h2>一起写下的第 3 个星期</h2><p>3 个共同事件 · {confirmed.length + memories.length} 条被珍藏的小事</p></div></div>{confirmed.map(item=><article className="timeline-item" key={item.id}><div className="timeline-dot"/><time>{new Date(item.confirmedAt).toLocaleDateString('zh-CN')}</time><div className="memory-card glass"><span>✦</span><div>{editing===item.id?<><input className="memory-input" value={value} onChange={event=>setValue(event.target.value)} autoFocus/><div className="memory-actions"><button onClick={()=>{editMemory(item.id,value);setEditing(null)}}>保存</button><button onClick={()=>setEditing(null)}>取消</button></div></>:<><h3>由你确认的记忆</h3><p>{item.text}</p><small><ShieldCheck/> 仅保存在本机 · {characters.find(c=>c.id===item.characterId)?.name}</small><div className="memory-actions"><button onClick={()=>{setEditing(item.id);setValue(item.text)}}>编辑</button><button className="danger" onClick={()=>remove(item.id)}>删除</button></div></>}</div></div></article>)}{memories.map(m=><article className="timeline-item" key={m.title}><div className="timeline-dot" style={{background:m.color}}/><time>{m.date}</time><div className="memory-card glass"><span style={{color:m.color}}>{m.icon}</span><div><h3>{m.title}</h3><p>{m.detail}</p><button>查看那一天 <ChevronRight/></button></div></div></article>)}</section>}
 function ProfileScreen(){return <section className="screen profile"><div className="profile-card glass"><div className="profile-avatar">艳</div><div><h2>艳艳</h2><p>Aily 相伴第 21 天</p></div><ChevronRight/></div><div className="plan-card"><span><Sparkles/> Aily Plus</span><h3>让每一段故事，都被好好记住</h3><button>了解会员</button></div><div className="settings glass">{[[Home,'主角色','陆听澜'],[MemoryStick,'记忆与数据','7 条记忆'],[ShoppingBag,'会员与权益','免费版'],[ShieldCheck,'隐私与安全','本地存储']].map(([Icon,label,value])=><button key={String(label)}><Icon/><span>{String(label)}</span><small>{String(value)}</small><ChevronRight/></button>)}</div><p className="ai-note"><ShieldCheck/> Aily 是 AI 角色陪伴应用，不是真人或专业医疗服务</p></section>}
 function Avatar({character}:{character:typeof characters[0]}){return <span className="avatar" style={{'--accent':character.accent} as React.CSSProperties}>{character.avatar}</span>}
 function NavButton({active,icon,label,onClick}:{active:boolean;icon:React.ReactNode;label:string;onClick:()=>void}){return <button className={active?'active':''} onClick={onClick}>{icon}<span>{label}</span></button>}
