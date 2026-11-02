@@ -37,6 +37,17 @@ export function buildContext(characterId: CharacterId, messages: ChatMessage[], 
   ]
 }
 
+export async function testDeepSeekConnection(config: { apiKey: string; endpoint?: string; model?: string }) {
+  if (!config.apiKey.trim()) throw new Error('请先填写 API Key')
+  const response = await fetch(config.endpoint || 'https://api.deepseek.com/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${config.apiKey.trim()}` },
+    body: JSON.stringify({ model: config.model || 'deepseek-chat', stream: false, max_tokens: 1, messages: [{ role: 'user', content: 'Hi' }] }),
+  })
+  if (!response.ok) throw new Error(response.status === 401 ? 'API Key 无效' : `连接失败（${response.status}）`)
+  return true
+}
+
 export async function streamReply(request: StreamRequest) {
   if (!request.apiKey) return demoReply(request)
   const response = await fetch(request.endpoint || 'https://api.deepseek.com/chat/completions', {
