@@ -122,8 +122,6 @@ export function retrieveMemories(characterId: CharacterId, messages: ChatMessage
   return result
 }
 
-export function buildContext(characterId: CharacterId, messages: ChatMessage[], memories: ConfirmedMemory[], summaries?: ConversationSummary[], policy?: MemoryPolicy) {
-  const { history, excludedIds } = providerHistory(messages)
 export function buildContext(characterId: CharacterId, messages: ChatMessage[], memories: ConfirmedMemory[], summaries?: ConversationSummary[], policy?: MemoryPolicy, onboardingProfile?: OnboardingProfile | null) {
   const loaded = normalizeOnboardingProfile(onboardingProfile)
   const profile = loaded ? { ...loaded, characterId, characterName: loaded.characterId === characterId ? loaded.characterName : defaultOnboardingProfile(characterId).characterName } : defaultOnboardingProfile(characterId)
@@ -314,7 +312,6 @@ async function demoReply(request: StreamRequest) {
     const output = `【本地演示回复 · 非 AI 生成】${replies[request.characterId]}`
     const outputSafety = assessAssistantOutput(output)
     const safeOutput = outputSafety ? localSafeReply(outputSafety, latest) : output
-    for (const part of safeOutput.match(/.{1,4}/gu) || []) {
     for (const part of (`【本地演示回复 · 非 AI 生成】${naming}${answer}`).match(/.{1,4}/gu) || []) {
       await abortable(new Promise<void>(resolve => setTimeout(resolve, 20)), run.signal)
       if (run.signal.aborted) throw run.signal.reason
