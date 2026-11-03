@@ -4,12 +4,69 @@ import useLocalChat from './useLocalChat'
 import Dexie from 'dexie'
 import { db, loadLocalData } from './db'
 import { streamReply } from './chatService'
+import { defaultOnboardingProfile } from './onboarding'
 
 vi.mock('./chatService', async () => ({ ...await vi.importActual('./chatService'), streamReply: vi.fn() }))
 const stream = vi.mocked(streamReply)
 beforeEach(async () => { localStorage.clear(); sessionStorage.clear(); await db.delete(); await db.open(); stream.mockReset() })
 afterEach(() => { cleanup(); vi.restoreAllMocks() })
 async function setup() { const hook = renderHook(useLocalChat); await waitFor(() => expect(hook.result.current.ready).toBe(true)); return hook }
+
+describe('onboarding hook integration', () => {
+  it('finishes atomically, exposes profile and restores settings and trial after remount', async () => {
+    const hook = await setup()
+    expect(hook.result.current.onboardingProfile).toBeNull()
+    const profile = { ...defaultOnboardingProfile('gu'), userName: '小雨', characterName: '阿泽' }
+    const trial = [{ id: 1, from: 'character' as const, text: '小雨，阿泽在这里', time: '现在' }]
+    await act(() => hook.result.current.finishOnboarding(profile, trial))
+    expect(hook.result.current.onboarded).toBe(true)
+    expect(hook.result.current.selected).toBe('gu')
+    expect(hook.result.current.onboardingProfile).toEqual(profile)
+    expect(hook.result.current.conversations.gu).toEqual(trial)
+    hook.unmount()
+    const restored = await setup()
+    expect(restored.result.current.onboardingProfile).toEqual(profile)
+    expect(restored.result.current.selected).toBe('gu')
+    await act(() => restored.result.current.updateOnboarding({ ...profile, userName: '新称呼' }))
+    expect(restored.result.current.memories.filter(memory => memory.state === 'confirmed')).toHaveLength(1)
+    expect(restored.result.current.conversations.gu).toEqual(trial)
+    stream.mockImplementation(async request => request.onDelta('回复'))
+    act(() => restored.result.current.setDraft('你好'))
+    await act(() => restored.result.current.send())
+    expect(stream.mock.calls.at(-1)![0].onboardingProfile?.userName).toBe('新称呼')
+  })
+  it('does not switch active role, clear its draft or revive deleted naming memory on settings update', async () => {
+    const hook = await setup()
+    const profile = defaultOnboardingProfile('lu')
+    await act(() => hook.result.current.finishOnboarding(profile))
+    const id = hook.result.current.memories[0].id
+    await act(() => hook.result.current.removeMemory(id))
+    act(() => { hook.result.current.setSelected('chen'); hook.result.current.setDraft('not sent yet') })
+    await act(() => hook.result.current.updateOnboarding({ ...profile, userName: '小雨', proactiveFrequency: 'daily' }))
+    expect(hook.result.current.selected).toBe('chen')
+    expect(hook.result.current.draft).toBe('not sent yet')
+    expect(hook.result.current.memories).toEqual([])
+    expect((await loadLocalData()).settings.selected).toBe('chen')
+    await act(() => hook.result.current.reload())
+    expect(hook.result.current.selected).toBe('chen')
+    expect(hook.result.current.onboardingProfile?.userName).toBe('小雨')
+    expect(hook.result.current.memories).toEqual([])
+  })
+  it('keeps no-argument finish compatible and rejects failures without advancing state', async () => {
+    const hook = await setup()
+    vi.spyOn(db.settings, 'bulkPut').mockRejectedValueOnce(new Error('quota'))
+    await act(async () => { await expect(hook.result.current.finishOnboarding()).rejects.toThrow('quota') })
+    expect(hook.result.current.onboarded).toBe(false)
+    expect(hook.result.current.onboardingProfile).toBeNull()
+    expect(hook.result.current.memories).toEqual([])
+    expect(hook.result.current.error).toContain('无法保存引导设置')
+    await act(() => hook.result.current.finishOnboarding())
+    expect(hook.result.current.onboardingProfile).toEqual(defaultOnboardingProfile('lu'))
+    const before = hook.result.current.onboardingProfile
+    await act(async () => { await expect(hook.result.current.updateOnboarding({ ...before!, adultEnabled: true })).rejects.toThrow('引导设置无效') })
+    expect(hook.result.current.onboardingProfile).toEqual(before)
+  })
+})
 
 describe('durable chat orchestration', () => {
   it('blocks deletion during an uncompleted policy write and rejects new writes after draining', async () => {

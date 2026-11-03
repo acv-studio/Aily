@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { ArrowLeft, Search, Send, Square, Image as ImageIcon, Mic, Quote, X } from 'lucide-react'
 import type { Character } from './data'
 import type { ChatMessage, ConfirmedMemory } from './chatService'
+import VoicePlayer from './VoicePlayer'
 
 export type MemoryDraft = { text: string; category: NonNullable<ConfirmedMemory['category']>; sourceMessageId?: number }
 export interface ChatPanelProps {
@@ -36,6 +37,11 @@ export default function ChatPanel(props: ChatPanelProps) {
   const bottom = useRef<HTMLDivElement>(null)
   const recorder = useRef<MediaRecorder | null>(null)
   const audioStream = useRef<MediaStream | null>(null)
+  const playingAudio = useRef<HTMLAudioElement | null>(null)
+  const playAudio = (audio: HTMLAudioElement) => {
+    if (playingAudio.current !== audio) playingAudio.current?.pause()
+    playingAudio.current = audio
+  }
   const mounted = useRef(false)
   const recordingRequest = useRef(0)
   const acquiringAudio = useRef(false)
@@ -68,6 +74,7 @@ export default function ChatPanel(props: ChatPanelProps) {
     if (recorder.current?.state === 'recording') { recorder.current.stop(); return }
     if (acquiringAudio.current || !mounted.current) return
     if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') { setNotice('当前浏览器不支持录音，请使用 HTTPS 或本机地址'); return }
+    playingAudio.current?.pause()
     acquiringAudio.current = true
     const request = ++recordingRequest.current
     const current = () => mounted.current && request === recordingRequest.current
@@ -92,6 +99,7 @@ export default function ChatPanel(props: ChatPanelProps) {
         audioStream.current = null
         setRecording(false)
         const blob = new Blob(chunks, { type: activeRecorder.mimeType.split(';')[0] })
+        if (!blob.size) { setNotice('没有录到声音，请重新录制'); return }
         if (blob.size > 3 * 1024 * 1024) { setNotice('录音超过 3MB，请缩短后重试'); return }
         try {
           const dataUrl = await readDataUrl(blob)
@@ -142,7 +150,7 @@ export default function ChatPanel(props: ChatPanelProps) {
           <div className={`bubble ${message.status === 'sending' ? 'streaming' : ''}`}>
             {message.withdrawn ? <em>你撤回了一条消息</em> : <>
               {message.kind === 'image' && message.attachment && <img className="chat-image" src={message.attachment.dataUrl} alt={message.attachment.name} />}
-              {message.kind === 'audio' && message.attachment && <audio controls src={message.attachment.dataUrl} aria-label="播放语音消息" />}
+              {message.kind === 'audio' && (message.attachment ? <VoicePlayer src={message.attachment.dataUrl} onPlay={playAudio} /> : <em>语音附件不可用</em>)}
               {message.text || (message.status === 'sending' ? '正在回复…' : '')}
             </>}
           </div>
@@ -159,7 +167,10 @@ export default function ChatPanel(props: ChatPanelProps) {
     {props.error && <p className="chat-error" role="alert">{props.error}</p>}
     {notice && <div className="chat-notice">{notice}<button aria-label="关闭提示" onClick={() => setNotice('')}><X size={14} /></button></div>}
     {quoted && <div className="quoted-preview">引用：{quoted.withdrawn ? '已撤回' : quoted.text}<button onClick={() => setQuote(undefined)}>取消</button></div>}
-    {attachment && <div className="quoted-preview">待发送：{attachment.data.name}<button onClick={() => setAttachment(undefined)}>移除</button></div>}
+    {attachment && <div className={`quoted-preview ${attachment.kind === 'audio' ? 'voice-preview' : ''}`}>
+      <div>待发送：{attachment.data.name}{attachment.kind === 'audio' && <VoicePlayer src={attachment.data.dataUrl} preview onPlay={playAudio} />}</div>
+      <button onClick={() => setAttachment(undefined)}>移除</button>
+    </div>}
     <div className="quick-replies"><button onClick={props.openStory}>⌁ 共同故事</button><button onClick={props.openGame}>✊ 猜拳</button></div>
     <footer className="composer glass">
       <label className="attachment-button" aria-label="分享图片"><ImageIcon size={18} /><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" disabled={replying} onChange={event => { void chooseFile(event.target.files?.[0]); event.target.value = '' }} /></label>
