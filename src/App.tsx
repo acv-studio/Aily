@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { t, useI18n } from './i18n'
+import LanguageSettings from './LanguageSettings'
 import { flushSync } from 'react-dom'
 import SafetyPrivacyPanel, { SafetyConsent } from './SafetyPrivacyPanel'
 import { acceptSafetyConsent, acquireUsageLease, deleteLocalProfile, hasSafetyConsent } from './privacy'
@@ -19,6 +20,8 @@ import GiftStorePanel from './GiftStorePanel'
 import ProactiveSettingsPanel from './ProactiveSettingsPanel'
 import Onboarding, { OnboardingEditor } from './OnboardingFlow'
 import { defaultOnboardingProfile } from './onboarding'
+import { InviteLanding, InvitePanel } from './SharingPanel'
+import { invitedRole } from './sharing'
 
 type Tab = 'home' | 'moments' | 'memories' | 'store' | 'profile'
 
@@ -51,6 +54,14 @@ function AilyApp({ onDelete }: { onDelete: () => Promise<void> }) {
   const [gameOpen, setGameOpen] = useState(false)
   const [storyOpen, setStoryOpen] = useState(false)
   const [proactiveOpen, setProactiveOpen] = useState(false)
+  const [inviteOpen, setInviteOpen] = useState(false)
+  const [invitation, setInvitation] = useState(() => invitedRole(window.location.hash))
+  useEffect(() => {
+    const changed = () => setInvitation(invitedRole(window.location.hash))
+    window.addEventListener('hashchange', changed)
+    return () => window.removeEventListener('hashchange', changed)
+  }, [])
+  const dismissInvitation = () => { window.history.replaceState(null, '', window.location.pathname + window.location.search); setInvitation(null) }
   const [privacyOpen, setPrivacyOpen] = useState(false)
   const [consented, setConsented] = useState(hasSafetyConsent)
   const deleteProfile = async () => { await chat.prepareForDeletion(); await onDelete() }
@@ -62,30 +73,32 @@ function AilyApp({ onDelete }: { onDelete: () => Promise<void> }) {
   const setSelected = chat.setSelected
   const finishOnboarding = chat.finishOnboarding
   const saveGameMemory = (text: string) => { void chat.saveConfirmed({ text, category: 'relationship' }).catch(() => alert('回忆保存失败，请重试')) }
-  if (!chat.ready) return <main className="app-shell loading-screen"><p>{chat.loadError || '正在读取本机聊天与记忆…'}</p>{chat.loadError && <button onClick={chat.reload}>重试读取</button>}</main>
-  if (onboarded && !consented && !hasSafetyConsent()) return <main className="onboarding"><SafetyConsent returning={onboarded} onAccepted={() => { acceptSafetyConsent(); setConsented(true) }} /></main>
+  if (!chat.ready) return <main className="app-shell loading-screen"><p>{chat.loadError || '正在读取本机聊天与记忆…'}</p>{chat.loadError && <button onClick={chat.reload}>{t('重试读取')}</button>}</main>
+  if (invitation) return <InviteLanding role={invitation} start={() => { setSelected(invitation); dismissInvitation() }} dismiss={dismissInvitation} />
+  if (onboarded && !consented && !hasSafetyConsent()) return <main className="onboarding"><SafetyConsent returning onAccepted={() => { acceptSafetyConsent(); setConsented(true) }} /></main>
   if (!onboarded) return <Onboarding selected={selected} setSelected={setSelected} finish={finishOnboarding} apiKey={chat.apiKey} setApiKey={chat.setApiKey} />
+  if (inviteOpen) return <main className="app-shell"><InvitePanel role={selected} close={() => setInviteOpen(false)} /></main>
   if (privacyOpen) return <main className="app-shell"><SafetyPrivacyPanel close={() => setPrivacyOpen(false)} onDelete={deleteProfile} /></main>
-  if (chatOpen) return <><ChatPanel character={character} messages={chat.chatMessages} temporary={chat.temporary} toggleTemporary={chat.toggleTemporary} pendingCount={chat.memories.filter(memory => memory.characterId === selected && memory.state === 'pending').length} draft={draft} setDraft={setDraft} send={chat.send} close={() => { if (!replying) setChatOpen(false) }} saveMemory={chat.saveConfirmed} withdraw={chat.withdraw} stop={chat.stop} replying={replying} error={chatError} demo={!chat.apiKey} openGame={() => setGameOpen(true)} openStory={() => setStoryOpen(true)} />{gameOpen && <RockPaperScissors characterName={character.name} onComplete={saveGameMemory} onClose={() => setGameOpen(false)} />}{storyOpen && (selected === 'lu' ? <SevenDayStory temporary={chat.temporary} onSaved={() => { void db.memories.toArray().then(chat.setMemories).catch(() => alert('故事已保存，回忆列表暂未刷新；重新打开应用可读取')) }} onClose={() => setStoryOpen(false)} /> : <InteractiveStory characterName={character.name} onComplete={saveGameMemory} onClose={() => setStoryOpen(false)} />)}</>
+  if (chatOpen) return <><ChatPanel character={character} messages={chat.chatMessages} replyMode={chat.replyMode} setReplyMode={chat.setReplyMode} modeSaving={chat.modeSaving} temporary={chat.temporary} toggleTemporary={chat.toggleTemporary} pendingCount={chat.memories.filter(memory => memory.characterId === selected && memory.state === 'pending').length} draft={draft} setDraft={setDraft} send={chat.send} close={() => { if (!replying) setChatOpen(false) }} saveMemory={chat.saveConfirmed} withdraw={chat.withdraw} stop={chat.stop} replying={replying} error={chatError} demo={!chat.apiKey} openGame={() => setGameOpen(true)} openStory={() => setStoryOpen(true)} />{gameOpen && <RockPaperScissors characterName={t(character.name)} onComplete={saveGameMemory} onClose={() => setGameOpen(false)} />}{storyOpen && (selected === 'lu' ? <SevenDayStory temporary={chat.temporary} onSaved={() => { void db.memories.toArray().then(chat.setMemories).catch(() => alert('故事已保存，回忆列表暂未刷新；重新打开应用可读取')) }} onClose={() => setStoryOpen(false)} /> : <InteractiveStory characterName={t(character.name)} onComplete={saveGameMemory} onClose={() => setStoryOpen(false)} />)}</>
   if (preferencesOpen) return <OnboardingEditor initial={chat.onboardingProfile || defaultOnboardingProfile(selected)} save={chat.updateOnboarding} close={() => setPreferencesOpen(false)} />
 
   return <main className="app-shell">
     <div className="ambient ambient-one" /><div className="ambient ambient-two" />
-    {chat.loadError && <div className="chat-error" role="alert">{chat.loadError}<button onClick={() => void chat.reload()}>重试读取</button></div>}
-    <header className="topbar"><div><p className="eyebrow">晚上好，{chat.onboardingProfile?.userName === '你' ? '欢迎回来' : chat.onboardingProfile?.userName || '欢迎回来'}</p><h1>{tab === 'home' ? '有人一直记得你' : tab === 'moments' ? '他们的此刻' : tab === 'memories' ? '我们的回忆' : tab === 'store' ? '一份小心意' : '我的 Aily'}</h1></div><button className="icon-button" aria-label="通知"><Bell size={20}/><i /></button></header>
-    {tab === 'home' && <HomeScreen selected={selected} select={setSelected} lastMessage={messages.filter(item => !item.withdrawn).at(-1)?.text || '还没有聊天记录，先打个招呼吧'} openChat={() => setChatOpen(true)} />}
+    {chat.loadError && <div className="chat-error" role="alert">{chat.loadError}<button onClick={() => void chat.reload()}>{t('重试读取')}</button></div>}
+    <header className="topbar"><div><p className="eyebrow">{t('晚上好，{name}', { name: chat.onboardingProfile?.userName && chat.onboardingProfile.userName !== '你' ? chat.onboardingProfile.userName : t('欢迎回来') })}</p><h1>{tab === 'home' ? t("有人一直记得你") : tab === 'moments' ? t("他们的此刻") : tab === 'memories' ? t("我们的回忆") : tab === 'store' ? t("一份小心意") : t("我的 Aily")}</h1></div><button className="icon-button" aria-label={t("通知")}><Bell size={20}/><i /></button></header>
+    {tab === 'home' && <HomeScreen selected={selected} select={setSelected} lastMessage={messages.filter(item => !item.withdrawn).at(-1)?.text || t('还没有聊天记录，先打个招呼吧')} openChat={() => setChatOpen(true)} />}
     {tab === 'moments' && <MomentsScreen userName={userName} selected={selected} config={{ apiKey: chat.apiKey, endpoint: chat.endpoint, model: chat.model, onboardingProfile: chat.onboardingProfile }} onChat={(characterId, text) => { setSelected(characterId); setDraft(text); setChatOpen(true) }} />}
-    {tab === 'memories' && <MemoryPanel privateNames={[chat.onboardingProfile?.userName || '', chat.onboardingProfile?.characterName || '']} onBusyChange={setMemoryBusy} memories={chat.memories} selected={selected} onSave={chat.saveConfirmed} onUpdate={chat.editMemory} onDelete={chat.removeMemory} onClear={chat.clearMemories} summaries={chat.summaries} policies={chat.policies} onPolicy={chat.changePolicy} onConfirm={chat.approveProposal} conversations={chat.conversations} />}
+    {tab === 'memories' && <MemoryPanel privateNames={[chat.onboardingProfile?.userName || '', chat.onboardingProfile?.characterName || '']} profile={chat.onboardingProfile} onProfile={chat.updateOnboarding} onBusyChange={setMemoryBusy} memories={chat.memories} selected={selected} onSave={chat.saveConfirmed} onUpdate={chat.editMemory} onDelete={chat.removeMemory} onClear={chat.clearMemories} summaries={chat.summaries} policies={chat.policies} onPolicy={chat.changePolicy} onConfirm={chat.approveProposal} conversations={chat.conversations} />}
     {tab === 'profile' && proactiveOpen && <ProactiveSettingsPanel selected={selected} close={() => setProactiveOpen(false)} />}
-    {tab === 'profile' && !proactiveOpen && <section className="screen" style={{ paddingBottom: 0 }}><button className="proactive-entry glass" aria-label="角色主动消息设置" onClick={() => setProactiveOpen(true)}>角色主动消息设置 <ChevronRight size={18} /></button><button className="proactive-entry glass" aria-label="安全与隐私" onClick={() => setPrivacyOpen(true)}>安全与隐私 <ShieldCheck size={18} /></button></section>}
-    {tab === 'profile' && !proactiveOpen && <><button className="secondary" style={{ margin: '0 20px 16px' }} onClick={() => setPreferencesOpen(true)}>修改称呼与互动偏好</button><ProfileScreen userName={userName} primaryName={primaryName} beforeDataChange={chat.beforeDataChange} apiKey={chat.apiKey} endpoint={chat.endpoint} model={chat.model} setApiKey={chat.setApiKey} setEndpoint={chat.setEndpoint} setModel={chat.setModel} onImported={() => { void chat.reload() }} onCleared={() => { void chat.reload() }} /></>}
+    {tab === 'profile' && !proactiveOpen && <section className="screen" style={{ paddingBottom: 0 }}><button className="proactive-entry glass" aria-label={t('角色主动消息设置')} onClick={() => setProactiveOpen(true)}>{t('角色主动消息设置')}<ChevronRight size={18} /></button><button className="proactive-entry glass" aria-label={t('邀请朋友')} onClick={() => setInviteOpen(true)}>{t('邀请朋友')}<ChevronRight size={18} /></button><button className="proactive-entry glass" aria-label={t('安全与隐私')} onClick={() => setPrivacyOpen(true)}>{t('安全与隐私')}<ShieldCheck size={18} /></button></section>}
+    {tab === 'profile' && !proactiveOpen && <><button className="secondary" style={{ margin: '0 20px 16px' }} onClick={() => setPreferencesOpen(true)}>{t('修改称呼与互动偏好')}</button><ProfileScreen userName={userName} primaryName={primaryName} beforeDataChange={chat.beforeDataChange} apiKey={chat.apiKey} endpoint={chat.endpoint} model={chat.model} setApiKey={chat.setApiKey} setEndpoint={chat.setEndpoint} setModel={chat.setModel} onImported={() => { void chat.reload() }} onCleared={() => { void chat.reload() }} /></>}
     {tab === 'store' && <GiftStorePanel selected={selected} />}
     {!(tab === 'profile' && proactiveOpen) && <nav className="bottom-nav glass">
-      <NavButton disabled={memoryBusy} active={tab==='home'} icon={<MessageCircle/>} label="消息" onClick={()=>setTab('home')}/>
-      <NavButton disabled={memoryBusy} active={tab==='moments'} icon={<Sparkles/>} label="此刻" onClick={()=>setTab('moments')}/>
-      <NavButton disabled={memoryBusy} active={tab==='memories'} icon={<BookHeart/>} label="回忆" onClick={()=>setTab('memories')}/>
-      <NavButton disabled={memoryBusy} active={tab==='store'} icon={<ShoppingBag/>} label="商城" onClick={()=>setTab('store')}/>
-      <NavButton disabled={memoryBusy} active={tab==='profile'} icon={<CircleUserRound/>} label="我的" onClick={()=>setTab('profile')}/>
+      <NavButton disabled={memoryBusy} active={tab==='home'} icon={<MessageCircle/>} label={t('消息')} onClick={()=>setTab('home')}/>
+      <NavButton disabled={memoryBusy} active={tab==='moments'} icon={<Sparkles/>} label={t('此刻')} onClick={()=>setTab('moments')}/>
+      <NavButton disabled={memoryBusy} active={tab==='memories'} icon={<BookHeart/>} label={t('回忆')} onClick={()=>setTab('memories')}/>
+      <NavButton disabled={memoryBusy} active={tab==='store'} icon={<ShoppingBag/>} label={t('商城')} onClick={()=>setTab('store')}/>
+      <NavButton disabled={memoryBusy} active={tab==='profile'} icon={<CircleUserRound/>} label={t('我的')} onClick={()=>setTab('profile')}/>
     </nav>}
   </main>
 }
@@ -96,24 +109,25 @@ function HomeScreen({selected,select,openChat,lastMessage}:{selected:CharacterId
 }
 
 function ProfileScreen({userName,primaryName,apiKey,endpoint,model,setApiKey,setEndpoint,setModel,onImported,onCleared,beforeDataChange}:{userName:string;primaryName:string;beforeDataChange:()=>Promise<void>;apiKey:string;endpoint:string;model:string;setApiKey:(value:string)=>void;setEndpoint:(value:string)=>void;setModel:(value:string)=>void;onImported:(data:Awaited<ReturnType<typeof loadLocalData>>)=>void;onCleared:()=>void}){const [showApi,setShowApi]=useState(false);const [visible,setVisible]=useState(false);const [testing,setTesting]=useState(false);const [result,setResult]=useState('');const test=async()=>{setTesting(true);setResult('');try{await testDeepSeekConnection({apiKey,endpoint,model});setResult('连接成功，可以开始聊天')}catch(error){setResult(error instanceof Error?error.message:'连接失败')}finally{setTesting(false)}};return <section className="screen profile">
+<LanguageSettings />
 <div className="profile-card glass">
 <div className="profile-avatar">{Array.from(userName)[0]}</div>
 <div>
 <h2>{userName}</h2>
-<p>本机陪伴档案</p>
+<p>{t('本机陪伴档案')}</p>
 </div>
 <ChevronRight/>
 </div>
 <div className="plan-card">
 <span>
 <Sparkles/> Aily Plus</span>
-<h3>让每一段故事，都被好好记住</h3>
-<button>了解会员</button>
+<h3>{t('让每一段故事，都被好好记住')}</h3>
+<button>{t('了解会员')}</button>
 </div>
 <div className="settings glass">
 <button onClick={()=>setShowApi(!showApi)}>
 <MemoryStick/>
-<span>DeepSeek 连接</span>
+<span>{t('DeepSeek 连接')}</span>
 <small>{apiKey?'已配置':'演示模式'}</small>
 <ChevronRight/>
 </button>{[[Home,'主角色',primaryName],[ShoppingBag,'会员与权益','免费版'],[ShieldCheck,'隐私与安全','本地存储']].map(([Icon,label,value])=>
@@ -123,23 +137,23 @@ function ProfileScreen({userName,primaryName,apiKey,endpoint,model,setApiKey,set
 <small>{String(value)}</small>
 <ChevronRight/>
 </button>)}</div>{showApi&&<div className="api-settings glass">
-<h3>DeepSeek 连接</h3>
-<p>对话内容会直接发送至你配置的服务。Key 只保留在当前浏览器会话，不写入记忆或导出数据。</p>
+<h3>{t('DeepSeek 连接')}</h3>
+<p>{t('对话内容会直接发送至你配置的服务。Key 只保留在当前浏览器会话，不写入记忆或导出数据。')}</p>
 <label>API Key<div className="secret-input">
 <input type={visible?'text':'password'} value={apiKey} onChange={event=>setApiKey(event.target.value)} placeholder="sk-…"/>
 <button onClick={()=>setVisible(!visible)}>{visible?'隐藏':'显示'}</button>
 </div>
 </label>
-<label>接口地址<input value={endpoint} onChange={event=>setEndpoint(event.target.value)} />
+<label>{t('接口地址')}<input value={endpoint} onChange={event=>setEndpoint(event.target.value)} />
 </label>
-<label>模型<input value={model} onChange={event=>setModel(event.target.value)} />
+<label>{t('模型')}<input value={model} onChange={event=>setModel(event.target.value)} />
 </label>
 <div className="api-actions">
 <button className="test-api" onClick={test} disabled={testing}>{testing?'正在测试…':'测试连接'}</button>
-<button onClick={()=>{setApiKey('');setResult('已删除本次会话中的 Key')}}>删除 Key</button>
+<button onClick={()=>{setApiKey('');setResult('已删除本次会话中的 Key')}}>{t('删除 Key')}</button>
 </div>{result&&<p className="api-result">{result}</p>}</div>}<DataTransferPanel beforeDataChange={beforeDataChange} onImported={onImported} onCleared={onCleared} />
 <p className="ai-note">
-<ShieldCheck/> Aily 是 AI 角色陪伴应用，不是真人或专业医疗服务</p>
+<ShieldCheck/>{t(' Aily 是 AI 角色陪伴应用，不是真人或专业医疗服务')}</p>
 </section>}
-function Avatar({character}:{character:typeof characters[0]}){return <span className="avatar" style={{'--accent':character.accent} as React.CSSProperties}>{character.avatar}</span>}
+function Avatar({character}:{character:typeof characters[0]}){return <span className="avatar" style={{'--accent':character.accent} as React.CSSProperties}>{t(character.avatar)}</span>}
 function NavButton({active,icon,label,onClick,disabled = false}:{active:boolean;icon:React.ReactNode;label:string;onClick:()=>void;disabled?:boolean}){return <button disabled={disabled} className={active?'active':''} onClick={onClick}>{icon}<span>{label}</span></button>}

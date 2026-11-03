@@ -24,7 +24,7 @@ describe('bilingual panel localization', () => {
     const original = '用户偏好：我喜欢咖啡 — my own words'
     render(<MemoryPanel memories={[{ id: 'localization-memory', characterId: 'lu', text: original, originalText: original, confirmedAt: '2026-11-02T10:00:00Z' }]} selected="lu" onSave={vi.fn()} onUpdate={vi.fn()} onDelete={vi.fn()} onClear={vi.fn()} />)
     expect(screen.getByText('Only remembered with your confirmation')).toBeInTheDocument()
-    expect(screen.getAllByText(original)).toHaveLength(2)
+    expect(screen.getAllByText(original)).toHaveLength(3) // Relationship event, managed memory and saved original.
     expect(screen.getByText('1 memory · 0 awaiting confirmation')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
     expect(screen.getByLabelText('Edit memory content')).toHaveValue(original)

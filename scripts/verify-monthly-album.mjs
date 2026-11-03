@@ -30,6 +30,7 @@ try {
   } else {
     await page.getByRole('button', { name: '回忆', exact: true }).click()
     await page.getByRole('heading', { name: '我们一起完成海边明信片故事' }).waitFor()
+    await page.evaluate(() => window.scrollTo(0, document.querySelector('.memory-view-switch').getBoundingClientRect().top + window.scrollY - 20))
     await page.screenshot({ path: `docs/evidence/monthly-album/${phase}-memories.png` })
     if (phase === 'after') {
     await page.getByRole('button', { name: '月度回忆册', exact: true }).click()
