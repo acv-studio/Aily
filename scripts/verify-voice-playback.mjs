@@ -23,6 +23,7 @@ const browser = await chromium.launch({
   args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'],
 })
 const context = await browser.newContext({
+  locale: 'zh-CN',
   viewport: { width: 390, height: 844 }, deviceScaleFactor: 1,
   colorScheme: 'dark', timezoneId: 'Asia/Shanghai', permissions: ['microphone'],
 })
@@ -133,6 +134,7 @@ try {
       localStorage.setItem('aily-demo-state', JSON.stringify({
         onboarded: true, selected: 'lu', conversations: { lu: [] }, confirmedMemories: [],
       }))
+      localStorage.setItem('aily-safety-consent-v1', 'adult-ai-privacy-accepted')
       sessionStorage.setItem('voice-verification-seeded', '1')
     }
   })

@@ -1,6 +1,7 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import App from './App'
+import { acceptSafetyConsent } from './privacy'
 import { db } from './db'
 import { acceptSafetyConsent } from './privacy'
 import { streamReply } from './chatService'
