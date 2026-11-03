@@ -30,6 +30,19 @@ npm run dev
 npm run build
 ```
 
+## iOS + Android 移动端打包
+
+首发目标为 iOS 与 Android 同步支持，通过 Capacitor 打包同一份本地 Web 资源：
+
+```bash
+npm ci
+npm run mobile:build:ios      # macOS / Xcode：Simulator .app
+npm run mobile:build:android  # JDK 21 / Android SDK 36：Debug APK
+npm run mobile:bundle:android # 未签名 release AAB，正式发布需发行方签名
+```
+
+原生工程已纳入仓库；`mobile:sync` 自动先构建再同步。环境、签名/分发、权限、本机备份及首发验收边界见 [移动端打包说明](docs/mobile-packaging.md)。当前交付是可构建的双端壳，不是已经签名上架的应用；不新增真实支付、订阅或生产默认 Key。
+
 ## 聊天与记忆
 
 在“我的 → DeepSeek 连接”填写自己的 API Key。对话及少量相关确认记忆会直发配置的服务；Key 只保存在当前浏览器会话。没有 Key 时明确使用本地演示回复，不是 AI 生成内容。不要在客户端构建中预置生产密钥。

@@ -6,9 +6,20 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "tsc -b && vite build",
-    "test": "vitest run"
+    "test": "vitest run",
+    "mobile:sync": "npm run build && cap sync",
+    "mobile:ios": "npm run mobile:sync && cap open ios",
+    "mobile:android": "npm run mobile:sync && cap open android",
+    "mobile:build:ios": "npm run mobile:sync && xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath .mobile-build/ios CODE_SIGNING_ALLOWED=NO build",
+    "mobile:build:android": "npm run mobile:sync && cd android && ./gradlew --no-daemon assembleDebug",
+    "mobile:bundle:android": "npm run mobile:sync && cd android && ./gradlew --no-daemon bundleRelease"
   },
   "dependencies": {
+    "@capacitor/android": "8.6.0",
+    "@capacitor/core": "8.6.0",
+    "@capacitor/filesystem": "8.1.5",
+    "@capacitor/ios": "8.6.0",
+    "@capacitor/share": "8.0.3",
     "@vitejs/plugin-react": "latest",
     "dexie": "^4.4.7",
     "lucide-react": "latest",
@@ -18,8 +29,10 @@
     "vite": "latest"
   },
   "devDependencies": {
+    "@capacitor/cli": "8.6.0",
     "@testing-library/jest-dom": "latest",
     "@testing-library/react": "latest",
+    "@types/node": "22.20.5",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "fake-indexeddb": "^6.2.7",
