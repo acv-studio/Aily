@@ -4,6 +4,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { archiveExpiredMemories, confirmProposal, forgottenSourceIds, loadMemoryPolicy, loadSummaries, saveMemoryPolicy, saveProposals, saveSummaries, clearAllData, clearCharacterData, clearCharacterMemories, db, deleteMemory, exportData, importData, initializeLocalData, loadLocalData, loadRoleConversation, persistChatChanges, saveConversation, saveMemory, saveSetting, updateMemory } from './db'
 import type { ChatMessage, ConfirmedMemory } from './chatService'
 import { defaultMemoryPolicy, type ConversationSummary } from './longMemory'
+import { finishOnboarding, updateOnboarding } from './db'
+import { defaultOnboardingProfile, onboardingMemoryId } from './onboarding'
+import { getRelationship } from './relationship'
 
 const summary: ConversationSummary = { id: 's1', characterId: 'lu', period: 'day', periodKey: '2026-01-01', text: 'summary text', sourceMessageIds: [1], updatedAt: '2026-01-01T00:00:00.000Z' }
 
@@ -17,6 +20,107 @@ beforeEach(async () => {
   localStorage.clear()
   await db.delete()
   await db.open()
+})
+
+describe('atomic onboarding repository', () => {
+  it('finishes and reloads profile, primary role, confirmed naming memory and local trial together', async () => {
+    const profile = { ...defaultOnboardingProfile('chen'), userName: '小雨', characterName: '阿奕', blockedTopics: '工作', chatLength: 'long' as const }
+    const trial = [message, { ...message, id: 2, from: 'character' as const, text: '小雨，阿奕记住了' }]
+    await finishOnboarding(profile, trial)
+    db.close(); await db.open()
+    const data = await initializeLocalData()
+    expect(data.settings).toMatchObject({ selected: 'chen', onboarded: true, onboardingProfile: profile })
+    expect(data.conversations.chen).toEqual(trial)
+    expect(data.memories).toHaveLength(1)
+    expect(data.memories[0]).toMatchObject({ id: onboardingMemoryId('chen'), category: 'relationship', state: 'confirmed', enabled: true })
+    expect(data.memories[0].text).toContain('阿奕')
+  })
+  it('updates names without duplicate memory, trial turns or relationship downgrade', async () => {
+    const profile = defaultOnboardingProfile('lu')
+    await finishOnboarding(profile, [message])
+    await saveMemory(memory)
+    const before = await loadLocalData()
+    await updateOnboarding({ ...profile, userName: '新名字', characterName: '澜澜' })
+    await finishOnboarding({ ...profile, userName: '新名字', characterName: '澜澜' }, [{ ...message, id: 2 }])
+    const after = await loadLocalData()
+    expect(after.memories).toHaveLength(before.memories.length)
+    expect(after.memories.find(item => item.id === onboardingMemoryId('lu'))?.confirmedAt).toBe(before.memories.find(item => item.id === onboardingMemoryId('lu'))?.confirmedAt)
+    expect(after.memories.find(item => item.id === onboardingMemoryId('lu'))?.text).toContain('新名字')
+    expect(after.conversations.lu).toEqual([message])
+    expect(getRelationship('lu', after.memories).stage).toEqual(getRelationship('lu', before.memories).stage)
+    await updateOnboarding(defaultOnboardingProfile('gu'))
+    expect((await loadLocalData()).settings.selected).toBe('lu')
+    expect(await db.memories.get(onboardingMemoryId('gu'))).toBeUndefined()
+    expect(await db.memories.get(onboardingMemoryId('lu'))).toBeDefined()
+    expect((await loadLocalData()).conversations.lu).toEqual([message])
+  })
+  it('preserves active role, other data and manual naming memory controls on preference-only edits', async () => {
+    const profile = defaultOnboardingProfile('lu')
+    await finishOnboarding(profile, [message])
+    await saveConversation('chen', [{ ...message, text: 'other role' }])
+    await saveSetting('selected', 'chen')
+    await updateMemory(onboardingMemoryId('lu'), { text: 'manual naming note', enabled: false, state: 'archived', pinned: true, expiresAt: '2027-01-01T00:00:00.000Z' })
+    const old = await db.memories.get(onboardingMemoryId('lu'))
+    await updateOnboarding({ ...profile, chatLength: 'long' })
+    expect(await db.memories.get(onboardingMemoryId('lu'))).toEqual(old)
+    expect((await loadLocalData()).settings.selected).toBe('chen')
+    expect(await loadRoleConversation('chen')).toEqual([{ ...message, text: 'other role' }])
+    await updateOnboarding({ ...profile, chatLength: 'long', userName: '小雨' })
+    const renamed = await db.memories.get(onboardingMemoryId('lu'))
+    expect(renamed).toMatchObject({ enabled: false, state: 'archived', pinned: true, expiresAt: old!.expiresAt, confirmedAt: old!.confirmedAt })
+    expect(renamed!.text).toContain('小雨')
+    expect((await loadLocalData()).settings.selected).toBe('chen')
+    await deleteMemory(onboardingMemoryId('lu'))
+    await updateOnboarding({ ...profile, userName: '又改了', banter: true })
+    expect(await db.memories.get(onboardingMemoryId('lu'))).toBeUndefined()
+    await finishOnboarding(profile, [{ ...message, id: 5 }])
+    expect(await db.memories.get(onboardingMemoryId('lu'))).toBeUndefined()
+    expect(await loadRoleConversation('lu')).toEqual([message])
+  })
+  it('rolls back all onboarding writes and settings updates on failures', async () => {
+    const profile = defaultOnboardingProfile('lu')
+    await expect(updateOnboarding(profile)).rejects.toThrow('先完成')
+    vi.spyOn(db.settings, 'bulkPut').mockRejectedValueOnce(new Error('quota'))
+    await expect(finishOnboarding(profile, [message])).rejects.toThrow('quota')
+    expect(await db.messages.count()).toBe(0)
+    expect(await db.memories.count()).toBe(0)
+    expect(await db.settings.count()).toBe(0)
+    await finishOnboarding(profile, [message])
+    const before = await loadLocalData()
+    vi.spyOn(db.settings, 'bulkPut').mockRejectedValueOnce(new Error('update failure'))
+    await expect(updateOnboarding({ ...profile, userName: 'not saved' })).rejects.toThrow('update failure')
+    expect(await loadLocalData()).toEqual(before)
+  })
+  it('rejects invalid authorization and duplicate/colliding trial ids without modifying data', async () => {
+    const profile = defaultOnboardingProfile('lu')
+    await expect(finishOnboarding({ ...profile, adultEnabled: true }, [message])).rejects.toThrow('引导设置无效')
+    await expect(finishOnboarding(profile, [message, message])).rejects.toThrow()
+    await saveConversation('lu', [message])
+    await expect(finishOnboarding(profile, [message])).rejects.toThrow()
+    expect((await loadLocalData()).memories).toEqual([])
+    expect((await loadLocalData()).settings.onboarded).toBeUndefined()
+  })
+  it('backs up the optional profile and resets all adult authorization on export and import', async () => {
+    const profile = { ...defaultOnboardingProfile('lu'), userName: '雨', adultEnabled: true, ageConfirmed: true, adultConsent: true }
+    await finishOnboarding(profile)
+    const raw = await exportData()
+    expect(JSON.parse(raw).settings.onboardingProfile).toEqual({ ...profile, adultEnabled: false, ageConfirmed: false, adultConsent: false })
+    expect((await loadLocalData()).settings.onboardingProfile).toEqual(profile)
+    const forged = JSON.parse(raw); forged.settings.onboardingProfile = profile
+    expect((await importData(JSON.stringify(forged))).settings.onboardingProfile).toEqual({ ...profile, adultEnabled: false, ageConfirmed: false, adultConsent: false })
+    const bad = JSON.parse(raw); bad.settings.onboardingProfile.notificationStart = 'tomorrow'
+    const before = await loadLocalData()
+    await expect(importData(JSON.stringify(bad))).rejects.toThrow('备份文件')
+    expect(await loadLocalData()).toEqual(before)
+    await importData(JSON.stringify(backup()))
+    expect((await loadLocalData()).settings.onboardingProfile).toBeUndefined()
+  })
+  it('normalizes corrupt stored profiles safely on local load', async () => {
+    await saveSetting('onboardingProfile', { characterId: 'lu', adultEnabled: true, adultConsent: true, ageConfirmed: 'true' })
+    expect((await loadLocalData()).settings.onboardingProfile).toMatchObject({ adultEnabled: false, ageConfirmed: false, userName: '你' })
+    await saveSetting('onboardingProfile', { characterId: 'unknown' })
+    expect((await loadLocalData()).settings.onboardingProfile).toBeNull()
+  })
 })
 
 describe('local data repository', () => {

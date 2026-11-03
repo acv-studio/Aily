@@ -1,0 +1,68 @@
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import Onboarding, { OnboardingEditor } from './OnboardingFlow'
+import { defaultOnboardingProfile } from './onboarding'
+afterEach(cleanup)
+const proceed = () => fireEvent.click(screen.getByRole('button', { name: '继续' }))
+function start() {
+  const finish = vi.fn().mockResolvedValue(undefined)
+  render(<Onboarding selected="lu" setSelected={vi.fn()} finish={finish} apiKey="" setApiKey={vi.fn()}/> )
+  fireEvent.click(screen.getByRole('button', { name: /遇见 TA/ }))
+  fireEvent.click(screen.getByRole('button', { name: /开始我们的故事/ }))
+  proceed()
+  return finish
+}
+function toBoundary() { start(); proceed(); proceed(); proceed() }
+describe('nine-step onboarding UI', () => {
+  it('requires independent age and consent plus nonempty safety word, and can revoke', () => {
+    toBoundary()
+    expect(screen.getByText('成人模式：关闭（默认）')).toBeInTheDocument()
+    screen.getByRole('button', { name: '了解并确认成人模式' }).focus()
+    fireEvent.click(screen.getByRole('button', { name: '了解并确认成人模式' }))
+    expect(screen.getByLabelText('我确认已年满 18 岁')).toHaveFocus()
+    fireEvent.keyDown(document, { key: 'Tab', shiftKey: true })
+    expect(screen.getByRole('button', { name: '保持关闭' })).toHaveFocus()
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '了解并确认成人模式' })).toHaveFocus()
+    fireEvent.click(screen.getByRole('button', { name: '了解并确认成人模式' }))
+    const enable = screen.getByRole('button', { name: '确认开启' })
+    expect(enable).toBeDisabled()
+    fireEvent.click(screen.getByLabelText('我确认已年满 18 岁'))
+    expect(enable).toBeDisabled()
+    fireEvent.click(screen.getByLabelText('我自愿开启，知道可以随时撤回同意'))
+    fireEvent.change(screen.getByLabelText('安全词'), { target: { value: ' ' } })
+    expect(enable).toBeDisabled()
+    fireEvent.change(screen.getByLabelText('安全词'), { target: { value: '停' } })
+    fireEvent.click(enable)
+    expect(screen.getByText('成人模式：已开启')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '关闭成人模式' }))
+    expect(screen.getByText('成人模式：关闭（默认）')).toBeInTheDocument()
+  })
+  it('allows optional defaults, correcting trial names and completing without API key', async () => {
+    const finish = start()
+    fireEvent.click(screen.getByRole('button', { name: '先不填写' }))
+    fireEvent.click(screen.getByRole('button', { name: '先用全名' }))
+    fireEvent.click(screen.getByRole('button', { name: '先用默认偏好' }))
+    proceed()
+    fireEvent.click(screen.getByRole('button', { name: '发送试聊' }))
+    fireEvent.click(screen.getByRole('button', { name: '纠正称呼' }))
+    fireEvent.change(screen.getByLabelText('你的名字或昵称'), { target: { value: '阿雨' } })
+    proceed(); proceed(); proceed(); proceed()
+    expect(screen.queryByRole('button', { name: '称呼没问题，继续' })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '发送试聊' }))
+    expect(screen.getByText(/阿雨，听到了/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '称呼没问题，继续' }))
+    fireEvent.click(screen.getByRole('button', { name: '设置 API Key' }))
+    expect(screen.getByLabelText('DeepSeek API Key')).toHaveAttribute('type', 'password')
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: '完成引导' })) })
+    expect(finish).toHaveBeenCalledWith(expect.objectContaining({ userName: '阿雨', adultEnabled: false }), expect.arrayContaining([expect.objectContaining({ from: 'user' }), expect.objectContaining({ from: 'character' })]))
+  })
+  it('keeps failed edits visible for retry instead of claiming they saved', async () => {
+    const close = vi.fn()
+    render(<OnboardingEditor initial={defaultOnboardingProfile('lu')} save={vi.fn().mockRejectedValue(new Error('disk'))} close={close}/>)
+    fireEvent.click(screen.getByRole('button', { name: '保存偏好' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('偏好未保存')
+    expect(close).not.toHaveBeenCalled()
+  })
+})

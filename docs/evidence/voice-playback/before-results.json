@@ -1,0 +1,64 @@
+{
+  "baseURL": "http://127.0.0.1:43192",
+  "phase": "before",
+  "outcome": "passed",
+  "failure": null,
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "observations": [
+    {
+      "label": "sent message",
+      "currentTime": 3.96,
+      "duration": 3.96,
+      "readyState": 4,
+      "error": null,
+      "events": [
+        "play",
+        "playing",
+        "pause",
+        "play",
+        "playing",
+        "pause",
+        "ended",
+        "seeking",
+        "seeked",
+        "play",
+        "playing",
+        "pause",
+        "ended"
+      ],
+      "nativeEvents": true
+    },
+    {
+      "label": "refreshed persisted message",
+      "currentTime": 3.96,
+      "duration": 3.96,
+      "readyState": 4,
+      "error": null,
+      "events": [
+        "play",
+        "playing",
+        "pause",
+        "play",
+        "playing",
+        "pause",
+        "ended",
+        "seeking",
+        "seeked",
+        "play",
+        "playing",
+        "pause",
+        "ended"
+      ],
+      "nativeEvents": true
+    },
+    {
+      "label": "Withdrawal unmounts and pauses active message",
+      "paused": true,
+      "connected": false
+    }
+  ],
+  "errors": []
+}
