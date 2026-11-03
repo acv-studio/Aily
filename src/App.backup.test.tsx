@@ -33,6 +33,7 @@ async function exportFromProfile() {
   fireEvent.click(screen.getByLabelText('我已年满 18 周岁'))
   fireEvent.click(screen.getByLabelText('我理解 AI 身份与数据说明'))
   fireEvent.click(continueButton)
+  fireEvent.click(await screen.findByRole('button', { name: '跳过，进入消息' }))
   fireEvent.click(await screen.findByRole('button', { name: '我的' }))
   setPassword()
   exportBackup()
