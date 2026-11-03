@@ -4,6 +4,7 @@ import App from './App'
 import { db, loadLocalData, saveSetting } from './db'
 import { defaultSplashSettings, saveSplashSettings } from './characterPresence'
 import * as presence from './characterPresence'
+import { defaultOnboardingProfile } from './onboarding'
 
 beforeEach(async () => { localStorage.clear(); sessionStorage.clear(); await db.delete(); await db.open(); vi.setSystemTime(new Date(2026, 10, 3, 19)); Element.prototype.scrollIntoView = vi.fn() })
 afterEach(() => { cleanup(); vi.useRealTimers(); vi.restoreAllMocks() })
@@ -15,9 +16,19 @@ describe('character splash entry and settings', () => {
     fireEvent.click(await screen.findByRole('button', { name: /遇见 TA/ }))
     fireEvent.click(screen.getByRole('button', { name: /陈奕恒/ }))
     fireEvent.click(screen.getByRole('button', { name: /开始我们的故事/ }))
+    for (let step = 0; step < 5; step++) fireEvent.click(screen.getByRole('button', { name: '继续' }))
+    fireEvent.click(screen.getByRole('button', { name: '发送试聊' }))
+    fireEvent.click(screen.getByRole('button', { name: '称呼没问题，继续' }))
+    fireEvent.click(screen.getByRole('button', { name: '完成引导' }))
     await screen.findByRole('button', { name: '消息' })
     expect(screen.queryByRole('button', { name: '跳过，进入消息' })).not.toBeInTheDocument()
     app.unmount()
+    render(<App />)
+    expect(await screen.findByRole('button', { name: '与陈奕恒继续聊天' })).toBeInTheDocument()
+  })
+  it('migrates the first onboarding choice rather than the last conversation', async () => {
+    await returning()
+    await saveSetting('onboardingProfile', defaultOnboardingProfile('chen'))
     render(<App />)
     expect(await screen.findByRole('button', { name: '与陈奕恒继续聊天' })).toBeInTheDocument()
   })

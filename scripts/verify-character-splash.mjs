@@ -11,9 +11,16 @@ try {
   const errors = []
   page.on('pageerror', error => errors.push(error.message))
   await page.clock.install({ time: new Date('2026-11-03T19:00:00+08:00') })
-  await page.goto(process.env.AILY_URL || 'http://127.0.0.1:4193/')
+  await page.goto(process.env.AILY_URL || 'http://127.0.0.1:4195/')
   await page.getByRole('button', { name: /遇见 TA/ }).click()
   await page.getByRole('button', { name: /开始我们的故事/ }).click()
+  // Current main has nine-step onboarding; retain compatibility with the original baseline.
+  if (await page.getByRole('heading', { name: '先听听我的自我介绍' }).isVisible()) {
+    for (let step = 0; step < 5; step++) await page.getByRole('button', { name: '继续', exact: true }).click()
+    await page.getByRole('button', { name: '发送试聊' }).click()
+    await page.getByRole('button', { name: '称呼没问题，继续' }).click()
+    await page.getByRole('button', { name: '完成引导' }).click()
+  }
   await page.getByRole('button', { name: '我的', exact: true }).click()
   await page.getByText('我的 Aily', { exact: true }).waitFor()
   await page.screenshot({ path: `${evidence}/${before ? 'before' : 'after'}-profile.png`, fullPage: true })

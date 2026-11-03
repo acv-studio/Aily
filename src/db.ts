@@ -1,6 +1,7 @@
 import Dexie, { type EntityTable, type Table } from 'dexie'
 import type { CharacterId } from './data'
 import type { ChatMessage, ConfirmedMemory } from './chatService'
+import { normalizeOnboardingProfile, onboardingMemoryId, onboardingMemoryText, validateOnboardingProfile, withoutAdultAuthorization, type OnboardingProfile } from './onboarding'
 import { conflictMemoryIds, defaultMemoryPolicy, type ConversationSummary, type MemoryPolicy } from './longMemory'
 
 type StoredMessage = ChatMessage & { characterId: CharacterId }
@@ -156,10 +157,11 @@ function validatePolicies(value: unknown): Partial<Record<CharacterId, MemoryPol
 function validateSettings(value: unknown, version = 1): Record<string, unknown> {
   check(isRecord(value))
   // Credentials, endpoints and arbitrary provider configuration are never backups.
-  keys(value, ['onboarded', 'selected', ...(version === 2 ? ['memoryPolicies', ...characterIds.map(forgottenKey)] : [])])
+  keys(value, ['onboarded', 'selected', 'onboardingProfile', ...(version === 2 ? ['memoryPolicies', ...characterIds.map(forgottenKey)] : [])])
   optional(value, 'onboarded', item => typeof item === 'boolean')
   optional(value, 'selected', character)
   const result = { ...value }
+  if (Object.hasOwn(value, 'onboardingProfile')) result.onboardingProfile = withoutAdultAuthorization(validateOnboardingProfile(value.onboardingProfile))
   if (Object.hasOwn(value, 'memoryPolicies')) result.memoryPolicies = validatePolicies(value.memoryPolicies)
   for (const id of characterIds) optional(value, forgottenKey(id), sourceIds)
   return result
@@ -209,7 +211,9 @@ export async function loadLocalData(): Promise<LocalData> {
       ;(conversations[characterId] ||= []).push(definedFields(message))
     }
     for (const messages of Object.values(conversations)) messages.sort((left, right) => left.id - right.id)
-    return { conversations, memories: memories.map(definedFields), summaries, settings: Object.fromEntries(settings.filter(item => !item.key.startsWith('__') || characterIds.some(id => item.key === forgottenKey(id))).map(item => [item.key, item.value])) }
+    const loadedSettings = Object.fromEntries(settings.filter(item => !item.key.startsWith('__') || characterIds.some(id => item.key === forgottenKey(id))).map(item => [item.key, item.value]))
+    if (Object.hasOwn(loadedSettings, 'onboardingProfile')) loadedSettings.onboardingProfile = normalizeOnboardingProfile(loadedSettings.onboardingProfile)
+    return { conversations, memories: memories.map(definedFields), summaries, settings: loadedSettings }
   })
 }
 
@@ -410,11 +414,61 @@ export async function archiveExpiredMemories(now: Date | string | number = new D
 }
 export async function saveSetting(key: string, value: unknown) { await db.settings.put({ key, value }) }
 
+export type OnboardingSaveResult = { profile: OnboardingProfile; memory?: ConfirmedMemory; memories: ConfirmedMemory[]; messages: ChatMessage[] }
+
+/** One commit for primary role, preferences, first confirmed memory and local trial. */
+async function persistOnboarding(value: OnboardingProfile, trial: ChatMessage[], finish: boolean): Promise<OnboardingSaveResult> {
+  const profile = validateOnboardingProfile(value)
+  const messages = trial.map(item => validateMessage(definedFields(item)))
+  check(messages.length <= 100 && new Set(messages.map(item => item.id)).size === messages.length)
+  return db.transaction('rw', db.settings, db.memories, db.messages, async () => {
+    const alreadyFinished = (await db.settings.get('onboarded'))?.value === true
+    if (!finish && !alreadyFinished) throw new Error('请先完成首次引导')
+    const id = onboardingMemoryId(profile.characterId)
+    const old = await db.memories.get(id)
+    const previous = normalizeOnboardingProfile((await db.settings.get('onboardingProfile'))?.value)
+    const namesChanged = !previous || previous.characterId !== profile.characterId || previous.userName !== profile.userName || previous.characterName !== profile.characterName || previous.familiarNames !== profile.familiarNames
+    const now = new Date().toISOString()
+    let memory = old
+    if (finish && !alreadyFinished) {
+      memory = old ? { ...old, text: onboardingMemoryText(profile), updatedAt: now } : {
+        id, characterId: profile.characterId, text: onboardingMemoryText(profile),
+        category: 'relationship', state: 'confirmed', enabled: true, importance: 3, confirmedAt: now,
+      }
+      await db.memories.put(memory)
+    } else if (old && namesChanged) {
+      // Changing names does not undo explicit pause/archive/expiry/pinning choices.
+      memory = { ...old, text: onboardingMemoryText(profile), updatedAt: now }
+      await db.memories.put(memory)
+    }
+    // Preference-only changes preserve manual content; deleted memories stay deleted.
+    // Retrying a completed finish or changing settings never adds trial turns.
+    if (finish && !alreadyFinished) {
+      for (const message of messages) check(!(await db.messages.get([profile.characterId, message.id])))
+      await db.messages.bulkPut(messages.map(message => ({ ...message, characterId: profile.characterId })))
+      await db.settings.put({ key: conversationKey(profile.characterId), value: true })
+    }
+    await db.settings.bulkPut([
+      { key: 'onboardingProfile', value: profile }, ...(finish ? [{ key: 'selected', value: profile.characterId }] : []),
+      { key: 'onboarded', value: true }, { key: migrationKey, value: true },
+    ])
+    return { profile, ...(memory ? { memory } : {}), memories: await db.memories.toArray(), messages: await loadRoleConversation(profile.characterId) }
+  })
+}
+
+export async function finishOnboarding(profile: OnboardingProfile, messages: ChatMessage[] = []): Promise<OnboardingSaveResult> {
+  return persistOnboarding(profile, messages, true)
+}
+export async function updateOnboarding(profile: OnboardingProfile): Promise<OnboardingSaveResult> {
+  return persistOnboarding(profile, [], false)
+}
+
 export async function exportData() {
   const data = await loadLocalData()
   const settings: Record<string, unknown> = {}
   if (typeof data.settings.onboarded === 'boolean') settings.onboarded = data.settings.onboarded
   if (character(data.settings.selected)) settings.selected = data.settings.selected
+  if (data.settings.onboardingProfile != null) settings.onboardingProfile = withoutAdultAuthorization(validateOnboardingProfile(data.settings.onboardingProfile))
   if (data.settings.memoryPolicies !== undefined) settings.memoryPolicies = validatePolicies(data.settings.memoryPolicies)
   for (const id of characterIds) {
     const ids = data.settings[forgottenKey(id)]
