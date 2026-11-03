@@ -24,13 +24,14 @@ export default function DataTransferPanel({ beforeDataChange, onImported, onClea
   const previousConfirmation = useRef<typeof confirmation>(null)
   useEffect(() => {
     if (confirmation) confirmGroup.current?.focus()
-    else if (previousConfirmation.current) {
+    else if (previousConfirmation.current && !busy) {
       const trigger = previousConfirmation.current === 'import' ? importButton.current : clearButton.current
       if (trigger?.disabled) input.current?.focus()
       else trigger?.focus()
     }
-    previousConfirmation.current = confirmation
-  }, [confirmation])
+    // Keep the prior trigger while busy: disabled fieldsets cannot receive focus.
+    if (confirmation || !busy) previousConfirmation.current = confirmation
+  }, [confirmation, busy])
   const resetFile = () => { setFile(null); if (input.current) input.current.value = '' }
   const run = async (operation: NonNullable<typeof busy>, work: () => Promise<void>) => {
     if (running.current) return

@@ -2,10 +2,13 @@ import { useI18n } from './i18n'
 import { useEffect, useRef, useState } from 'react'
 import { characters, type CharacterId } from './data'
 import { gifts, rechargePacks, rechargeDemo, sendDemoGift, subscribeDemoWallet, type DemoWalletSnapshot } from './giftDemo'
+import { subscribeDemoStoryEvents, type DemoStoryEvent } from './giftDemo'
+import { storyGiftEvents } from './storyGifts'
+import StoryGiftPanel from './StoryGiftPanel'
 import './giftStore.css'
 
 type Confirmation = { kind: 'recharge'; packId: string; coins: number } | { kind: 'gift'; giftId: string; characterId: CharacterId; quantity: number }
-const giftErrorKeys = ['演示余额无效', '演示币不足，请先免费补充', '演示余额超出上限', '演示充值包无效', '演示礼物无效', '收礼角色无效', '礼物数量须为 1–99 的整数', '演示金额无效']
+const giftErrorKeys = ['演示余额无效', '演示币不足，请先免费补充', '演示余额超出上限', '演示充值包无效', '演示礼物无效', '收礼角色无效', '礼物数量须为 1–99 的整数', '演示金额无效', '该角色已拥有此演示剧情，请勿重复赠送', '剧情礼物数量只能为 1', '演示剧情无效']
 
 export default function GiftStorePanel({ selected }: { selected: CharacterId }) {
   const { t, locale } = useI18n()
@@ -23,9 +26,16 @@ export default function GiftStorePanel({ selected }: { selected: CharacterId }) 
   const initiatingButton = useRef<HTMLButtonElement | null>(null)
   const [notice, setNotice] = useState<Confirmation | null>(null)
   const [visibleCount, setVisibleCount] = useState(10)
+  const [events, setEvents] = useState<DemoStoryEvent[] | null>(null)
+  const [eventError, setEventError] = useState('')
+  const [activeEventId, setActiveEventId] = useState<string | null>(null)
+  const eventButtonId = useRef<string | null>(null)
+  const library = useRef<HTMLElement>(null)
   const gift = gifts.find(item => item.id === giftId)!
+  const owned = events?.some(item => item.characterId === recipient && item.eventId === gift.storyEventId)
+  const activeEvent = events?.find(item => item.id === activeEventId)
   const count = Number(quantity)
-  const validQuantity = quantity.trim() !== '' && Number.isInteger(count) && count >= 1 && count <= 99
+  const validQuantity = quantity.trim() !== '' && Number.isInteger(count) && count >= 1 && count <= (gift.storyEventId ? 1 : 99)
   const total = validQuantity ? gift.cost * count : 0
 
   useEffect(() => {
@@ -33,6 +43,14 @@ export default function GiftStorePanel({ selected }: { selected: CharacterId }) 
     const unsubscribe = subscribeDemoWallet(value => { setWallet(value); setError(current => current === '无法读取演示余额，请重试。' ? '' : current) }, () => setError('无法读取演示余额，请重试。'))
     return () => { mounted.current = false; unsubscribe() }
   }, [attempt])
+  useEffect(() => subscribeDemoStoryEvents(value => { setEvents(value); setEventError('') }, () => { setEvents(null); setEventError('无法读取剧情事件，请重试。') }), [attempt])
+  useEffect(() => {
+    if (!activeEventId && eventButtonId.current) {
+      const button = Array.from(library.current?.querySelectorAll<HTMLButtonElement>('button[data-event-id]') || []).find(item => item.dataset.eventId === eventButtonId.current)
+      button?.focus({ preventScroll: true }); button?.scrollIntoView({ block: 'center', inline: 'nearest' })
+      eventButtonId.current = null
+    }
+  }, [activeEventId])
   useEffect(() => {
     if (confirmation) confirmationRef.current?.focus()
     else if (initiatingButton.current) { initiatingButton.current.focus(); initiatingButton.current = null }
@@ -72,6 +90,7 @@ export default function GiftStorePanel({ selected }: { selected: CharacterId }) 
     }
   }
 
+  if (activeEvent) return <StoryGiftPanel key={activeEvent.id} record={activeEvent} close={() => setActiveEventId(null)} />
   return <section className="screen gift-store" aria-label={t('商城演示')}>
     <div className="demo-banner"><strong>{t('不扣款演示')}</strong><p>{t('充值和礼物仅供体验，不接入真实支付。演示币无现金价值，不可提现；送礼不是获得基本回应的条件。')}</p></div>
     <section className="demo-wallet glass" aria-label={t('演示钱包')}><span>{t('演示币余额')}</span><strong data-testid="demo-balance">{wallet ? wallet.balance.toLocaleString(locale) : '—'}</strong><small>{t('仅保存在本机浏览器，不跨设备同步')}</small></section>
@@ -80,11 +99,12 @@ export default function GiftStorePanel({ selected }: { selected: CharacterId }) 
     <section aria-labelledby="recharge-heading"><h2 id="recharge-heading">{t('模拟充值')}</h2><div className="recharge-packs">{rechargePacks.map(pack => <button key={pack.id} aria-label={t('+{count} 演示币 · 不扣款', { count: pack.coins.toLocaleString(locale) })} disabled={!wallet || busy || !!confirmation} onClick={event => requestConfirmation({ kind: 'recharge', packId: pack.id, coins: pack.coins }, event.currentTarget)}><strong>+{pack.coins.toLocaleString(locale)}</strong><span>{t('演示币 · 不扣款')}</span></button>)}</div></section>
     <section aria-labelledby="gift-heading"><h2 id="gift-heading">{t('给 TA 一份小心意')}</h2>
       <label className="recipient-label">{t('赠送给')}<select aria-label={t('礼物接收角色')} value={recipient} disabled={busy || !!confirmation} onChange={event => setRecipient(event.target.value as CharacterId)}>{characters.map(character => <option key={character.id} value={character.id}>{t(character.name)}</option>)}</select></label>
-      <div className="gift-catalog">{gifts.map(item => <button key={item.id} aria-pressed={giftId === item.id} disabled={busy || !!confirmation} onClick={() => { setGiftId(item.id); setNotice(null) }}><span className="gift-emoji" aria-hidden="true">{item.emoji}</span><strong>{t(item.name)}</strong><span>{t('{count} 演示币', { count: item.cost })}</span></button>)}</div>
+      <div className="gift-catalog">{gifts.map(item => <button key={item.id} aria-pressed={giftId === item.id} disabled={busy || !!confirmation} onClick={() => { setGiftId(item.id); if (item.storyEventId) setQuantity('1'); setNotice(null) }}><span className="gift-emoji" aria-hidden="true">{item.emoji}</span><strong>{t(item.name)}</strong><span>{t('{count} 演示币', { count: item.cost })}{item.storyEventId ? t(' · 剧情') : ''}</span></button>)}</div>
       <p className="gift-description">{t(gift.description)}</p>
-      <div className="gift-quantity"><label>{t('数量')}<input aria-label={t('礼物数量')} type="number" min="1" max="99" step="1" value={quantity} disabled={busy || !!confirmation} onChange={event => setQuantity(event.target.value)} /></label><strong>{t('合计 {count} 演示币', { count: total })}</strong></div>
+      {gift.storyEventId && <p className="gift-description">{t('解锁《{title}》 · 每位角色只需赠送一次，数量固定为 1，之后可免费继续和回看。', { title: t(storyGiftEvents.find(item => item.id === gift.storyEventId)!.title) })}</p>}
+      <div className="gift-quantity"><label>{t('数量')}<input aria-label={t('礼物数量')} type="number" min="1" max={gift.storyEventId ? 1 : 99} step="1" value={quantity} disabled={busy || !!confirmation || !!gift.storyEventId} onChange={event => setQuantity(event.target.value)} /></label><strong>{t('合计 {count} 演示币', { count: total })}</strong></div>
       {!validQuantity && <p className="store-error">{t('请输入 1–99 的整数数量。')}</p>}
-      <button className="primary" disabled={!wallet || !validQuantity || busy || !!confirmation} onClick={event => requestConfirmation({ kind: 'gift', giftId, characterId: recipient, quantity: count }, event.currentTarget)}>{t('赠送礼物（演示）')}</button>
+      <button className="primary" disabled={!wallet || !validQuantity || busy || !!confirmation || !!owned || (!!gift.storyEventId && !events)} onClick={event => requestConfirmation({ kind: 'gift', giftId, characterId: recipient, quantity: count }, event.currentTarget)}>{t(owned ? '此角色已解锁，无需重复赠送' : '赠送礼物（演示）')}</button>
       {wallet && validQuantity && wallet.balance < total && <p className="gift-description">{t('演示币不足，可先免费模拟充值。')}</p>}
     </section>
     {confirmation && <div className="store-confirm glass" role="group" aria-label={t('确认演示操作')} tabIndex={-1} ref={confirmationRef}>
@@ -92,7 +112,17 @@ export default function GiftStorePanel({ selected }: { selected: CharacterId }) 
       <p>{confirmation.kind === 'recharge' ? t('增加 {count} 演示币，不会扣取任何真实费用。', { count: confirmation.coins }) : t('向{name}赠送{gift} × {count}，消耗 {coins} 演示币。', { name: t(characters.find(item => item.id === confirmation.characterId)!.name), gift: t(gifts.find(item => item.id === confirmation.giftId)!.name), count: confirmation.quantity, coins: gifts.find(item => item.id === confirmation.giftId)!.cost * confirmation.quantity })}</p>
       <div><button disabled={busy} onClick={() => setConfirmation(null)}>{t('取消')}</button><button disabled={busy} onClick={() => void confirm()}>{t(busy ? '正在保存…' : confirmation.kind === 'recharge' ? '确认模拟充值' : '确认赠送（演示）')}</button></div>
     </div>}
-    {notice && <div role="status" className="gift-feedback"><p>{notice.kind === 'recharge' ? t('已模拟充值 {count} 演示币，未真实扣款。', { count: notice.coins }) : t('已向{name}赠送{gift} × {count}。{feedback}', { name: t(characters.find(item => item.id === notice.characterId)!.name), gift: t(gifts.find(item => item.id === notice.giftId)!.name), count: notice.quantity, feedback: t(gifts.find(item => item.id === notice.giftId)!.feedback) })}</p><small>{t('礼物回应为固定演示文案，不调用 AI，不影响聊天、记忆或剧情权益。')}</small></div>}
+    {notice && <div role="status" className="gift-feedback"><p>{notice.kind === 'recharge' ? t('已模拟充值 {count} 演示币，未真实扣款。', { count: notice.coins }) : t('已向{name}赠送{gift} × {count}。{feedback}', { name: t(characters.find(item => item.id === notice.characterId)!.name), gift: t(gifts.find(item => item.id === notice.giftId)!.name), count: notice.quantity, feedback: t(gifts.find(item => item.id === notice.giftId)!.feedback) })}</p><small>{t('回应与剧情为固定本机文案，不调用 AI。剧情礼物解锁下方对应事件，不自动写入聊天或记忆。')}</small></div>}
+    <section ref={library} className="story-gift-library" aria-labelledby="events-heading"><h2 id="events-heading">{t('与{name}的剧情事件', { name: t(characters.find(item => item.id === recipient)!.name) })}</h2>
+      <p className="gift-description">{t('演唱会票、旅行箱、相机分别解锁对应互动。基本聊天与免费主线不受送礼影响。')}</p>
+      {eventError && <p role="alert" className="store-error">{t(eventError)}<button onClick={() => setAttempt(value => value + 1)}>{t('重新读取事件')}</button></p>}
+      {!events && !eventError && <p role="status">{t('正在读取剧情事件…')}</p>}
+      {storyGiftEvents.map(item => {
+        const record = events?.find(value => value.characterId === recipient && value.eventId === item.id)
+        return <article className="story-gift-card glass" key={item.id}><h3>{t(item.title)}</h3><p>{t(record ? record.choiceId ? '已完成 · 可回看' : '已解锁 · 待体验' : '尚未解锁')}</p>{record && <button data-event-id={record.id} disabled={busy || !!confirmation} onClick={() => { eventButtonId.current = record.id; setActiveEventId(record.id) }}>{t(record.choiceId ? '回看《{title}》' : '进入《{title}》', { title: t(item.title) })}</button>}</article>
+      })}
+      <p className="gift-description">{t('事件与选择随演示钱包保存，不随聊天备份导出；清空聊天不删除。删除本机使用资料或清除站点数据会删除。')}</p>
+    </section>
     <section className="demo-ledger" aria-labelledby="ledger-heading"><h2 id="ledger-heading">{t('本机演示记录')}</h2>{wallet && wallet.transactions.length === 0 && <p>{t('还没有记录，试试免费模拟充值。')}</p>}
       <ul>{wallet?.transactions.slice(0, visibleCount).map(transaction => <li key={transaction.id}><div><strong>{transaction.kind === 'recharge' ? t('模拟充值') : `${t(characters.find(item => item.id === transaction.characterId)?.name || '')} · ${t(transaction.giftName || '')} × ${transaction.quantity}`}</strong><time dateTime={transaction.createdAt}>{new Date(transaction.createdAt).toLocaleString(locale)}</time></div><span>{transaction.kind === 'recharge' ? '+' : '−'}{transaction.coins}</span></li>)}</ul>
       {wallet && wallet.transactions.length > visibleCount && <button onClick={() => setVisibleCount(value => value + 10)}>{t('显示更多记录')}</button>}

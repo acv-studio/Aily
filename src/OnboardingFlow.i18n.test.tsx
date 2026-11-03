@@ -3,8 +3,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import Onboarding, { OnboardingEditor } from './OnboardingFlow'
 import { setLocale } from './i18n'
 import { defaultOnboardingProfile } from './onboarding'
+import { acceptSafetyConsent } from './privacy'
 
-beforeEach(() => { localStorage.clear(); setLocale('en') })
+beforeEach(() => { setLocale('en'); acceptSafetyConsent() })
 afterEach(() => { cleanup(); setLocale('zh-CN') })
 
 const continueSetup = () => fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
@@ -15,9 +16,13 @@ describe('bilingual onboarding and profile editor', () => {
     render(<Onboarding selected="lu" setSelected={vi.fn()} finish={finish} apiKey="" setApiKey={vi.fn()} />)
     expect(screen.getByLabelText('界面语言 / Interface language')).toHaveValue('en')
     expect(screen.getByText('Step 1 of 9 · First meeting')).toBeInTheDocument()
+    const encounter = screen.getByRole('button', { name: 'Meet your companion' })
+    expect(encounter).toBeDisabled()
     fireEvent.click(screen.getByLabelText('I am at least 18 years old'))
+    expect(encounter).toBeDisabled()
     fireEvent.click(screen.getByLabelText('I understand the AI identity and data disclosures'))
-    fireEvent.click(screen.getByRole('button', { name: 'Meet your companion' }))
+    expect(encounter).toBeEnabled()
+    fireEvent.click(encounter)
     expect(screen.getByText('Lu Tinglan')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Start our story' }))
     expect(screen.getByText('Lu Tinglan · AI character')).toBeInTheDocument()

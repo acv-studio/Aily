@@ -39,7 +39,8 @@ describe('confirmed memory controls', () => {
     fireEvent.click(screen.getByRole('button', { name: '回忆卡' }))
     expect(screen.getByText('回忆插画 · 非实拍照片')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '时间轴' }))
-    expect(document.querySelector('.recollection-timeline')).toBeInTheDocument()
+    // The relationship-stage panel also has a list; assert the shared-event timeline.
+    expect(screen.getAllByRole('list').some(list => list.classList.contains('recollection-timeline'))).toBe(true)
     fireEvent.click(screen.getByRole('button', { name: '周记月记' }))
     expect(screen.getByRole('button', { name: '预览并确认' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '管理、编辑或删除记忆' }))

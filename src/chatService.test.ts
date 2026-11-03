@@ -3,6 +3,7 @@ import { buildContext, retrieveMemories, streamReply, testDeepSeekConnection, ty
 import { MAX_SAFETY_TEXT, SAFETY_SYSTEM_BOUNDARIES } from './safety'
 import { defaultOnboardingProfile } from './onboarding'
 import { REPLY_MODES, REPLY_MODE_PROMPTS, type ReplyMode } from './replyModes'
+import { translate } from './i18n'
 
 const messages: ChatMessage[] = [
   { id: 1, from: 'user', text: '今天胃有点不舒服', time: '现在' },
@@ -184,6 +185,33 @@ describe('reply mode context and demo', () => {
     expect(legacy[0].content).toContain('可较详细回复')
   })
 
+  it.each(REPLY_MODES)('preserves seventh-argument mode callers alongside an explicit Chinese locale for %s', replyMode => {
+    const legacy = buildContext('lu', messages, memories, undefined, undefined, undefined, replyMode)
+    const explicit = buildContext('lu', messages, memories, undefined, undefined, undefined, 'zh-CN', replyMode)
+    expect(explicit).toEqual(legacy)
+    expect(explicit[0].content).toContain(REPLY_MODE_PROMPTS[replyMode])
+  })
+
+  it.each(REPLY_MODES)('combines explicit English response locale and %s mode without changing quoted facts', async replyMode => {
+    const context = buildContext('lu', messages, memories, undefined, undefined, undefined, 'en', replyMode)
+    expect(context.filter(entry => entry.role === 'system')).toHaveLength(1)
+    expect(context[0].content).toContain('Reply in English.')
+    expect(context[0].content).toContain(translate(REPLY_MODE_PROMPTS[replyMode], {}, 'en'))
+    expect(context[0].content).toContain(memories[0].text)
+    expect(context[1].content).toBe(messages[0].text)
+    mockStream(event('A complete reply.'))
+    await streamReply(request({ locale: 'en', replyMode }))
+    const body = JSON.parse(vi.mocked(fetch).mock.calls[0][1]!.body as string)
+    expect(body.messages).toEqual(context)
+  })
+
+  it('keeps seventh-argument locale callers unchanged when eighth mode is omitted', () => {
+    for (const locale of ['zh-CN', 'en'] as const) {
+      expect(buildContext('lu', messages, memories, undefined, undefined, undefined, locale))
+        .toEqual(buildContext('lu', messages, memories, undefined, undefined, undefined, locale, undefined))
+    }
+  })
+
   it.each(REPLY_MODES)('sends the selected %s prompt and overrides only chat length', async replyMode => {
     const profile = { ...defaultOnboardingProfile('lu'), chatLength: replyMode === 'brief' ? 'long' as const : 'short' as const, blockedTopics: '工作', safeWord: '红灯', supportStyle: 'comfort' as const }
     mockStream(event('好'))
@@ -314,6 +342,7 @@ describe('bounded local context and confirmed memory', () => {
       { id: 204, from: 'character', text: 'sending-secret', time: '', status: 'sending' },
     )
     const context = buildContext('lu', history, [])
+    expect(context.filter(item => item.role === 'system')).toHaveLength(1)
     expect(context.slice(1).reduce((sum, item) => sum + item.content.length, 0)).toBeLessThanOrEqual(6000)
     expect(context.length).toBeLessThanOrEqual(13)
     // The reconciled single system message includes safety, onboarding defaults and excerpts.

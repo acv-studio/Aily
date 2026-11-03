@@ -4,7 +4,9 @@ import type { CharacterId } from './data'
 import { assessAssistantOutput, assessUserInput, localSafeReply, MAX_SAFETY_TEXT, SAFETY_SYSTEM_BOUNDARIES } from './safety'
 import { adultAuthorizationAllowed, defaultOnboardingProfile, normalizeOnboardingProfile, type OnboardingProfile } from './onboarding'
 import { canRecall, semanticScore, type ConversationSummary, type MemoryPolicy } from './longMemory'
+import { getRelationship } from './relationship'
 import { normalizeReplyMode, REPLY_MODE_PROMPTS, type ReplyMode } from './replyModes'
+import { getRelationship } from './relationship'
 
 export type ChatMessage = {
   id: number
@@ -270,7 +272,7 @@ export async function streamReply(request: StreamRequest) {
       if (!payload.choices.length && payload.usage) return
       const choice = payload.choices[0]
       if (!choice || !choice.delta || typeof choice.delta !== 'object') throw new Error(t('DeepSeek 返回格式错误（缺少 delta）'))
-      if (request.requireCompletion && choice.finish_reason && choice.finish_reason !== 'stop') throw new Error('模型输出未完整结束，请重试')
+      if (request.requireCompletion && choice.finish_reason && choice.finish_reason !== 'stop') throw new Error(t('模型输出未完整结束，请重试'))
       if (choice.finish_reason === 'stop') stopped = true
       const delta = choice.delta.content
       if (delta !== undefined && delta !== null && typeof delta !== 'string') throw new Error(t('DeepSeek 返回格式错误（content）'))
@@ -305,7 +307,7 @@ export async function streamReply(request: StreamRequest) {
         break
       }
     }
-    if (request.requireCompletion && !finished && !stopped) throw new Error('模型响应中断，请重试')
+    if (request.requireCompletion && !finished && !stopped) throw new Error(t('模型响应中断，请重试'))
     if (!output.trim()) throw new Error(t('DeepSeek 返回空响应，请重试'))
     if (run.signal.aborted) throw run.signal.reason
     // Preserve onDelta's append-only API, but emit only the complete assessed text.
@@ -329,7 +331,7 @@ async function demoReply(request: StreamRequest) {
   const recall = memory ? localized('你确认过「{memory}」，我记得。', { memory: memory.text.slice(0, 120) }) : ''
   const stomach = /胃|\bstomach\b|\btummy\b/i.test(latest)
   const profile = normalizeOnboardingProfile(request.onboardingProfile)
-  const exclusiveName = profile?.familiarNames === true && getRelationship(request.characterId, request.memories, request.memoryPolicy).stage.threshold >= 9 ? profile.exclusiveNames?.[request.characterId] : undefined
+  const exclusiveName = selectedExclusiveName(request.characterId, request.memories, profile, request.memoryPolicy)
   const naming = profile ? localized('{userName}，{characterName}在这里。', { userName: exclusiveName || profile.userName, characterName: profile.characterId === request.characterId ? profile.characterName : defaultOnboardingProfile(request.characterId).characterName }) : ''
   const replies: Record<CharacterId, string> = {
     lu: localized(stomach ? '先吃点热的，好不好？不想说也没关系，我陪你。' : '我在。慢慢说，先让自己歇一会儿。'),
@@ -341,19 +343,20 @@ async function demoReply(request: StreamRequest) {
   const mode = normalizeReplyMode(request.replyMode)
   const comfort = profile?.supportStyle === 'comfort'
   const base = `${recall}${comfort ? localized('辛苦了。先歇一会儿，你不用独自扛着。') : replies[request.characterId]}`
-  const deep = `${base}\n\n${comfort ? '不必马上把一切处理好，也不用为了别人压下自己的感受。此刻可以先照顾自己，等你愿意时再一起想下一步。' : '你可以按自己的节奏，把发生的事和当时的感受分开说。我会先听，不急着下结论或替你决定；如果你需要建议，我们再一起梳理。'}\n\n${comfort ? '现在怎样的陪伴，会让你轻松一点？' : '这件事里，最希望被理解的是哪一部分？'}`
+  const deep = `${base}\n\n${localized(comfort ? '不必马上把一切处理好，也不用为了别人压下自己的感受。此刻可以先照顾自己，等你愿意时再一起想下一步。' : '你可以按自己的节奏，把发生的事和当时的感受分开说。我会先听，不急着下结论或替你决定；如果你需要建议，我们再一起梳理。')}\n\n${localized(comfort ? '现在怎样的陪伴，会让你轻松一点？' : '这件事里，最希望被理解的是哪一部分？')}`
   const storyLines: Record<CharacterId, string> = {
     lu: '陆听澜在窗边留了一张空椅，轻声说：',
     chen: '陈奕恒收起玩笑，把旁边的座位留空，说：',
     gu: '顾辰泽停在尊重彼此距离的位置，平静地说：',
   }
-  const story = `【虚构场景 · 不记录剧情进度或新增记忆】窗外落着细雨，屋里的灯光柔和。${storyLines[request.characterId]}“${comfort ? '辛苦了。这里不需要你逞强；愿意的话，就休息一会儿。' : '我先听。愿意说多少、要不要继续，都由你决定。'}”\n灯光安静地亮着，场景停在这里，等你选择是否继续这段虚构对话。`
+  const story = `${localized('【虚构场景 · 不记录剧情进度或新增记忆】窗外落着细雨，屋里的灯光柔和。')}${localized(storyLines[request.characterId])}“${localized(comfort ? '辛苦了。这里不需要你逞强；愿意的话，就休息一会儿。' : '我先听。愿意说多少、要不要继续，都由你决定。')}”\n${localized('灯光安静地亮着，场景停在这里，等你选择是否继续这段虚构对话。')}`
   // Boundaries win before mode, comfort copy or recalled text; never quote the triggering input.
   const answer = stopped ? localized('好，已停止。我们可以换个话题，或先安静一会儿。') : blocked ? localized('我们不聊这个禁区话题。想换个话题，还是安静一会儿？') : mode === 'story' ? story : mode === 'deep' ? deep : base
   try {
-    // Recalled memories are user-controlled data and can also contaminate a demo.
+    // Assess the entire localized demo, including user-controlled names and recall.
     const output = `${localized('【本地演示回复 · 非 AI 生成】')}${naming}${answer}`
     const outputSafety = assessAssistantOutput(output)
+    if (outputSafety) request.onLocalSafety?.()
     const safeOutput = outputSafety ? localSafeReply(outputSafety, latest, request.locale) : output
     for (const part of safeOutput.match(/[\s\S]{1,4}/gu) || []) {
       await abortable(new Promise<void>(resolve => setTimeout(resolve, 20)), run.signal)
