@@ -6,7 +6,7 @@ afterEach(() => { cleanup(); localStorage.clear() })
 const proceed = () => fireEvent.click(screen.getByRole('button', { name: '继续' }))
 function start() {
   const finish = vi.fn().mockResolvedValue(undefined)
-  render(<Onboarding selected="lu" setSelected={vi.fn()} finish={finish} apiKey="" setApiKey={vi.fn()}/> )
+  render(<Onboarding selected="lu" setSelected={vi.fn()} finish={finish} apiKey="" setApiKey={vi.fn()} onSafetyAccepted={vi.fn()}/> )
   const encounter = screen.getByRole('button', { name: /遇见 TA/ })
   expect(encounter).toBeDisabled()
   fireEvent.click(screen.getByLabelText('我已年满 18 周岁'))

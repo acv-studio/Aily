@@ -27,7 +27,7 @@ describe('Aily core journey', () => {
     expect(screen.getByText(/第 1 \/ 9 步 · 初遇/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /遇见 TA/ })).toBeDisabled()
     expect(screen.getByText(/本机优先保存，外部模型另有传输/)).toBeInTheDocument()
-    expect(screen.getByText(/记录保存在当前设备/)).toBeInTheDocument()
+    expect(screen.getByText(/聊天与附件保存在本机/)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /去找他/ })).not.toBeInTheDocument()
     expect((await loadLocalData()).settings.onboarded).not.toBe(true)
   })

@@ -6,7 +6,7 @@ const evidence = 'docs/evidence/character-splash'
 await mkdir(evidence, { recursive: true })
 const browser = await chromium.launch()
 try {
-  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, colorScheme: 'dark', reducedMotion: 'reduce', timezoneId: 'Asia/Shanghai' })
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, colorScheme: 'dark', reducedMotion: 'reduce', timezoneId: 'Asia/Shanghai', locale: 'zh-CN' })
   const page = await context.newPage()
   const errors = []
   page.on('pageerror', error => errors.push(error.message))
@@ -81,6 +81,16 @@ try {
     await page.getByRole('button', { name: '跳过，进入消息' }).waitFor()
     await page.clock.runFor(15_001)
     await page.getByRole('button', { name: '消息', exact: true }).waitFor()
+    await page.getByRole('button', { name: '我的', exact: true }).click()
+    await page.getByLabel('界面语言 / Interface language').selectOption('en')
+    await page.reload()
+    await page.getByRole('button', { name: 'Continue chatting with Gu Chenze' }).waitFor()
+    assert.equal(await page.getByText('Waiting here for you', { exact: true }).count(), 1)
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.screenshot({ path: `${evidence}/after-return-en.png`, fullPage: true })
+    await page.setViewportSize({ width: 320, height: 740 })
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true)
+    await page.screenshot({ path: `${evidence}/after-return-en-320.png`, fullPage: true })
   }
   assert.deepEqual(errors, [])
   console.log(before ? 'Captured real baseline return and profile, 390x844 dark, evening.' : 'Passed first-entry skip, return splash, character chat, primary persistence, fixed/static mode, reduced motion, swipe, disabled splash, 15s timeout and 320px layout.')

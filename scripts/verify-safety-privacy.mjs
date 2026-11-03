@@ -2,15 +2,16 @@ import { chromium } from 'playwright'
 import { mkdir } from 'node:fs/promises'
 import assert from 'node:assert/strict'
 const before = process.argv.includes('--before')
-const evidence = 'docs/evidence/safety-privacy'
+const evidence = process.env.AILY_EVIDENCE_DIR || 'docs/evidence/safety-privacy'
+const url = process.env.AILY_URL || 'http://127.0.0.1:4293/'
 await mkdir(evidence, { recursive: true })
 const browser = await chromium.launch()
 try {
-  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, colorScheme: 'dark', reducedMotion: 'reduce', timezoneId: 'Asia/Shanghai' })
+  const context = await browser.newContext({ locale: 'zh-CN', viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, colorScheme: 'dark', reducedMotion: 'reduce', timezoneId: 'Asia/Shanghai' })
   const page = await context.newPage()
   const errors = []
   page.on('pageerror', error => errors.push(error.message))
-  await page.goto('http://127.0.0.1:4293/')
+  await page.goto(url)
   await page.getByRole('button', { name: /遇见 TA/ }).waitFor()
   await page.screenshot({ path: `${evidence}/${before ? 'before' : 'after'}-welcome.png`, fullPage: true })
   if (!before) {
@@ -19,6 +20,11 @@ try {
   }
   await page.getByRole('button', { name: /遇见 TA/ }).click()
   await page.getByRole('button', { name: /开始我们的故事/ }).click()
+  // Preserve the full nine-step onboarding introduced before the safety gate.
+  for (let step = 2; step <= 6; step++) await page.getByRole('button', { name: '继续', exact: true }).click()
+  await page.getByRole('button', { name: '发送试聊', exact: true }).click()
+  await page.getByRole('button', { name: '称呼没问题，继续', exact: true }).click()
+  await page.getByRole('button', { name: '完成引导', exact: true }).click()
   await page.getByRole('button', { name: '我的', exact: true }).click()
   await page.getByText('我的 Aily', { exact: true }).waitFor()
   await page.screenshot({ path: `${evidence}/${before ? 'before' : 'after'}-profile.png`, fullPage: true })
@@ -43,7 +49,7 @@ try {
     await page.getByRole('button', { name: '删除本机使用资料', exact: true }).click()
     await page.getByLabel('输入“删除”确认').fill('删除')
     const other = await context.newPage()
-    await other.goto('http://127.0.0.1:4293/')
+    await other.goto(url)
     await other.getByRole('button', { name: '我的', exact: true }).waitFor()
     await page.getByRole('button', { name: '永久删除并退出', exact: true }).click()
     await page.getByRole('alert').filter({ hasText: '请关闭其他 Aily' }).waitFor()

@@ -1,5 +1,6 @@
 import { useEffect, useRef, type CSSProperties, type TouchEvent } from 'react'
 import type { Character } from './data'
+import { useI18n } from './i18n'
 import './characterSplash.css'
 
 interface CharacterSplashProps {
@@ -30,6 +31,7 @@ export default function CharacterSplash({
   onChat,
   onHome,
 }: CharacterSplashProps) {
+  const { t } = useI18n()
   const skipRef = useRef<HTMLButtonElement>(null)
   const callbacks = useRef({ onChat, onHome })
   const timeout = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -113,7 +115,7 @@ export default function CharacterSplash({
     <section
       className={`character-splash character-splash--${activity.scene}${staticScene ? ' character-splash--static' : ''}`}
       style={{ '--splash-accent': character.accent } as CSSProperties}
-      aria-label={`${character.name}的 AI 角色场景`}
+      aria-label={t('{name}的 AI 角色场景', { name: t(character.name) })}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
       onTouchCancel={() => { touchStart.current = null }}
@@ -136,46 +138,46 @@ export default function CharacterSplash({
       </div>
 
       <header className="character-splash__header">
-        <span className="character-splash__brand"><span aria-hidden="true">✦</span> Aily</span>
+        <span className="character-splash__brand"><span aria-hidden="true">✦</span> {t('Aily')}</span>
         <button ref={skipRef} className="character-splash__skip" type="button" onClick={() => leave('home')}>
-          跳过，进入消息 <span aria-hidden="true">↗</span>
+          {t('跳过，进入消息')} <span aria-hidden="true">↗</span>
         </button>
       </header>
 
       <main className="character-splash__content">
-        <p className="character-splash__scene-label"><span aria-hidden="true" />{sceneLabels[activity.scene]}</p>
-        <p className="character-splash__disclosure">AI 角色 · 本机日程演示</p>
+        <p className="character-splash__scene-label"><span aria-hidden="true" />{t(sceneLabels[activity.scene])}</p>
+        <p className="character-splash__disclosure">{t('AI 角色 · 本机日程演示')}</p>
 
         <button
           type="button"
           className="character-splash__character"
-          aria-label={`与${character.name}继续聊天`}
+          aria-label={t('与{name}继续聊天', { name: t(character.name) })}
           onClick={() => leave('chat')}
         >
           <span className="character-splash__portrait" aria-hidden="true">
             <span className="character-splash__portrait-orbit" />
             <span className="character-splash__shoulders" />
-            <span className="character-splash__avatar">{character.avatar || character.name.slice(0, 1)}</span>
+            <span className="character-splash__avatar">{t(character.avatar || character.name.slice(0, 1))}</span>
             <span className="character-splash__portrait-spark">✧</span>
           </span>
-          <span className="character-splash__chat-hint">轻触角色，继续聊天 <span aria-hidden="true">↗</span></span>
+          <span className="character-splash__chat-hint">{t('轻触角色，继续聊天')} <span aria-hidden="true">↗</span></span>
         </button>
 
         <div className="character-splash__copy">
-          <p className="character-splash__title">{character.title}</p>
-          <h1>{character.name}</h1>
-          <p className="character-splash__status"><span aria-hidden="true" />{activity.status}</p>
-          <blockquote><span aria-hidden="true" className="character-splash__quote-mark">“</span>{activity.quote}</blockquote>
+          <p className="character-splash__title">{t(character.title)}</p>
+          <h1>{t(character.name)}</h1>
+          <p className="character-splash__status"><span aria-hidden="true" />{t(activity.status)}</p>
+          <blockquote><span aria-hidden="true" className="character-splash__quote-mark">“</span>{t(activity.quote)}</blockquote>
         </div>
       </main>
 
       <footer className="character-splash__footer">
         <button className="character-splash__enter" type="button" onClick={() => leave('home')}>
           <span className="character-splash__chevron" aria-hidden="true">⌃</span>
-          <span>上滑进入消息</span>
+          <span>{t('上滑进入消息')}</span>
         </button>
-        <p className="character-splash__timeout">无需等待 · 15 秒后自动进入消息</p>
-        <p className="character-splash__privacy">虚构 AI 场景，状态由本机演示日程生成<br />不代表真实人物的生活或活动</p>
+        <p className="character-splash__timeout">{t('无需等待 · 15 秒后自动进入消息')}</p>
+        <p className="character-splash__privacy">{t('虚构 AI 场景，状态由本机演示日程生成')}<br />{t('不代表真实人物的生活或活动')}</p>
       </footer>
     </section>
   )

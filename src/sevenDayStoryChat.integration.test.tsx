@@ -7,7 +7,8 @@ import { streamReply } from './chatService'
 vi.mock('./chatService', async () => ({ ...await vi.importActual('./chatService'), streamReply: vi.fn() }))
 beforeEach(async () => {
   localStorage.clear(); sessionStorage.clear(); await db.delete(); await db.open()
-  acceptSafetyConsent()
+  // Existing adult-consented user fixture; consent gating has separate coverage.
+  localStorage.setItem('aily-safety-consent-v1', 'adult-ai-privacy-accepted')
   await db.settings.bulkPut([{ key: 'onboarded', value: true }, { key: 'selected', value: 'lu' }])
   Element.prototype.scrollIntoView = vi.fn()
 })

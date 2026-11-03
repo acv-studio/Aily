@@ -1,11 +1,12 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import CharacterSplash from './CharacterSplash'
 import { characters } from './data'
 import { getCharacterActivity } from './characterPresence'
+import { setLocale } from './i18n'
 
 beforeEach(() => { vi.useFakeTimers(); vi.spyOn(document, 'hidden', 'get').mockReturnValue(false) })
-afterEach(() => { cleanup(); vi.useRealTimers(); vi.restoreAllMocks() })
+afterEach(() => { cleanup(); setLocale('zh-CN'); vi.useRealTimers(); vi.restoreAllMocks() })
 const props = () => ({ character: characters[0], activity: getCharacterActivity('lu'), staticScene: false, onChat: vi.fn(), onHome: vi.fn() })
 describe('splash controls and bounded lifetime', () => {
   it('focuses skip and allows immediate character navigation', () => {
@@ -49,6 +50,19 @@ describe('splash controls and bounded lifetime', () => {
     swipe(105, 270); swipe(200, 230)
     expect(options.onHome).not.toHaveBeenCalled()
     swipe(105, 200)
+    expect(options.onHome).toHaveBeenCalledTimes(1)
+  })
+  it('localizes names, activity and controls without resetting the display deadline', () => {
+    setLocale('en')
+    const options = { ...props(), activity: getCharacterActivity('lu', new Date(2026, 10, 3, 19)) }
+    render(<CharacterSplash {...options} />)
+    expect(screen.getByRole('button', { name: 'Continue chatting with Lu Tinglan' })).toBeInTheDocument()
+    expect(screen.getByText('Trying a new recipe')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Skip to messages' })).toHaveFocus()
+    vi.advanceTimersByTime(10_000)
+    act(() => setLocale('zh-CN'))
+    expect(screen.getByRole('button', { name: '与陆听澜继续聊天' })).toBeInTheDocument()
+    vi.advanceTimersByTime(5_000)
     expect(options.onHome).toHaveBeenCalledTimes(1)
   })
   it('supports Escape and cleans timers on unmount', () => {

@@ -6,9 +6,10 @@ import { defaultSplashSettings, saveSplashSettings } from './characterPresence'
 import * as presence from './characterPresence'
 import { defaultOnboardingProfile } from './onboarding'
 import { acceptSafetyConsent } from './privacy'
+import { setLocale } from './i18n'
 
 beforeEach(async () => { localStorage.clear(); sessionStorage.clear(); await db.delete(); await db.open(); vi.setSystemTime(new Date(2026, 10, 3, 19)); Element.prototype.scrollIntoView = vi.fn() })
-afterEach(() => { cleanup(); vi.useRealTimers(); vi.restoreAllMocks() })
+afterEach(() => { cleanup(); setLocale('zh-CN'); vi.useRealTimers(); vi.restoreAllMocks() })
 async function returning() { acceptSafetyConsent(); await saveSetting('onboarded', true); await saveSetting('selected', 'lu') }
 
 describe('character splash entry and settings', () => {
@@ -71,6 +72,16 @@ describe('character splash entry and settings', () => {
     expect(screen.queryByRole('button', { name: '跳过，进入消息' })).not.toBeInTheDocument()
     expect(screen.getByText('在这里等你')).toBeInTheDocument()
     expect(screen.getAllByText('陈奕恒')).toHaveLength(2)
+  })
+  it('lets English users configure the primary and read save feedback', async () => {
+    await returning(); setLocale('en'); render(<App />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Skip to messages' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Profile' }))
+    expect(screen.getByRole('heading', { name: 'Main companion & splash screen' })).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('Main companion'), { target: { value: 'gu' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save companion & splash screen' }))
+    expect(await screen.findByRole('status')).toHaveTextContent('Companion and splash screen settings saved')
+    expect((await presence.loadSplashSettings('lu')).primary).toBe('gu')
   })
   it('safely skips splash and time personalization when preferences cannot be read', async () => {
     await returning()
