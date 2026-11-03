@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 import { t, useI18n } from './i18n'
-import LanguageSettings from './LanguageSettings'
 import { flushSync } from 'react-dom'
 import SafetyPrivacyPanel, { SafetyConsent } from './SafetyPrivacyPanel'
 import { acceptSafetyConsent, acquireUsageLease, deleteLocalProfile, hasSafetyConsent } from './privacy'

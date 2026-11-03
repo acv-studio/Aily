@@ -322,7 +322,7 @@ export default function useLocalChat() {
     catch { setError('浏览器无法保存配置，本次配置仅暂留内存。') }
   }
   return { prepareForDeletion: async () => { if (active.current || mutationCount.current || memoryLock.current) throw new Error('请先停止回复或等待保存'); deleting.current = true; try { await proactiveTask.current; await mutations.current; await Promise.all([...pendingWrites.current]); await organization.current } catch (failure) { deleting.current = false; throw failure } }, beforeDataChange: async () => { if (active.current || mutationCount.current) throw new Error('请先停止回复或等待保存'); await organization.current }, summaries, policies, changePolicy: tracked(changePolicy), approveProposal: tracked(approveProposal), temporary, toggleTemporary, chatMessages: temporary ? temporaryConversations[selected] : conversations[selected], ready, loadError, reload: load, onboarded, finishOnboarding, selected, setSelected, conversations, setConversations, memories, setMemories, draft, setDraft, replying, error, apiKey, endpoint, model,
-    onboardingProfile, updateOnboarding,
+    onboardingProfile, updateOnboarding, replyMode: currentReplyMode(selected), setReplyMode: tracked(changeReplyMode), modeSaving,
     setApiKey: (value: string) => { setKey(value); writePreference('sessionStorage', 'aily-api-key', value) },
     setEndpoint: (value: string) => { setEndpointState(value); writePreference('localStorage', 'aily-api-endpoint', value) }, setModel: (value: string) => { setModelState(value); writePreference('localStorage', 'aily-api-model', value) },
     replyMode: currentReplyMode(selected), setReplyMode: tracked(changeReplyMode), modeSaving,
