@@ -194,7 +194,8 @@ export default function useLocalChat() {
     const target = options.retryId === undefined ? undefined : original.find(message => message.id === options.retryId && message.from === 'user' && !message.withdrawn)
     if (options.retryId !== undefined && !target) return
     if (!target && !draft.trim() && !options.attachment) return
-    const user: ChatMessage = target ? { ...target, status: 'sent' } : { id: nextId(original.reduce((maximum, message) => Math.max(maximum, message.id), 0)), from: 'user', text: draft.trim(), time: new Date().toLocaleTimeString('zh-CN'), createdAt: new Date().toISOString(), status: 'sent', replyToId: options.replyToId, kind: options.kind || 'text', attachment: options.attachment }
+    const replyToId = original.find(message => message.id === options.replyToId && !message.withdrawn && message.status !== 'sending')?.id
+    const user: ChatMessage = target ? { ...target, status: 'sent' } : { id: nextId(original.reduce((maximum, message) => Math.max(maximum, message.id), 0)), from: 'user', text: draft.trim(), time: new Date().toLocaleTimeString('zh-CN'), createdAt: new Date().toISOString(), status: 'sent', replyToId, kind: options.kind || 'text', attachment: options.attachment }
     // Retrying operates on exactly the original user turn; it never duplicates that turn.
     let records = target ? original.map(message => message.id === target.id ? user : message) : [...original, user]
     const controller = new AbortController(); active.current = controller; setReplying(true); setError('')
@@ -211,7 +212,7 @@ export default function useLocalChat() {
       const forgotten = new Set(isTemporary ? [] : await forgottenSourceIds(role))
       let lastUserForgotten = false
       const context = history.filter(message => {
-        if (message.from === 'user') lastUserForgotten = forgotten.has(message.id)
+        if (message.from === 'user') lastUserForgotten = !!message.withdrawn || forgotten.has(message.id)
         return !forgotten.has(message.id) && !lastUserForgotten
       })
       await streamReply({ characterId: role, onboardingProfile: onboardingProfileRef.current, messages: context, memories: isTemporary ? [] : await db.memories.toArray(), summaries: isTemporary ? [] : await loadSummaries(role), memoryPolicy: await loadMemoryPolicy(role), apiKey, endpoint, model, signal: controller.signal, onDelta: delta => { content += delta; apply(role, [...records, { ...assistant, text: content }]) } })
@@ -236,6 +237,7 @@ export default function useLocalChat() {
     await organization.current
     if (temporaryRef.current || role !== selectedRef.current) throw new Error('会话已切换，记忆未保存')
     if ((await loadMemoryPolicy(role)).disabledCategories.includes(memory.category)) throw new Error('此类记忆已关闭')
+    if (memory.sourceMessageId !== undefined && !conversationsRef.current[role].some(message => message.id === memory.sourceMessageId && !message.withdrawn)) throw new Error('原消息已撤回或不可用，记忆未保存')
     if (!memory.text.trim() || memory.text.trim().length > 1000) throw new Error('记忆内容需为 1–1000 字')
     const item: ConfirmedMemory = { ...memory, text: memory.text.trim(), id: crypto.randomUUID(), characterId: selectedRef.current, confirmedAt: new Date().toISOString(), enabled: true, state: 'confirmed', importance: 3, originalText: conversationsRef.current[selectedRef.current].find(message => message.id === memory.sourceMessageId)?.text }
     const proposal = memoriesRef.current.find(existing => existing.characterId === item.characterId && existing.sourceMessageId === item.sourceMessageId && item.sourceMessageId !== undefined && existing.state === 'pending')
