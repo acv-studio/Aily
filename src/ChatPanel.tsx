@@ -17,6 +17,9 @@ export interface ChatPanelProps {
   stop: () => void
   replying: boolean
   error: string
+  temporary?: boolean
+  toggleTemporary?: () => void
+  pendingCount?: number
   demo: boolean
   openGame: () => void
   openStory: () => void
@@ -131,11 +134,12 @@ export default function ChatPanel(props: ChatPanelProps) {
   }
   return <main className="chat-screen">
     <header className="chat-header glass">
-      <button className="icon-button" aria-label="返回消息" onClick={props.close}><ArrowLeft /></button>
+      <button className="icon-button" aria-label="返回消息" disabled={replying} onClick={props.close}><ArrowLeft /></button>
       <span className="avatar" style={{ '--accent': character.accent } as React.CSSProperties}>{character.avatar}</span>
-      <div><strong>{character.name}<small>AI 角色 · {props.demo ? '演示模式' : 'DeepSeek'}</small></strong><span>{replying ? '正在回复…' : '聊天与记忆仅存本机'}</span></div>
+      <div><strong>{character.name}<small>AI 角色 · {props.demo ? '演示模式' : 'DeepSeek'}</small></strong><span>{replying ? '正在回复…' : props.temporary ? '临时会话 · 仅内存' : '聊天与记忆仅存本机'}</span></div>
       <button className="icon-button" aria-label="搜索消息" onClick={() => setSearchOpen(!searchOpen)}><Search /></button>
     </header>
+    {props.toggleTemporary && <div className="chat-notice"><span>{props.temporary ? '临时会话：不落盘、不提取或引用记忆；退出模式后清除。请求仍发送到所配置的模型服务。' : `自动提议记忆需你确认${props.pendingCount ? ` · ${props.pendingCount} 条待确认，请到回忆页查看` : ''}`}</span><button disabled={replying} onClick={() => { setMemory(undefined); setQuote(undefined); setSearch(''); setAttachment(undefined); props.toggleTemporary?.() }}>{props.temporary ? '结束临时会话' : '临时会话'}</button></div>}
     {searchOpen && <div className="chat-search"><input aria-label="搜索聊天记录" placeholder="搜索当前角色的聊天记录" value={search} onChange={event => setSearch(event.target.value)} /><button onClick={() => { setSearch(''); setSearchOpen(false) }}>关闭</button></div>}
     <section className="messages" aria-label="聊天记录" aria-live="polite">
       {messages.length === 0 && <p className="chat-empty">从今天开始认识彼此。先说声你好吧。</p>}
@@ -154,7 +158,7 @@ export default function ChatPanel(props: ChatPanelProps) {
           <time>{message.createdAt ? new Date(message.createdAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }) : message.time}</time>
           {!message.withdrawn && message.status !== 'sending' && <div className="message-actions">
             <button aria-label={`引用消息 ${message.id}`} onClick={() => setQuote(message.id)}><Quote size={12} />引用</button>
-            {message.text && <button onClick={() => setMemory({ text: message.text, category: 'profile', sourceMessageId: message.id })}>记住这条</button>}
+            {message.text && !props.temporary && <button onClick={() => setMemory({ text: message.text, category: 'profile', sourceMessageId: message.id })}>记住这条</button>}
             {message.from === 'user' && <button onClick={() => props.withdraw(message.id)}>撤回</button>}
           </div>}
           {message.status === 'failed' && message.from === 'user' && <button className="retry" disabled={replying} onClick={() => { const consent = message.kind === 'image' && window.confirm('重试将把这张图片再次发送给设置中配置的模型服务，是否同意？'); if (message.kind !== 'image' || consent) void props.send({ retryId: message.id, imageConsent: consent }).catch(() => { /* Parent exposes retry errors. */ }) }}>回复未完成 · 重试</button>}

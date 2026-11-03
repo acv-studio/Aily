@@ -1,0 +1,42 @@
+.gift-store { color: #f7f4f2; }
+.gift-store h2 { font-size: 17px; margin: 22px 0 12px; }
+.demo-banner { border: 1px solid #74639b; border-radius: 18px; padding: 14px; background: #2d2442; }
+.demo-banner strong { color: #e7dbff; font-size: 14px; }
+.demo-banner p, .gift-description, .demo-ledger > p { font-size: 12px; line-height: 1.65; color: #c4c9db; margin: 8px 0; }
+.demo-wallet { display: flex; flex-direction: column; gap: 6px; padding: 18px; border-radius: 22px; margin-top: 14px; }
+.demo-wallet > span { font-size: 12px; color: #c4c9db; }
+.demo-wallet strong { font-size: 32px; color: #b1efdd; }
+.demo-wallet small { font-size: 11px; color: #b8bfd2; }
+.recharge-packs, .gift-catalog { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.recharge-packs button, .gift-catalog button { min-height: 70px; padding: 12px 5px; border: 1px solid #4a435f; border-radius: 16px; background: #242538; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
+.recharge-packs button strong { color: #cfc0ff; font-size: 18px; }
+.recharge-packs button span, .gift-catalog button > span:last-child { font-size: 11px; color: #c5cadb; }
+.recipient-label { display: flex; align-items: center; justify-content: space-between; font-size: 13px; margin: 12px 0; }
+.recipient-label select { width: 65%; padding: 11px; border: 1px solid #52566d; border-radius: 12px; background: #202436; color: #f7f4f2; font: inherit; }
+.gift-catalog button[aria-pressed="true"] { border-color: #c0a6ff; background: #3a2e50; box-shadow: inset 0 0 0 1px #c0a6ff; }
+.gift-catalog strong { font-size: 13px; }
+.gift-emoji { font-size: 32px; }
+.gift-quantity { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 14px 0; font-size: 13px; }
+.gift-quantity label { display: flex; align-items: center; gap: 10px; }
+.gift-quantity input { width: 65px; padding: 10px 7px; border: 1px solid #52566d; border-radius: 10px; background: #202436; color: #f7f4f2; }
+.gift-quantity strong { text-align: right; }
+.gift-store button:disabled { opacity: .5; cursor: not-allowed; }
+.gift-store button:focus-visible, .gift-store input:focus-visible, .gift-store select:focus-visible, .store-confirm:focus-visible { outline: 2px solid #8ee7c4; outline-offset: 3px; }
+.store-confirm { margin-top: 16px; padding: 16px; border-radius: 18px; }
+.store-confirm h2 { margin-top: 0; }
+.store-confirm p { font-size: 13px; line-height: 1.6; }
+.store-confirm > div { display: flex; gap: 10px; }
+.store-confirm button, .store-error button, .demo-ledger > button { min-height: 44px; border-radius: 12px; padding: 10px 14px; background: #34324b; font-size: 12px; }
+.store-confirm button:last-child { background: #bba5fb; color: #151321; flex: 1; font-weight: 700; }
+.store-error { background: #362232; color: #ffc2cc; padding: 12px; margin-top: 12px; border-radius: 12px; font-size: 13px; line-height: 1.6; }
+.store-error button { display: block; margin-top: 8px; }
+.gift-feedback { padding: 16px; border: 1px solid #44766a; background: #183630; color: #c8f3e8; border-radius: 18px; margin-top: 16px; font-size: 14px; line-height: 1.65; }
+.gift-feedback p { margin: 0; }
+.gift-feedback small { display: block; font-size: 11px; color: #b3d0c8; margin-top: 8px; }
+.demo-ledger ul { list-style: none; margin: 0; padding: 0; }
+.demo-ledger li { display: flex; align-items: center; gap: 12px; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #33374b; font-size: 12px; }
+.demo-ledger li > div { min-width: 0; }
+.demo-ledger li strong { display: block; overflow-wrap: anywhere; }
+.demo-ledger li time { display: block; color: #b3bacd; font-size: 10px; margin-top: 5px; }
+.demo-ledger li > span { color: #b1efdd; white-space: nowrap; }
+@media (prefers-reduced-motion: reduce) { .gift-store * { scroll-behavior: auto; } }
