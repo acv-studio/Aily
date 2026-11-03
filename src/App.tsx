@@ -1,99 +1,40 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useState } from 'react'
 import { ArrowLeft, Bell, BookHeart, ChevronRight, CircleUserRound, Heart, Home, Image, MemoryStick, MessageCircle, MoreHorizontal, Plus, Send, ShieldCheck, ShoppingBag, Sparkles, Volume2 } from 'lucide-react'
-import { characters, memories, moments, starterMessages, type CharacterId } from './data'
-import { streamReply, testDeepSeekConnection, type ChatMessage as Message, type ConfirmedMemory } from './chatService'
-import { clearAllData, deleteMemory, exportData, importData, loadLocalData, saveConversation, saveMemory as persistMemory, saveSetting, updateMemory } from './db'
+import { characters, moments, type CharacterId } from './data'
+import { testDeepSeekConnection } from './chatService'
+import { clearAllData, exportData, importData, loadLocalData } from './db'
 import RockPaperScissors from './RockPaperScissors'
 import InteractiveStory from './InteractiveStory'
 import { decryptBackup, encryptBackup } from './cryptoBackup'
-import { getRelationship } from './relationship'
+import ChatPanel from './ChatPanel'
+import MemoryPanel from './MemoryPanel'
+import useLocalChat from './useLocalChat'
 
 type Tab = 'home' | 'moments' | 'memories' | 'profile'
 
-const storageKey = 'aily-demo-state'
-function loadSaved() {
-  try { return JSON.parse(localStorage.getItem(storageKey) || '{}') } catch { return {} }
-}
-
 export default function App() {
-  const saved = useMemo(loadSaved, [])
-  const [onboarded, setOnboarded] = useState(Boolean(saved.onboarded))
-  const [selected, setSelected] = useState<CharacterId>(saved.selected || 'lu')
+  const chat = useLocalChat()
+  const { onboarded, selected, conversations, draft, setDraft, replying, error: chatError } = chat
   const [tab, setTab] = useState<Tab>('home')
   const [chatOpen, setChatOpen] = useState(false)
-  const [conversations, setConversations] = useState<Record<CharacterId, Message[]>>(saved.conversations || { lu: saved.messages || starterMessages as Message[], chen: starterMessages.slice(0, 2) as Message[], gu: starterMessages.slice(0, 2) as Message[] })
-  const [confirmedMemories, setConfirmedMemories] = useState<ConfirmedMemory[]>(saved.confirmedMemories || [])
-  const [draft, setDraft] = useState('')
-  const [replying, setReplying] = useState(false)
-  const [chatError, setChatError] = useState('')
   const [gameOpen, setGameOpen] = useState(false)
   const [storyOpen, setStoryOpen] = useState(false)
-  const [apiKey, setApiKeyState] = useState(() => sessionStorage.getItem('aily-api-key') || '')
-  const [apiEndpoint, setApiEndpoint] = useState(() => localStorage.getItem('aily-api-endpoint') || 'https://api.deepseek.com/chat/completions')
-  const [apiModel, setApiModel] = useState(() => localStorage.getItem('aily-api-model') || 'deepseek-chat')
-  const character = characters.find(c => c.id === selected) || characters[0]
-  const messages = conversations[selected] || []
-  const remembered = confirmedMemories.some(memory => memory.characterId === selected)
-
-  useEffect(() => {
-    loadLocalData().then(data => {
-      if (Object.keys(data.conversations).length) setConversations(current => ({ ...current, ...data.conversations }))
-      if (data.memories.length) setConfirmedMemories(data.memories)
-      if (typeof data.settings.onboarded === 'boolean') setOnboarded(data.settings.onboarded)
-      if (typeof data.settings.selected === 'string') setSelected(data.settings.selected as CharacterId)
-    }).catch(() => undefined)
-  }, [])
-
-  const persist = (extra: Record<string, unknown>) => localStorage.setItem(storageKey, JSON.stringify({ onboarded, selected, conversations, confirmedMemories, ...extra }))
-  const finishOnboarding = () => { setOnboarded(true); persist({ onboarded: true, selected }); void Promise.all([saveSetting('onboarded', true), saveSetting('selected', selected)]) }
-  const send = async (retryText?: string) => {
-    const text = (retryText || draft).trim(); if (!text || replying) return
-    const userMessage: Message = { id: Date.now(), from: 'user', text, time: '现在', status: 'sent' }
-    const next = retryText ? messages : [...messages, userMessage]
-    const assistantId = Date.now() + 1
-    const pending: Message = { id: assistantId, from: 'character', text: '', time: '现在', memory: text.includes('胃'), status: 'sending' }
-    const withPending = [...next, pending]
-    setDraft(''); setChatError(''); setReplying(true)
-    setConversations(current => ({ ...current, [selected]: withPending }))
-    let content = ''
-    try {
-      await streamReply({ characterId: selected, messages: next, memories: confirmedMemories, apiKey: apiKey || import.meta.env.VITE_DEEPSEEK_API_KEY, endpoint: apiEndpoint || import.meta.env.VITE_DEEPSEEK_ENDPOINT, model: apiModel || import.meta.env.VITE_DEEPSEEK_MODEL, onDelta: delta => { content += delta; setConversations(current => ({ ...current, [selected]: (current[selected] || []).map(item => item.id === assistantId ? { ...item, text: content } : item) })) } })
-      const completed = [...next, { ...pending, text: content, status: 'sent' as const }]
-      setConversations(current => ({ ...current, [selected]: completed })); persist({ conversations: { ...conversations, [selected]: completed } }); await saveConversation(selected, completed)
-    } catch (error) {
-      const failed = next.map(item => item.id === userMessage.id ? { ...item, status: 'failed' as const } : item)
-      setConversations(current => ({ ...current, [selected]: failed })); setChatError(error instanceof Error ? error.message : '回复失败，请稍后重试')
-    } finally { setReplying(false) }
-  }
-  const saveMemory = () => {
-    const memory: ConfirmedMemory = { id: crypto.randomUUID(), characterId: selected, text: '胃不舒服时先提醒我吃点热的', confirmedAt: new Date().toISOString() }
-    const updated = [...confirmedMemories.filter(item => item.characterId !== selected), memory]
-    setConfirmedMemories(updated); persist({ confirmedMemories: updated }); void persistMemory(memory)
-  }
-  const editConfirmedMemory = (id: string, text: string) => {
-    const clean = text.trim(); if (!clean) return
-    const updated = confirmedMemories.map(memory => memory.id === id ? { ...memory, text: clean } : memory)
-    setConfirmedMemories(updated); persist({ confirmedMemories: updated }); void updateMemory(id, clean)
-  }
-  const saveGameMemory = (text: string) => {
-    const memory: ConfirmedMemory = { id: crypto.randomUUID(), characterId: selected, text, confirmedAt: new Date().toISOString() }
-    const updated = [...confirmedMemories, memory]; setConfirmedMemories(updated); persist({ confirmedMemories: updated }); void persistMemory(memory)
-  }
-  const removeConfirmedMemory = (id: string) => {
-    const updated = confirmedMemories.filter(memory => memory.id !== id)
-    setConfirmedMemories(updated); persist({ confirmedMemories: updated }); void deleteMemory(id)
-  }
-
+  const character = characters.find(item => item.id === selected) || characters[0]
+  const messages = conversations[selected]
+  const setSelected = chat.setSelected
+  const finishOnboarding = chat.finishOnboarding
+  const saveGameMemory = (text: string) => { void chat.saveConfirmed({ text, category: 'relationship' }).catch(() => alert('回忆保存失败，请重试')) }
+  if (!chat.ready) return <main className="app-shell loading-screen"><p>{chat.loadError || '正在读取本机聊天与记忆…'}</p>{chat.loadError && <button onClick={chat.reload}>重试读取</button>}</main>
   if (!onboarded) return <Onboarding selected={selected} setSelected={setSelected} finish={finishOnboarding} />
-  if (chatOpen) return <><Chat character={character} messages={messages} draft={draft} setDraft={setDraft} send={send} close={() => setChatOpen(false)} remembered={remembered} saveMemory={saveMemory} replying={replying} error={chatError} openGame={()=>setGameOpen(true)} openStory={()=>setStoryOpen(true)} />{gameOpen&&<RockPaperScissors characterName={character.name} onComplete={saveGameMemory} onClose={()=>setGameOpen(false)}/>} {storyOpen&&<InteractiveStory characterName={character.name} onComplete={saveGameMemory} onClose={()=>setStoryOpen(false)}/>}</>
+  if (chatOpen) return <><ChatPanel character={character} messages={messages} draft={draft} setDraft={setDraft} send={chat.send} close={() => setChatOpen(false)} saveMemory={chat.saveConfirmed} withdraw={chat.withdraw} stop={chat.stop} replying={replying} error={chatError} demo={!chat.apiKey} openGame={() => setGameOpen(true)} openStory={() => setStoryOpen(true)} />{gameOpen && <RockPaperScissors characterName={character.name} onComplete={saveGameMemory} onClose={() => setGameOpen(false)} />}{storyOpen && <InteractiveStory characterName={character.name} onComplete={saveGameMemory} onClose={() => setStoryOpen(false)} />}</>
 
   return <main className="app-shell">
     <div className="ambient ambient-one" /><div className="ambient ambient-two" />
     <header className="topbar"><div><p className="eyebrow">晚上好，艳艳</p><h1>{tab === 'home' ? '有人一直记得你' : tab === 'moments' ? '他们的此刻' : tab === 'memories' ? '我们的回忆' : '我的 Aily'}</h1></div><button className="icon-button" aria-label="通知"><Bell size={20}/><i /></button></header>
-    {tab === 'home' && <HomeScreen selected={selected} select={setSelected} openChat={() => setChatOpen(true)} />}
+    {tab === 'home' && <HomeScreen selected={selected} select={setSelected} lastMessage={messages.filter(item => !item.withdrawn).at(-1)?.text || '还没有聊天记录，先打个招呼吧'} openChat={() => setChatOpen(true)} />}
     {tab === 'moments' && <MomentsScreen onChat={(text)=>{setSelected('lu');setDraft(text);setChatOpen(true)}} />}
-    {tab === 'memories' && <MemoriesScreen memories={confirmedMemories} selected={selected} editMemory={editConfirmedMemory} deleteMemory={removeConfirmedMemory} />}
-    {tab === 'profile' && <ProfileScreen apiKey={apiKey} endpoint={apiEndpoint} model={apiModel} setApiKey={value=>{setApiKeyState(value);if(value)sessionStorage.setItem('aily-api-key',value);else sessionStorage.removeItem('aily-api-key')}} setEndpoint={value=>{setApiEndpoint(value);localStorage.setItem('aily-api-endpoint',value)}} setModel={value=>{setApiModel(value);localStorage.setItem('aily-api-model',value)}} onImported={(data)=>{setConversations(current=>({...current,...data.conversations}));setConfirmedMemories(data.memories)}} onCleared={()=>{localStorage.removeItem(storageKey);setConversations({lu:[],chen:[],gu:[]});setConfirmedMemories([])}} />}
+    {tab === 'memories' && <MemoryPanel memories={chat.memories} selected={selected} onSave={chat.saveConfirmed} onUpdate={chat.editMemory} onDelete={chat.removeMemory} onClear={chat.clearMemories} />}
+    {tab === 'profile' && <ProfileScreen apiKey={chat.apiKey} endpoint={chat.endpoint} model={chat.model} setApiKey={chat.setApiKey} setEndpoint={chat.setEndpoint} setModel={chat.setModel} onImported={data => { chat.setConversations({ lu: [], chen: [], gu: [], ...data.conversations }); chat.setMemories(data.memories) }} onCleared={() => { chat.setConversations({ lu: [], chen: [], gu: [] }); chat.setMemories([]) }} />}
     <nav className="bottom-nav glass">
       <NavButton active={tab==='home'} icon={<MessageCircle/>} label="消息" onClick={()=>setTab('home')}/>
       <NavButton active={tab==='moments'} icon={<Sparkles/>} label="此刻" onClick={()=>setTab('moments')}/>
@@ -112,17 +53,12 @@ function Onboarding({selected,setSelected,finish}:{selected:CharacterId;setSelec
   </main>
 }
 
-function HomeScreen({selected,select,openChat}:{selected:CharacterId;select:(id:CharacterId)=>void;openChat:()=>void}) {
+function HomeScreen({selected,select,openChat,lastMessage}:{selected:CharacterId;select:(id:CharacterId)=>void;openChat:()=>void;lastMessage:string}) {
  const current=characters.find(c=>c.id===selected)!
- return <section className="screen home-screen"><article className="presence-card" style={{'--accent':current.accent} as React.CSSProperties}><div className="presence-art"><div className="moon"/><div className="portrait"><span>{current.avatar}</span></div><span className="online-dot"/></div><div className="presence-copy"><div><span className="status"><i/>{current.status}</span><h2>{current.name}</h2><p>“{current.quote}”</p></div><button className="talk-button" onClick={openChat}><MessageCircle size={20}/> 去找他</button></div></article><div className="section-title"><h3>最近消息</h3><button>全部</button></div><button className="conversation glass" onClick={openChat}><Avatar character={current}/><div><strong>{current.name}<small>AI</small></strong><p>那就好。答应你的庆祝，没忘。</p></div><time>22:09</time></button><div className="section-title"><h3>其他角色</h3><span>随时可以认识</span></div><div className="mini-characters">{characters.filter(c=>c.id!==selected).map(c=><button key={c.id} className="mini-card glass" onClick={()=>select(c.id)}><Avatar character={c}/><div><strong>{c.name}</strong><span>{c.status}</span></div><ChevronRight/></button>)}</div></section>
-}
-
-function Chat({character,messages,draft,setDraft,send,close,remembered,saveMemory,replying,error,openGame,openStory}:{character:typeof characters[0];messages:Message[];draft:string;setDraft:(v:string)=>void;send:(retryText?:string)=>void;close:()=>void;remembered:boolean;saveMemory:()=>void;replying:boolean;error:string;openGame:()=>void;openStory:()=>void}) {
- return <main className="chat-screen"><header className="chat-header glass"><button className="icon-button" onClick={close}><ArrowLeft/></button><Avatar character={character}/><div><strong>{character.name}<small>AI 角色</small></strong><span><i/> {replying?'正在输入…':`在线 · ${character.status}`}</span></div><button className="icon-button"><MoreHorizontal/></button></header><section className="messages"><div className="date-pill">今天 22:08</div>{messages.map(m=><div key={m.id} className={`message-row ${m.from==='user'?'mine':''}`}>{m.from!=='user'&&<Avatar character={character}/>}<div><div className={`bubble ${m.status==='sending'?'streaming':''}`}>{m.text || '···'}</div>{m.status==='failed'&&<button className="retry" onClick={()=>send(m.text)}>发送失败 · 点击重试</button>}{m.memory&&m.status!=='sending'&&<div className="memory-signal"><MemoryStick size={14}/><span>{remembered?'已记住：胃不舒服时先提醒吃饭':'这似乎是件重要的小事'}</span>{!remembered&&<button onClick={saveMemory}>记住</button>}</div>}</div></div>)}{error&&<p className="chat-error">{error} · 你的消息已保存在本机</p>}</section><div className="quick-replies"><button onClick={openStory}>⌁ 继续共同故事</button><button onClick={openGame}>✊ 玩一局猜拳</button><button onClick={()=>setDraft('今天胃有点不舒服')}>今天胃有点不舒服</button><button onClick={()=>setDraft('陪我聊一会儿')}>陪我聊一会儿</button></div><footer className="composer glass"><button><Plus/></button><input aria-label="发消息" value={draft} onChange={e=>setDraft(e.target.value)} onKeyDown={e=>e.key==='Enter'&&send()} placeholder="发消息…" disabled={replying}/><button><Volume2/></button><button className="send" onClick={()=>send()} disabled={replying}><Send/></button></footer></main>
+ return <section className="screen home-screen"><article className="presence-card" style={{'--accent':current.accent} as React.CSSProperties}><div className="presence-art"><div className="moon"/><div className="portrait"><span>{current.avatar}</span></div><span className="online-dot"/></div><div className="presence-copy"><div><span className="status"><i/>{current.status}</span><h2>{current.name}</h2><p>“{current.quote}”</p></div><button className="talk-button" onClick={openChat}><MessageCircle size={20}/> 去找他</button></div></article><div className="section-title"><h3>最近消息</h3><button>全部</button></div><button className="conversation glass" onClick={openChat}><Avatar character={current}/><div><strong>{current.name}<small>AI</small></strong><p>{lastMessage}</p></div></button><div className="section-title"><h3>其他角色</h3><span>随时可以认识</span></div><div className="mini-characters">{characters.filter(c=>c.id!==selected).map(c=><button key={c.id} className="mini-card glass" onClick={()=>select(c.id)}><Avatar character={c}/><div><strong>{c.name}</strong><span>{c.status}</span></div><ChevronRight/></button>)}</div></section>
 }
 
 function MomentsScreen({onChat}:{onChat:(text:string)=>void}){const [liked,setLiked]=useState<number[]>([]);const [commenting,setCommenting]=useState<number|null>(null);const [draft,setDraft]=useState('');const [comments,setComments]=useState<Record<number,string[]>>({});const submit=(id:number)=>{if(!draft.trim())return;setComments(current=>({...current,[id]:[...(current[id]||[]),draft.trim()]}));setDraft('');setCommenting(null)};return <section className="screen feed"><div className="feed-hero"><p>这一刻，他们也在生活</p><span>所有内容均由 AI 角色生成</span></div>{moments.map((m,i)=><article className="moment glass" key={m.id}><header><span className={`simple-avatar a${i}`}>{m.avatar}</span><div><strong>{m.character}<small>AI</small></strong><time>{m.time}</time></div><MoreHorizontal/></header><p>{m.text}</p><div className={`moment-visual ${m.visual}`}><span>{m.visual==='dinner'?'今晚的晚饭':'18:32 的天空'}</span></div>{(comments[m.id]||[]).map((comment,index)=><div className="moment-comment" key={index}><strong>艳艳</strong> {comment}<p><strong>{m.character}</strong> {i===0?'给你留着，回来趁热吃。':'拍给你看的，勉强还行吧。'}</p><button onClick={()=>onChat(`回复你刚才的动态：“${m.text}”`)}>私聊回应</button></div>)}{commenting===m.id&&<div className="comment-box"><input aria-label="评论内容" value={draft} onChange={event=>setDraft(event.target.value)} placeholder="写下评论…"/><button onClick={()=>submit(m.id)}>发送</button></div>}<footer><button className={liked.includes(m.id)?'liked':''} onClick={()=>setLiked(current=>current.includes(m.id)?current.filter(id=>id!==m.id):[...current,m.id])}><Heart fill={liked.includes(m.id)?'currentColor':'none'}/> {m.likes+(liked.includes(m.id)?1:0)}</button><button onClick={()=>setCommenting(m.id)}><MessageCircle/> {m.comments+(comments[m.id]?.length||0)}</button><button onClick={()=>onChat(`我看到你的动态了：“${m.text}”`)}><Send/></button></footer></article>)}</section>}
-function MemoriesScreen({memories:confirmed,selected,editMemory,deleteMemory:remove}:{memories:ConfirmedMemory[];selected:CharacterId;editMemory:(id:string,text:string)=>void;deleteMemory:(id:string)=>void}){const relation=getRelationship(selected,confirmed);const [editing,setEditing]=useState<string|null>(null);const [value,setValue]=useState('');return <section className="screen memory-page"><div className="relation glass"><div className="relation-ring"><span>21</span><small>天</small></div><div><span>{characters.find(c=>c.id===selected)?.name} · {relation.stage.name}</span><h2>{relation.stage.description}</h2><p>{relation.count} 个共同事件 · {confirmed.length + memories.length} 条被珍藏的小事</p><div className="relation-progress"><i style={{width:`${relation.progress*100}%`}}/></div><small>{relation.next?`再完成 ${relation.remaining} 个共同事件，进入「${relation.next.name}」`:'你们已经走到了长期相伴'}</small></div></div>{confirmed.map(item=><article className="timeline-item" key={item.id}><div className="timeline-dot"/><time>{new Date(item.confirmedAt).toLocaleDateString('zh-CN')}</time><div className="memory-card glass"><span>✦</span><div>{editing===item.id?<><input className="memory-input" value={value} onChange={event=>setValue(event.target.value)} autoFocus/><div className="memory-actions"><button onClick={()=>{editMemory(item.id,value);setEditing(null)}}>保存</button><button onClick={()=>setEditing(null)}>取消</button></div></>:<><h3>由你确认的记忆</h3><p>{item.text}</p><small><ShieldCheck/> 仅保存在本机 · {characters.find(c=>c.id===item.characterId)?.name}</small><div className="memory-actions"><button onClick={()=>{setEditing(item.id);setValue(item.text)}}>编辑</button><button className="danger" onClick={()=>remove(item.id)}>删除</button></div></>}</div></div></article>)}{memories.map(m=><article className="timeline-item" key={m.title}><div className="timeline-dot" style={{background:m.color}}/><time>{m.date}</time><div className="memory-card glass"><span style={{color:m.color}}>{m.icon}</span><div><h3>{m.title}</h3><p>{m.detail}</p><button>查看那一天 <ChevronRight/></button></div></div></article>)}</section>}
-function ProfileScreen({apiKey,endpoint,model,setApiKey,setEndpoint,setModel,onImported,onCleared}:{apiKey:string;endpoint:string;model:string;setApiKey:(value:string)=>void;setEndpoint:(value:string)=>void;setModel:(value:string)=>void;onImported:(data:Awaited<ReturnType<typeof loadLocalData>>)=>void;onCleared:()=>void}){const [showApi,setShowApi]=useState(false);const [visible,setVisible]=useState(false);const [testing,setTesting]=useState(false);const [result,setResult]=useState('');const [backupPassword,setBackupPassword]=useState('');const test=async()=>{setTesting(true);setResult('');try{await testDeepSeekConnection({apiKey,endpoint,model});setResult('连接成功，可以开始聊天')}catch(error){setResult(error instanceof Error?error.message:'连接失败')}finally{setTesting(false)}};const download=async()=>{try{const encrypted=await encryptBackup(await exportData(),backupPassword);const blob=new Blob([encrypted],{type:'application/json'});const url=URL.createObjectURL(blob);const anchor=document.createElement('a');anchor.href=url;anchor.download=`aily-backup-${new Date().toISOString().slice(0,10)}.json`;anchor.click();URL.revokeObjectURL(url);setResult('加密备份已导出，API Key 不包含在文件中')}catch(error){setResult(error instanceof Error?error.message:'导出失败')}};const upload=async(file?:File)=>{if(!file)return;try{const data=await importData(await decryptBackup(await file.text(),backupPassword));onImported(data);setResult('备份导入成功')}catch(error){setResult(error instanceof Error?error.message:'导入失败')}};const clear=async()=>{if(!window.confirm('确定清空本机全部聊天和记忆吗？此操作无法撤销。'))return;await clearAllData();onCleared();setResult('本机聊天和记忆已清空')};return <section className="screen profile"><div className="profile-card glass"><div className="profile-avatar">艳</div><div><h2>艳艳</h2><p>Aily 相伴第 21 天</p></div><ChevronRight/></div><div className="plan-card"><span><Sparkles/> Aily Plus</span><h3>让每一段故事，都被好好记住</h3><button>了解会员</button></div><div className="settings glass"><button onClick={()=>setShowApi(!showApi)}><MemoryStick/><span>DeepSeek 连接</span><small>{apiKey?'已配置':'演示模式'}</small><ChevronRight/></button>{[[Home,'主角色','陆听澜'],[ShoppingBag,'会员与权益','免费版'],[ShieldCheck,'隐私与安全','本地存储']].map(([Icon,label,value])=><button key={String(label)}><Icon/><span>{String(label)}</span><small>{String(value)}</small><ChevronRight/></button>)}</div>{showApi&&<div className="api-settings glass"><h3>DeepSeek 连接</h3><p>对话内容会直接发送至你配置的服务。Key 只保留在当前浏览器会话，不写入记忆或导出数据。</p><label>API Key<div className="secret-input"><input type={visible?'text':'password'} value={apiKey} onChange={event=>setApiKey(event.target.value)} placeholder="sk-…"/><button onClick={()=>setVisible(!visible)}>{visible?'隐藏':'显示'}</button></div></label><label>接口地址<input value={endpoint} onChange={event=>setEndpoint(event.target.value)} /></label><label>模型<input value={model} onChange={event=>setModel(event.target.value)} /></label><div className="api-actions"><button className="test-api" onClick={test} disabled={testing}>{testing?'正在测试…':'测试连接'}</button><button onClick={()=>{setApiKey('');setResult('已删除本次会话中的 Key')}}>删除 Key</button></div>{result&&<p className="api-result">{result}</p>}</div>}<div className="data-tools glass"><h3>本机数据</h3><p>聊天和记忆保存在当前设备。换机前请导出备份。</p><input className="backup-password" type="password" value={backupPassword} onChange={event=>setBackupPassword(event.target.value)} placeholder="设置或输入备份密码（至少 6 位）"/><div><button onClick={download}>导出备份</button><label>导入备份<input type="file" accept="application/json" onChange={event=>upload(event.target.files?.[0])}/></label><button className="danger" onClick={clear}>清空全部</button></div>{result&&<small>{result}</small>}</div><p className="ai-note"><ShieldCheck/> Aily 是 AI 角色陪伴应用，不是真人或专业医疗服务</p></section>}
+function ProfileScreen({apiKey,endpoint,model,setApiKey,setEndpoint,setModel,onImported,onCleared}:{apiKey:string;endpoint:string;model:string;setApiKey:(value:string)=>void;setEndpoint:(value:string)=>void;setModel:(value:string)=>void;onImported:(data:Awaited<ReturnType<typeof loadLocalData>>)=>void;onCleared:()=>void}){const [showApi,setShowApi]=useState(false);const [visible,setVisible]=useState(false);const [testing,setTesting]=useState(false);const [result,setResult]=useState('');const [backupPassword,setBackupPassword]=useState('');const test=async()=>{setTesting(true);setResult('');try{await testDeepSeekConnection({apiKey,endpoint,model});setResult('连接成功，可以开始聊天')}catch(error){setResult(error instanceof Error?error.message:'连接失败')}finally{setTesting(false)}};const download=async()=>{try{const encrypted=await encryptBackup(await exportData(),backupPassword);const blob=new Blob([encrypted],{type:'application/json'});const url=URL.createObjectURL(blob);const anchor=document.createElement('a');anchor.href=url;anchor.download=`aily-backup-${new Date().toISOString().slice(0,10)}.json`;anchor.click();URL.revokeObjectURL(url);setResult('加密备份已导出，API Key 不包含在文件中')}catch(error){setResult(error instanceof Error?error.message:'导出失败')}};const upload=async(file?:File)=>{if(!file)return;if(!window.confirm('导入会替换本机全部聊天和记忆。确认已备份当前数据并继续？'))return;try{const data=await importData(await decryptBackup(await file.text(),backupPassword));onImported(data);setResult('备份导入成功')}catch(error){setResult(error instanceof Error?error.message:'导入失败')}};const clear=async()=>{if(!window.confirm('确定清空本机全部聊天和记忆吗？此操作无法撤销。'))return;await clearAllData();onCleared();setResult('本机聊天和记忆已清空')};return <section className="screen profile"><div className="profile-card glass"><div className="profile-avatar">艳</div><div><h2>艳艳</h2><p>Aily 相伴第 21 天</p></div><ChevronRight/></div><div className="plan-card"><span><Sparkles/> Aily Plus</span><h3>让每一段故事，都被好好记住</h3><button>了解会员</button></div><div className="settings glass"><button onClick={()=>setShowApi(!showApi)}><MemoryStick/><span>DeepSeek 连接</span><small>{apiKey?'已配置':'演示模式'}</small><ChevronRight/></button>{[[Home,'主角色','陆听澜'],[ShoppingBag,'会员与权益','免费版'],[ShieldCheck,'隐私与安全','本地存储']].map(([Icon,label,value])=><button key={String(label)}><Icon/><span>{String(label)}</span><small>{String(value)}</small><ChevronRight/></button>)}</div>{showApi&&<div className="api-settings glass"><h3>DeepSeek 连接</h3><p>对话内容会直接发送至你配置的服务。Key 只保留在当前浏览器会话，不写入记忆或导出数据。</p><label>API Key<div className="secret-input"><input type={visible?'text':'password'} value={apiKey} onChange={event=>setApiKey(event.target.value)} placeholder="sk-…"/><button onClick={()=>setVisible(!visible)}>{visible?'隐藏':'显示'}</button></div></label><label>接口地址<input value={endpoint} onChange={event=>setEndpoint(event.target.value)} /></label><label>模型<input value={model} onChange={event=>setModel(event.target.value)} /></label><div className="api-actions"><button className="test-api" onClick={test} disabled={testing}>{testing?'正在测试…':'测试连接'}</button><button onClick={()=>{setApiKey('');setResult('已删除本次会话中的 Key')}}>删除 Key</button></div>{result&&<p className="api-result">{result}</p>}</div>}<div className="data-tools glass"><h3>本机数据</h3><p>聊天和记忆保存在当前设备。换机前请导出备份。</p><input className="backup-password" type="password" value={backupPassword} onChange={event=>setBackupPassword(event.target.value)} placeholder="设置或输入备份密码（至少 6 位）"/><div><button onClick={download}>导出备份</button><label>导入备份<input type="file" accept="application/json" onChange={event=>upload(event.target.files?.[0])}/></label><button className="danger" onClick={clear}>清空全部</button></div>{result&&<small>{result}</small>}</div><p className="ai-note"><ShieldCheck/> Aily 是 AI 角色陪伴应用，不是真人或专业医疗服务</p></section>}
 function Avatar({character}:{character:typeof characters[0]}){return <span className="avatar" style={{'--accent':character.accent} as React.CSSProperties}>{character.avatar}</span>}
 function NavButton({active,icon,label,onClick}:{active:boolean;icon:React.ReactNode;label:string;onClick:()=>void}){return <button className={active?'active':''} onClick={onClick}>{icon}<span>{label}</span></button>}
