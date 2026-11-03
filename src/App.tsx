@@ -7,8 +7,6 @@ import { acceptSafetyConsent, acquireUsageLease, deleteLocalProfile, hasSafetyCo
 import { Bell, BookHeart, ChevronRight, CircleUserRound, Home, MemoryStick, MessageCircle, ShieldCheck, ShoppingBag, Sparkles } from 'lucide-react'
 import { characters, type CharacterId } from './data'
 import MomentsScreen from './MomentsScreen'
-import { t, useI18n } from './i18n'
-import LanguageSettings from './LanguageSettings'
 import { testDeepSeekConnection } from './chatService'
 import { db, loadLocalData } from './db'
 import RockPaperScissors from './RockPaperScissors'

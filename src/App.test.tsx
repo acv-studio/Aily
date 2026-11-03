@@ -3,7 +3,6 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 import * as storage from './db'
-import { acceptSafetyConsent } from './privacy'
 import { db, loadLocalData, saveSetting } from './db'
 import { acceptSafetyConsent, hasSafetyConsent } from './privacy'
 

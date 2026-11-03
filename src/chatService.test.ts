@@ -33,7 +33,7 @@ describe('merged locale and reply mode context', () => {
     await streamReply(request({ locale: 'en', replyMode: 'deep', onboardingProfile }))
     const prompt = JSON.parse(vi.mocked(fetch).mock.calls[0][1]!.body as string).messages[0].content
     expect(prompt).toContain('Reply in English.')
-    expect(prompt).toContain(REPLY_MODE_PROMPTS.deep)
+    expect(prompt).toContain(translate(REPLY_MODE_PROMPTS.deep, {}, 'en'))
     expect(prompt).toContain('阿雨')
     expect(prompt).toContain('小澜')
     expect(prompt).toContain(memories[0].text)
@@ -203,6 +203,16 @@ describe('reply mode context and demo', () => {
     await streamReply(request({ locale: 'en', replyMode }))
     const body = JSON.parse(vi.mocked(fetch).mock.calls[0][1]!.body as string)
     expect(body.messages).toEqual(context)
+  })
+
+  it.each(REPLY_MODES)('preserves legacy (mode, locale) calls for %s alongside (locale, mode)', replyMode => {
+    for (const locale of ['zh-CN', 'en'] as const) {
+      const legacy = buildContext('lu', messages, memories, undefined, undefined, undefined, replyMode, locale)
+      const current = buildContext('lu', messages, memories, undefined, undefined, undefined, locale, replyMode)
+      expect(legacy).toEqual(current)
+      expect(buildContext('lu', messages, memories, undefined, undefined, undefined, undefined, locale))
+        .toEqual(buildContext('lu', messages, memories, undefined, undefined, undefined, locale))
+    }
   })
 
   it('keeps seventh-argument locale callers unchanged when eighth mode is omitted', () => {
