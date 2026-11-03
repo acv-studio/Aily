@@ -1,10 +1,12 @@
 import '@testing-library/jest-dom/vitest'
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import GiftStorePanel from './GiftStorePanel'
+import { setLocale } from './i18n'
 import { demoDb, loadDemoWallet, loadDemoStoryEvents, rechargeDemo } from './giftDemo'
 
 beforeEach(async () => {
+  setLocale('zh-CN')
   vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
   HTMLElement.prototype.scrollIntoView = vi.fn()
   await demoDb.delete(); await demoDb.open()
@@ -96,6 +98,25 @@ describe('gift store demo journey', () => {
     expect(screen.queryByRole('button', { name: /^进入《|^回看《/ })).not.toBeInTheDocument()
     expect((await loadDemoWallet()).balance).toBe(900)
     expect((await loadDemoWallet()).transactions).toHaveLength(2)
+  })
+  it('localizes new gift interactions live without changing saved event IDs or choice', async () => {
+    await rechargeDemo('demo-1000')
+    setLocale('en')
+    render(<GiftStorePanel selected="chen" />)
+    await waitFor(() => expect(screen.getByTestId('demo-balance')).toHaveTextContent('1,000'))
+    fireEvent.click(screen.getByRole('button', { name: /Concert ticket/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'Send gift (demo)' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm gift (demo)' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Enter “A concert together”' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Listen quietly to the song' }))
+    act(() => setLocale('zh-CN'))
+    expect(screen.getByRole('button', { name: '安静听完这首歌' })).toHaveAttribute('aria-pressed', 'true')
+    fireEvent.click(screen.getByRole('button', { name: '确认保存事件选择' }))
+    await screen.findByText(/事件已完成/)
+    act(() => setLocale('en'))
+    expect(screen.getByText(/Event complete/)).toBeInTheDocument()
+    expect((await loadDemoStoryEvents())[0]).toMatchObject({ characterId: 'chen', eventId: 'concert', choiceId: 'listen' })
+    expect(screen.getByRole('region', { name: 'Story gift interaction' }).textContent).not.toMatch(/[\u3400-\u9fff]/u)
   })
   it('shows a storage error and recovers on explicit retry', async () => {
     const read = vi.spyOn(demoDb.wallet, 'get').mockRejectedValueOnce(new Error('unavailable'))
