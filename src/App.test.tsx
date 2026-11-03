@@ -3,8 +3,8 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 import * as storage from './db'
-import { acceptSafetyConsent } from './privacy'
 import { db, loadLocalData, saveSetting } from './db'
+import { acceptSafetyConsent, hasSafetyConsent } from './privacy'
 
 beforeEach(async () => { window.history.replaceState(null, '', '/'); localStorage.clear(); sessionStorage.clear(); await db.delete(); await db.open() })
 afterEach(() => { cleanup(); vi.restoreAllMocks() })
@@ -14,8 +14,10 @@ async function acceptDisclosure(name = '确认并继续') {
   fireEvent.click(screen.getByLabelText('我已年满 18 周岁'))
   expect(screen.getByRole('button', { name })).toBeDisabled()
   fireEvent.click(screen.getByLabelText('我理解 AI 身份与数据说明'))
+  expect(screen.getByRole('button', { name })).toBeEnabled()
   fireEvent.click(screen.getByRole('button', { name }))
   if (name === '确认并继续') fireEvent.click(await screen.findByRole('button', { name: '跳过，进入消息' }))
+  expect(hasSafetyConsent()).toBe(true)
 }
 
 describe('Aily core journey', () => {
@@ -68,13 +70,17 @@ describe('Aily core journey', () => {
   it('introduces the memory-first value proposition after loading storage', async () => {
     render(<App />)
     expect(await screen.findByText(/会生长/)).toBeInTheDocument()
+    expect(screen.getByText(/第 1 \/ 9 步 · 初遇/)).toBeInTheDocument()
     expect(screen.getByText(/来自未来的一条回忆 · 场景示例/)).toBeInTheDocument()
     expect(screen.getByRole('progressbar', { name: '首次引导进度' })).toHaveAttribute('max', '9')
-    expect(screen.getByRole('button', { name: '遇见 TA' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /遇见 TA/ })).toBeDisabled()
+    expect(screen.getByText(/AI 角色互动.*记录保存在当前设备/)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /去找他/ })).not.toBeInTheDocument()
-    expect(screen.getByText(/本机优先保存，外部模型另有传输 · 记录保存在当前设备/)).toBeInTheDocument()
-    expect(screen.getByText(/第 1 \/ 9 步 · 初遇/)).toBeInTheDocument()
     expect((await loadLocalData()).settings.onboarded).not.toBe(true)
+    expect(screen.getByText(/本机优先保存，外部模型另有传输/)).toBeInTheDocument()
+    expect(screen.getByLabelText('我已年满 18 周岁')).not.toBeChecked()
+    expect(screen.getByLabelText('我理解 AI 身份与数据说明')).not.toBeChecked()
+    expect(screen.queryByRole('button', { name: /陈奕恒/ })).not.toBeInTheDocument()
   })
 
   it('lets previously onboarded users add preferences without restarting or switching characters', async () => {
@@ -113,9 +119,9 @@ describe('Aily core journey', () => {
     expect(screen.getByText(/API Key 只保留在本次浏览器会话，不包含在备份内/)).toBeInTheDocument()
     expect((await loadLocalData()).settings.onboarded).not.toBe(true)
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: '完成引导' })) })
-    expect(screen.queryByRole('button', { name: '确认并继续' })).not.toBeInTheDocument()
     await waitFor(() => expect(screen.getAllByText('陈奕恒')).toHaveLength(2))
     expect(screen.queryByRole('button', { name: '确认并继续' })).not.toBeInTheDocument()
+    expect(hasSafetyConsent()).toBe(true)
     const data = await loadLocalData()
     expect(data.settings.onboardingProfile).toMatchObject({ userName: '小雨', characterName: '阿恒', adultEnabled: false })
     expect(data.memories.some(memory => memory.category === 'relationship' && memory.state === 'confirmed')).toBe(true)

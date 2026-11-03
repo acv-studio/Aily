@@ -2,7 +2,7 @@
 
 真实应用浏览器截图，不是设计稿或合成基线。
 
-- **Before baseline:** `f01ab5c35ab304accb34bd9786852ab5da3e68dd` (reviewed main baseline, including onboarding, stories, voice, privacy, data transfer, language settings and invitations).
+- **Before baseline:** `e0c22eb42e912dbb78b986db7ea90995ae3c699c` (reviewed main baseline, including onboarding, stories, voice, privacy, data transfer, language settings and invitations).
 - **After:** this ticket branch `agent/character-dynamic-splash-aa3418d8dce7`; the PR description pins the exact reviewed commit.
 - **Matched scenario:** isolated fresh browser → complete all nine onboarding steps with 陆听澜 using default names and local trial chat → open 我的 → reload. Baseline reload enters home; changed reload shows the new splash. No seeded personal chat, credentials, API key, or private conversation content.
 - **Integration context:** both revisions retain existing voice, safety/privacy, language settings and data transfer. The added splash follows consent and does not replace invitations, private settings or active chats. Baseline images are real captures of the identified revision with no repair patch or reconstructed UI applied.

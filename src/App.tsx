@@ -147,17 +147,17 @@ function AilyApp({ onDelete }: { onDelete: () => Promise<void> }) {
     <header className="topbar"><div><p className="eyebrow">{t('晚上好，{name}', { name: chat.onboardingProfile?.userName && chat.onboardingProfile.userName !== '你' ? chat.onboardingProfile.userName : t('欢迎回来') })}</p><h1>{tab === 'home' ? t("有人一直记得你") : tab === 'moments' ? t("他们的此刻") : tab === 'memories' ? t("我们的回忆") : tab === 'store' ? t("一份小心意") : t("我的 Aily")}</h1></div><button className="icon-button" aria-label={t("通知")}><Bell size={20}/><i /></button></header>
     {tab === 'home' && <HomeScreen selected={selected} select={setSelected} activity={activity} lastMessage={messages.filter(item => !item.withdrawn).at(-1)?.text || t("还没有聊天记录，先打个招呼吧")} openChat={() => setChatOpen(true)} />}
     {tab === 'moments' && <MomentsScreen userName={userName} selected={selected} config={{ apiKey: chat.apiKey, endpoint: chat.endpoint, model: chat.model, onboardingProfile: chat.onboardingProfile }} onChat={(characterId, text) => { setSelected(characterId); setDraft(text); setChatOpen(true) }} />}
-    {tab === 'memories' && <MemoryPanel profile={chat.onboardingProfile} onProfile={chat.updateOnboarding} onBusyChange={setMemoryBusy} memories={chat.memories} selected={selected} onSave={chat.saveConfirmed} onUpdate={chat.editMemory} onDelete={chat.removeMemory} onClear={chat.clearMemories} summaries={chat.summaries} policies={chat.policies} onPolicy={chat.changePolicy} onConfirm={chat.approveProposal} conversations={chat.conversations} />}
+    {tab === 'memories' && <MemoryPanel privateNames={[chat.onboardingProfile?.userName || '', chat.onboardingProfile?.characterName || '']} profile={chat.onboardingProfile} onProfile={chat.updateOnboarding} onBusyChange={setMemoryBusy} memories={chat.memories} selected={selected} onSave={chat.saveConfirmed} onUpdate={chat.editMemory} onDelete={chat.removeMemory} onClear={chat.clearMemories} summaries={chat.summaries} policies={chat.policies} onPolicy={chat.changePolicy} onConfirm={chat.approveProposal} conversations={chat.conversations} />}
     {tab === 'profile' && proactiveOpen && <ProactiveSettingsPanel selected={selected} close={() => setProactiveOpen(false)} />}
     {tab === 'profile' && !proactiveOpen && <section className="screen" style={{ paddingBottom: 0 }}><CharacterSplashSettings settings={splashSettings} onSave={updateSplashSettings} /><button className="proactive-entry glass" aria-label={t("角色主动消息设置")} onClick={() => setProactiveOpen(true)}>{t("角色主动消息设置")}<ChevronRight size={18} /></button><button className="proactive-entry glass" aria-label={t("邀请朋友")} onClick={() => setInviteOpen(true)}>{t("邀请朋友")}<ChevronRight size={18} /></button><button className="proactive-entry glass" aria-label={t("安全与隐私")} onClick={() => setPrivacyOpen(true)}>{t("安全与隐私")}<ShieldCheck size={18} /></button></section>}
     {tab === 'profile' && !proactiveOpen && <><button className="secondary" style={{ margin: '0 20px 16px' }} onClick={() => setPreferencesOpen(true)}>{t("修改称呼与互动偏好")}</button><ProfileScreen userName={userName} primaryName={primaryName} beforeDataChange={chat.beforeDataChange} apiKey={chat.apiKey} endpoint={chat.endpoint} model={chat.model} setApiKey={chat.setApiKey} setEndpoint={chat.setEndpoint} setModel={chat.setModel} onImported={() => { void reloadLocalState().catch(() => alert(t("主角色设置读取失败，请重新打开应用"))) }} onCleared={() => { void reloadLocalState().catch(() => alert(t("主角色设置读取失败，请重新打开应用"))) }} /></>}
     {tab === 'store' && <GiftStorePanel selected={selected} />}
     {!(tab === 'profile' && proactiveOpen) && <nav className="bottom-nav glass">
-      <NavButton disabled={memoryBusy} active={tab==='home'} icon={<MessageCircle/>} label={t('消息')} onClick={()=>setTab('home')}/>
-      <NavButton disabled={memoryBusy} active={tab==='moments'} icon={<Sparkles/>} label={t('此刻')} onClick={()=>setTab('moments')}/>
-      <NavButton disabled={memoryBusy} active={tab==='memories'} icon={<BookHeart/>} label={t('回忆')} onClick={()=>setTab('memories')}/>
-      <NavButton disabled={memoryBusy} active={tab==='store'} icon={<ShoppingBag/>} label={t('商城')} onClick={()=>setTab('store')}/>
-      <NavButton disabled={memoryBusy} active={tab==='profile'} icon={<CircleUserRound/>} label={t('我的')} onClick={()=>setTab('profile')}/>
+      <NavButton disabled={memoryBusy} active={tab==='home'} icon={<MessageCircle/>} label={t("消息")} onClick={()=>setTab('home')}/>
+      <NavButton disabled={memoryBusy} active={tab==='moments'} icon={<Sparkles/>} label={t("此刻")} onClick={()=>setTab('moments')}/>
+      <NavButton disabled={memoryBusy} active={tab==='memories'} icon={<BookHeart/>} label={t("回忆")} onClick={()=>setTab('memories')}/>
+      <NavButton disabled={memoryBusy} active={tab==='store'} icon={<ShoppingBag/>} label={t("商城")} onClick={()=>setTab('store')}/>
+      <NavButton disabled={memoryBusy} active={tab==='profile'} icon={<CircleUserRound/>} label={t("我的")} onClick={()=>setTab('profile')}/>
     </nav>}
   </main>
 }
@@ -211,7 +211,7 @@ function ProfileScreen({userName,primaryName,apiKey,endpoint,model,setApiKey,set
 <button onClick={()=>{setApiKey('');setResult('已删除本次会话中的 Key')}}>{t("删除 Key")}</button>
 </div>{result&&<p className="api-result">{t(result)}</p>}</div>}<DataTransferPanel beforeDataChange={beforeDataChange} onImported={onImported} onCleared={onCleared} />
 <p className="ai-note">
-<ShieldCheck/>{t(" Aily 是 AI 角色陪伴应用，不是真人或专业医疗服务")}</p>
+<ShieldCheck/>{t("Aily 是 AI 角色陪伴应用，不是真人或专业医疗服务")}</p>
 </section>}
 function Avatar({character}:{character:typeof characters[0]}){return <span className="avatar" style={{'--accent':character.accent} as React.CSSProperties}>{t(character.avatar)}</span>}
 function NavButton({active,icon,label,onClick,disabled = false}:{active:boolean;icon:React.ReactNode;label:string;onClick:()=>void;disabled?:boolean}){return <button disabled={disabled} className={active?'active':''} onClick={onClick}>{icon}<span>{label}</span></button>}

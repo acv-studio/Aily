@@ -84,7 +84,7 @@ describe('local encrypted data transfer', () => {
     confirm.focus(); fireEvent.click(confirm)
     await screen.findByRole('status')
     expect(trigger).toBeDisabled()
-    expect(screen.getByLabelText('导入备份文件')).toHaveFocus()
+    await waitFor(() => expect(screen.getByLabelText('导入备份文件')).toHaveFocus())
   })
 
   it('returns focus to the clear trigger after a successful clear', async () => {
