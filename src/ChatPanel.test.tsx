@@ -3,14 +3,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import ChatPanel, { type ChatPanelProps } from './ChatPanel'
 import { characters } from './data'
 
-function panel() {
+function panel(overrides: Partial<ChatPanelProps> = {}) {
   const props: ChatPanelProps = {
     character: characters[0], messages: [], draft: '', setDraft: vi.fn(),
     send: vi.fn(async () => {}), saveMemory: vi.fn(async () => {}), withdraw: vi.fn(async () => {}),
     close: vi.fn(), stop: vi.fn(), replying: false, error: '', demo: true,
-    openGame: vi.fn(), openStory: vi.fn(),
+    openGame: vi.fn(), openStory: vi.fn(), ...overrides,
   }
-  return render(<ChatPanel {...props} />)
+  return { ...render(<ChatPanel {...props} />), props }
 }
 function audio() {
   const stop = vi.fn()
@@ -34,6 +34,42 @@ afterEach(() => {
   else Reflect.deleteProperty(navigator, 'mediaDevices')
   if (originalScroll) Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', originalScroll)
   else Reflect.deleteProperty(HTMLElement.prototype, 'scrollIntoView')
+})
+
+const voiceMessage = (id: number) => ({ id, from: 'user' as const, text: '', time: '', kind: 'audio' as const, attachment: { dataUrl: `data:audio/webm;base64,${id}`, mimeType: 'audio/webm', name: '语音消息' } })
+
+describe('chat voice playback', () => {
+  it('pauses the previous message when another starts and stops withdrawn playback', () => {
+    const pause = vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => {})
+    const messages = [voiceMessage(1), voiceMessage(2)]
+    const view = panel({ messages })
+    const [first, second] = screen.getAllByLabelText('播放语音消息')
+    fireEvent.play(first)
+    expect(pause).not.toHaveBeenCalled()
+    fireEvent.play(second)
+    expect(pause.mock.instances[0]).toBe(first)
+    view.rerender(<ChatPanel {...view.props} messages={[{ ...messages[0], withdrawn: true }, messages[1]]} />)
+    expect(pause.mock.instances[1]).toBe(first)
+    view.unmount()
+    expect(pause.mock.instances[2]).toBe(second)
+  })
+
+  it('pauses playback before microphone acquisition', async () => {
+    const pause = vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => {})
+    microphone(vi.fn(() => new Promise(() => {})))
+    vi.stubGlobal('MediaRecorder', class {})
+    panel({ messages: [voiceMessage(1)] })
+    const playing = screen.getByLabelText('播放语音消息')
+    fireEvent.play(playing)
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: '录制语音' })) })
+    expect(pause.mock.instances[0]).toBe(playing)
+  })
+
+  it('does not render withdrawn attachments and explains missing audio', () => {
+    panel({ messages: [{ ...voiceMessage(1), withdrawn: true }, { ...voiceMessage(2), attachment: undefined }] })
+    expect(screen.queryByLabelText('播放语音消息')).not.toBeInTheDocument()
+    expect(screen.getByText('语音附件不可用')).toBeInTheDocument()
+  })
 })
 
 describe('chat microphone lifecycle', () => {
@@ -64,6 +100,23 @@ describe('chat microphone lifecycle', () => {
     expect(stop).toHaveBeenCalledOnce()
     expect(screen.getByText(/无法开始录音/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '录制语音' })).toBeInTheDocument()
+  })
+
+  it('rejects an empty recording instead of offering an unplayable attachment', async () => {
+    const { stream } = audio()
+    microphone(vi.fn(async () => stream))
+    vi.stubGlobal('MediaRecorder', class {
+      state = 'inactive'
+      mimeType = 'audio/webm'
+      onstop?: () => void
+      start() { this.state = 'recording' }
+      stop() { this.state = 'inactive'; this.onstop?.() }
+    })
+    panel()
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: '录制语音' })) })
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: '结束录音' })) })
+    expect(screen.getByText('没有录到声音，请重新录制')).toBeInTheDocument()
+    expect(screen.queryByText(/待发送/)).not.toBeInTheDocument()
   })
 
   it('allows only one pending permission request and clears recording on unmount', async () => {

@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { characters, type CharacterId } from './data'
 import { streamReply, type ChatMessage, type ConfirmedMemory } from './chatService'
-import { clearCharacterMemories, deleteMemory, initializeLocalData, loadRoleConversation, persistChatChanges, saveMemory, saveSetting, updateMemory } from './db'
+import { clearCharacterMemories, deleteMemory, finishOnboarding as persistFinishOnboarding, updateOnboarding as persistUpdateOnboarding, initializeLocalData, loadRoleConversation, persistChatChanges, saveMemory, saveSetting, updateMemory } from './db'
+import { defaultOnboardingProfile, normalizeOnboardingProfile, type OnboardingProfile } from './onboarding'
 import type { MemoryDraft } from './ChatPanel'
+import { deliverProactive } from './proactiveMessages'
 import { archiveExpiredMemories, confirmProposal, db, forgottenSourceIds, loadMemoryPolicy, loadSummaries, saveMemoryPolicy, saveProposals, saveSummaries } from './db'
 import { categoriesFor, conflictMemoryIds, defaultMemoryPolicy, extractCandidates, isSensitive, summarizeConversation, type ConversationSummary, type MemoryPolicy } from './longMemory'
 
@@ -11,10 +13,12 @@ function readPreference(storage: 'localStorage' | 'sessionStorage', key: string,
 }
 const empty = (): Record<CharacterId, ChatMessage[]> => ({ lu: [], chen: [], gu: [] })
 let lastId = Date.now()
-const nextId = () => { lastId = Math.max(lastId + 1, Date.now()); return lastId }
+const nextId = (knownMaximum = 0) => { lastId = Math.max(lastId + 1, knownMaximum + 1, Date.now()); return lastId }
 export default function useLocalChat() {
   const [ready, setReady] = useState(false)
   const [onboarded, setOnboarded] = useState(false)
+  const [onboardingProfile, setOnboardingProfile] = useState<OnboardingProfile | null>(null)
+  const onboardingProfileRef = useRef(onboardingProfile); onboardingProfileRef.current = onboardingProfile
   const [selected, setSelectedState] = useState<CharacterId>('lu')
   const [conversations, setConversations] = useState(empty)
   const [memories, setMemories] = useState<ConfirmedMemory[]>([])
@@ -48,6 +52,7 @@ export default function useLocalChat() {
       const restoredPolicies = Object.fromEntries(await Promise.all(characters.map(async role => [role.id, await loadMemoryPolicy(role.id)])))
       policiesRef.current = restoredPolicies; setPolicies(restoredPolicies)
       setSummaries(data.summaries || [])
+      onboardingProfileRef.current = normalizeOnboardingProfile(data.settings.onboardingProfile); setOnboardingProfile(onboardingProfileRef.current)
       setOnboarded(data.settings.onboarded === true); if (characters.some(character => character.id === data.settings.selected)) setSelectedState(data.settings.selected as CharacterId)
       for (const role of characters) queueOrganization(role.id)
       setReady(true)
@@ -105,15 +110,58 @@ export default function useLocalChat() {
   }
   const setSelected = (id: CharacterId) => {
     if (active.current || mutationCount.current) { setError('请先停止回复或等待保存，再切换角色'); return }
-    setSelectedState(id); setDraft(''); setError(''); void saveSetting('selected', id).catch(() => setError('角色选择未能保存，请重试'))
+    selectedRef.current = id; setSelectedState(id); setDraft(''); setError(''); void saveSetting('selected', id).catch(() => setError('角色选择未能保存，请重试'))
   }
-  const finishOnboarding = async () => {
-    try { await saveSetting('onboarded', true); await saveSetting('selected', selected); setOnboarded(true) } catch { setError('无法保存引导设置，请检查本机存储权限') }
+  const saveOnboarding = async (profile: OnboardingProfile, messages: ChatMessage[], finish: boolean): Promise<void> => {
+    if (!ready || active.current || mutationCount.current) throw new Error('请先停止回复或等待本机数据保存')
+    mutationCount.current++
+    try {
+      await organization.current
+      const result = await (finish ? persistFinishOnboarding(profile, messages) : persistUpdateOnboarding(profile))
+      onboardingProfileRef.current = result.profile
+      if (finish) selectedRef.current = result.profile.characterId
+      conversationsRef.current = { ...conversationsRef.current, [result.profile.characterId]: result.messages }
+      memoriesRef.current = result.memories
+      if (mounted.current) {
+        setOnboardingProfile(result.profile); if (finish) setSelectedState(result.profile.characterId); setOnboarded(true)
+        setConversations(conversationsRef.current); setMemories(memoriesRef.current); if (finish) setDraft(''); setError('')
+      }
+    } catch (failure) { if (mounted.current) setError('无法保存引导设置，请检查本机存储权限或设置内容'); throw failure }
+    finally { mutationCount.current-- }
   }
+  const finishOnboarding = async (profile?: OnboardingProfile, messages: ChatMessage[] = []): Promise<void> => {
+    await saveOnboarding(profile || onboardingProfileRef.current || defaultOnboardingProfile(selectedRef.current), messages, true)
+  }
+  const updateOnboarding = async (profile: OnboardingProfile): Promise<void> => { await saveOnboarding(profile, [], false) }
   const apply = (role: CharacterId, records: ChatMessage[]) => {
     if (temporaryRef.current) { temporaryConversationsRef.current = { ...temporaryConversationsRef.current, [role]: records }; if (mounted.current) setTemporaryConversations(temporaryConversationsRef.current); return }
     conversationsRef.current = { ...conversationsRef.current, [role]: records }; if (mounted.current) setConversations(conversationsRef.current)
   }
+  useEffect(() => {
+    if (!ready || !onboarded) return
+    let disposed = false
+    let running = false
+    const tick = async () => {
+      if (running || disposed || document.visibilityState !== 'visible' || active.current || temporaryRef.current || mutationCount.current) return
+      running = true
+      try {
+        for (const role of characters) {
+          if (disposed || active.current || temporaryRef.current || mutationCount.current) break
+          await deliverProactive(role.id, new Date())
+          const records = await loadRoleConversation(role.id)
+          // Do not replace an in-flight reply or temporary view after an async read.
+          if (!disposed && !active.current && !temporaryRef.current && !mutationCount.current && JSON.stringify(records) !== JSON.stringify(conversationsRef.current[role.id])) apply(role.id, records)
+        }
+      } catch { if (!disposed) setError('主动消息检查失败，未能确认保存；下次打开页面会重试。') }
+      finally { running = false }
+    }
+    void tick()
+    const timer = window.setInterval(() => void tick(), 30_000)
+    const wake = () => { void tick() }
+    document.addEventListener('visibilitychange', wake)
+    window.addEventListener('aily-proactive-settings', wake)
+    return () => { disposed = true; window.clearInterval(timer); document.removeEventListener('visibilitychange', wake); window.removeEventListener('aily-proactive-settings', wake) }
+  }, [ready, onboarded])
   const send = async (options: { retryId?: number; replyToId?: number; attachment?: ChatMessage['attachment']; kind?: ChatMessage['kind'] } = {}) => {
     if (!ready || active.current || mutationCount.current) return
     const role = selectedRef.current
@@ -127,7 +175,7 @@ export default function useLocalChat() {
     const target = options.retryId === undefined ? undefined : original.find(message => message.id === options.retryId && message.from === 'user' && !message.withdrawn)
     if (options.retryId !== undefined && !target) return
     if (!target && !draft.trim() && !options.attachment) return
-    const user: ChatMessage = target ? { ...target, status: 'sent' } : { id: nextId(), from: 'user', text: draft.trim(), time: new Date().toLocaleTimeString('zh-CN'), createdAt: new Date().toISOString(), status: 'sent', replyToId: options.replyToId, kind: options.kind || 'text', attachment: options.attachment }
+    const user: ChatMessage = target ? { ...target, status: 'sent' } : { id: nextId(original.reduce((maximum, message) => Math.max(maximum, message.id), 0)), from: 'user', text: draft.trim(), time: new Date().toLocaleTimeString('zh-CN'), createdAt: new Date().toISOString(), status: 'sent', replyToId: options.replyToId, kind: options.kind || 'text', attachment: options.attachment }
     // Retrying operates on exactly the original user turn; it never duplicates that turn.
     let records = target ? original.map(message => message.id === target.id ? user : message) : [...original, user]
     const controller = new AbortController(); active.current = controller; setReplying(true); setError('')
@@ -147,7 +195,7 @@ export default function useLocalChat() {
         if (message.from === 'user') lastUserForgotten = forgotten.has(message.id)
         return !forgotten.has(message.id) && !lastUserForgotten
       })
-      await streamReply({ characterId: role, messages: context, memories: isTemporary ? [] : await db.memories.toArray(), summaries: isTemporary ? [] : await loadSummaries(role), memoryPolicy: await loadMemoryPolicy(role), apiKey, endpoint, model, signal: controller.signal, onDelta: delta => { content += delta; apply(role, [...records, { ...assistant, text: content }]) } })
+      await streamReply({ characterId: role, onboardingProfile: onboardingProfileRef.current, messages: context, memories: isTemporary ? [] : await db.memories.toArray(), summaries: isTemporary ? [] : await loadSummaries(role), memoryPolicy: await loadMemoryPolicy(role), apiKey, endpoint, model, signal: controller.signal, onDelta: delta => { content += delta; apply(role, [...records, { ...assistant, text: content }]) } })
       const completed = await persist(role, [{ ...user, status: 'sent' }, { ...assistant, text: content, status: 'sent' }]); apply(role, completed)
     } catch (failure) {
       const cancelled = controller.signal.aborted
@@ -217,7 +265,7 @@ export default function useLocalChat() {
     try { if (value) window[storage].setItem(key, value); else window[storage].removeItem(key) }
     catch { setError('浏览器无法保存配置，本次配置仅暂留内存。') }
   }
-  return { beforeDataChange: async () => { if (active.current || mutationCount.current) throw new Error('请先停止回复或等待保存'); await organization.current }, summaries, policies, changePolicy, approveProposal, temporary, toggleTemporary, chatMessages: temporary ? temporaryConversations[selected] : conversations[selected], ready, loadError, reload: load, onboarded, finishOnboarding, selected, setSelected, conversations, setConversations, memories, setMemories, draft, setDraft, replying, error, apiKey, endpoint, model,
+  return { beforeDataChange: async () => { if (active.current || mutationCount.current) throw new Error('请先停止回复或等待保存'); await organization.current }, summaries, policies, changePolicy, approveProposal, temporary, toggleTemporary, chatMessages: temporary ? temporaryConversations[selected] : conversations[selected], ready, loadError, reload: load, onboarded, onboardingProfile, finishOnboarding, updateOnboarding, selected, setSelected, conversations, setConversations, memories, setMemories, draft, setDraft, replying, error, apiKey, endpoint, model,
     setApiKey: (value: string) => { setKey(value); writePreference('sessionStorage', 'aily-api-key', value) },
     setEndpoint: (value: string) => { setEndpointState(value); writePreference('localStorage', 'aily-api-endpoint', value) }, setModel: (value: string) => { setModelState(value); writePreference('localStorage', 'aily-api-model', value) },
     send, stop: () => active.current?.abort(), saveConfirmed, editMemory, removeMemory, clearMemories, withdraw }
