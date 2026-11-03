@@ -8,12 +8,12 @@ import { db, loadLocalData, saveSetting } from './db'
 beforeEach(async () => { localStorage.clear(); sessionStorage.clear(); await db.delete(); await db.open() })
 afterEach(() => { cleanup(); vi.restoreAllMocks() })
 
-async function confirmSafetyConsent() {
-  expect(await screen.findByRole('button', { name: '确认并继续' })).toBeDisabled()
+async function confirmSafetyConsent(name = '确认并继续') {
+  expect(await screen.findByRole('button', { name })).toBeDisabled()
   fireEvent.click(screen.getByLabelText('我已年满 18 周岁'))
-  expect(screen.getByRole('button', { name: '确认并继续' })).toBeDisabled()
+  expect(screen.getByRole('button', { name })).toBeDisabled()
   fireEvent.click(screen.getByLabelText('我理解 AI 身份与数据说明'))
-  fireEvent.click(screen.getByRole('button', { name: '确认并继续' }))
+  fireEvent.click(screen.getByRole('button', { name }))
 }
 
 describe('Aily core journey', () => {
@@ -54,9 +54,9 @@ describe('Aily core journey', () => {
     expect(await screen.findByText(/会生长/)).toBeInTheDocument()
     expect(screen.getByText(/来自未来的一条回忆 · 场景示例/)).toBeInTheDocument()
     expect(screen.getByRole('progressbar', { name: '首次引导进度' })).toHaveAttribute('max', '9')
-    expect(screen.getByRole('button', { name: /遇见 TA/ })).toBeEnabled()
+    expect(screen.getByRole('button', { name: '遇见 TA' })).toBeDisabled()
     expect(screen.queryByRole('button', { name: /去找他/ })).not.toBeInTheDocument()
-    expect(screen.getByText(/AI 角色互动 · 记录保存在当前设备/)).toBeInTheDocument()
+    expect(screen.getByText(/本机优先保存，外部模型另有传输 · 记录保存在当前设备/)).toBeInTheDocument()
     expect(screen.getByText(/第 1 \/ 9 步 · 初遇/)).toBeInTheDocument()
     expect((await loadLocalData()).settings.onboarded).not.toBe(true)
   })
@@ -78,7 +78,7 @@ describe('Aily core journey', () => {
 
   it('persists character choice in IndexedDB instead of a duplicate localStorage blob', async () => {
     render(<App />)
-    fireEvent.click(await screen.findByRole('button', { name: /遇见 TA/ }))
+    await confirmSafetyConsent('遇见 TA')
     fireEvent.click(screen.getByRole('button', { name: /陈奕恒/ }))
     fireEvent.click(screen.getByRole('button', { name: /开始我们的故事/ }))
     expect(screen.getByRole('heading', { name: '先听听我的自我介绍' })).toBeInTheDocument()
@@ -95,8 +95,7 @@ describe('Aily core journey', () => {
     expect(screen.getByText(/API Key 只保留在本次浏览器会话，不包含在备份内/)).toBeInTheDocument()
     expect((await loadLocalData()).settings.onboarded).not.toBe(true)
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: '完成引导' })) })
-    expect(screen.queryByRole('button', { name: /去找他/ })).not.toBeInTheDocument()
-    await confirmSafetyConsent()
+    expect(screen.queryByRole('button', { name: '确认并继续' })).not.toBeInTheDocument()
     await waitFor(() => expect(screen.getAllByText('陈奕恒')).toHaveLength(2))
     const data = await loadLocalData()
     expect(data.settings.onboardingProfile).toMatchObject({ userName: '小雨', characterName: '阿恒', adultEnabled: false })
