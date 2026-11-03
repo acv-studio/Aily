@@ -4,6 +4,8 @@ import { characters, type CharacterId } from './data'
 import type { ChatMessage } from './chatService'
 import { defaultOnboardingProfile, type OnboardingProfile } from './onboarding'
 import './onboarding.css'
+import { t, useI18n } from './i18n'
+import LanguageSettings from './LanguageSettings'
 import { SafetyConsent } from './SafetyPrivacyPanel'
 import { acceptSafetyConsent, hasSafetyConsent } from './privacy'
 

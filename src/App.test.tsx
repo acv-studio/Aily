@@ -2,6 +2,7 @@ import '@testing-library/jest-dom/vitest'
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
+import { acceptSafetyConsent } from './privacy'
 import * as storage from './db'
 import { db, loadLocalData, saveSetting } from './db'
 
@@ -66,7 +67,6 @@ describe('Aily core journey', () => {
     await saveSetting('selected', 'chen')
     acceptSafetyConsent()
     render(<App />)
-    await confirmSafetyConsent()
     fireEvent.click(await screen.findByRole('button', { name: '我的' }))
     expect(screen.queryByRole('button', { name: '确认并继续' })).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '修改称呼与互动偏好' }))
