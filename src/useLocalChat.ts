@@ -73,7 +73,7 @@ export default function useLocalChat() {
       for (const role of characters) queueOrganization(role.id)
       setReady(true)
     }
-    catch { if (mounted.current) setLoadError('无法读取本机数据。请允许浏览器存储后重试；未覆盖任何记录。') }
+    catch { if (mounted.current) setLoadError('无法读取本机数据，页面资料可能尚未更新。请允许浏览器存储后重试读取。') }
   }
   useEffect(() => { mounted.current = true; void load(); return () => { mounted.current = false; active.current?.abort() } }, [])
   const selectedRef = useRef(selected); selectedRef.current = selected
@@ -129,8 +129,8 @@ export default function useLocalChat() {
     selectedRef.current = id; setSelectedState(id); setDraft(''); setError(''); void observeWrite(saveSetting('selected', id)).catch(() => setError('角色选择未能保存，请重试'))
   }
   const saveOnboarding = async (profile: OnboardingProfile, messages: ChatMessage[], finish: boolean): Promise<void> => {
-    if (!ready || active.current || mutationCount.current) throw new Error('请先停止回复或等待本机数据保存')
-    mutationCount.current++
+    // The tracked public entry point already counts this onboarding mutation.
+    if (!ready || active.current || mutationCount.current > 1) throw new Error('请先停止回复或等待本机数据保存')
     try {
       await organization.current
       const result = await (finish ? persistFinishOnboarding(profile, messages) : persistUpdateOnboarding(profile))
@@ -143,7 +143,6 @@ export default function useLocalChat() {
         setConversations(conversationsRef.current); setMemories(memoriesRef.current); if (finish) setDraft(''); setError('')
       }
     } catch (failure) { if (mounted.current) setError('无法保存引导设置，请检查本机存储权限或设置内容'); throw failure }
-    finally { mutationCount.current-- }
   }
   const finishOnboarding = async (profile?: OnboardingProfile, messages: ChatMessage[] = []): Promise<void> => {
     await saveOnboarding(profile || onboardingProfileRef.current || defaultOnboardingProfile(selectedRef.current), messages, true)
