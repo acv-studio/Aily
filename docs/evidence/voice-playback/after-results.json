@@ -1,0 +1,121 @@
+{
+  "baseURL": "http://127.0.0.1:43191",
+  "phase": "after",
+  "outcome": "passed",
+  "failure": null,
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "observations": [
+    {
+      "label": "recording preview",
+      "currentTime": 3.96,
+      "duration": 3.96,
+      "readyState": 4,
+      "error": null,
+      "events": [
+        "play",
+        "playing",
+        "pause",
+        "play",
+        "playing",
+        "pause",
+        "ended",
+        "seeking",
+        "seeked",
+        "play",
+        "playing",
+        "pause",
+        "ended"
+      ],
+      "nativeEvents": true
+    },
+    {
+      "label": "Sending unmounts and pauses preview",
+      "paused": true,
+      "connected": false
+    },
+    {
+      "label": "sent message",
+      "currentTime": 3.96,
+      "duration": 3.96,
+      "readyState": 4,
+      "error": null,
+      "events": [
+        "play",
+        "playing",
+        "pause",
+        "play",
+        "playing",
+        "pause",
+        "ended",
+        "seeking",
+        "seeked",
+        "play",
+        "playing",
+        "pause",
+        "ended"
+      ],
+      "nativeEvents": true
+    },
+    {
+      "label": "Starting microphone recording pauses active playback",
+      "paused": true,
+      "connected": true
+    },
+    {
+      "label": "Preview playback pauses message (exclusive playback)",
+      "paused": true,
+      "connected": true
+    },
+    {
+      "label": "Message playback pauses preview (exclusive playback)",
+      "paused": true,
+      "connected": true
+    },
+    {
+      "label": "Removing draft unmounts and pauses preview",
+      "paused": true,
+      "connected": false
+    },
+    {
+      "label": "Leaving chat unmounts and pauses message",
+      "paused": true,
+      "connected": false
+    },
+    {
+      "label": "Real decode error exposes visible playback feedback",
+      "passed": true
+    },
+    {
+      "label": "refreshed persisted message",
+      "currentTime": 3.96,
+      "duration": 3.96,
+      "readyState": 4,
+      "error": null,
+      "events": [
+        "play",
+        "playing",
+        "pause",
+        "play",
+        "playing",
+        "pause",
+        "ended",
+        "seeking",
+        "seeked",
+        "play",
+        "playing",
+        "pause",
+        "ended"
+      ],
+      "nativeEvents": true
+    },
+    {
+      "label": "Withdrawal unmounts and pauses active message",
+      "paused": true,
+      "connected": false
+    }
+  ],
+  "errors": []
+}

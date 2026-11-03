@@ -1,5 +1,6 @@
 import { t, getLocale, resolveChatLocale, useI18n, detectLanguage } from './i18n'
 import { useEffect, useRef, useState } from 'react'
+import { hasSafetyConsent } from './privacy'
 import { characters, type CharacterId } from './data'
 import { streamReply, type ChatMessage, type ConfirmedMemory } from './chatService'
 import { clearCharacterMemories, deleteMemory, finishOnboarding as persistFinishOnboarding, updateOnboarding as persistUpdateOnboarding, initializeLocalData, loadRoleConversation, persistChatChanges, saveMemory, saveSetting, updateMemory } from './db'
@@ -37,10 +38,25 @@ export default function useLocalChat() {
   const [error, setError] = useState('')
   const [loadError, setLoadError] = useState('')
   const active = useRef<AbortController | null>(null)
+  const deleting = useRef(false)
+  const proactiveTask = useRef<Promise<void>>(Promise.resolve())
   const mounted = useRef(true)
   const memoryLock = useRef(false)
   const mutations = useRef(Promise.resolve())
   const mutationCount = useRef(0)
+  const pendingWrites = useRef(new Set<Promise<unknown>>())
+  const observeWrite = <Result,>(work: Promise<Result>): Promise<Result> => {
+    const task = work.finally(() => { pendingWrites.current.delete(task) })
+    pendingWrites.current.add(task)
+    return task
+  }
+  const tracked = <Args extends unknown[], Result,>(work: (...args: Args) => Promise<Result>) => (...args: Args): Promise<Result> => {
+    if (deleting.current) return Promise.reject(new Error(t('正在删除本机资料，不能继续写入')))
+    mutationCount.current++
+    const task = work(...args).finally(() => { mutationCount.current--; pendingWrites.current.delete(task) })
+    pendingWrites.current.add(task)
+    return task
+  }
   const [apiKey, setKey] = useState(() => readPreference('sessionStorage', 'aily-api-key'))
   const [endpoint, setEndpointState] = useState(() => readPreference('localStorage', 'aily-api-endpoint', 'https://api.deepseek.com/chat/completions'))
   const [model, setModelState] = useState(() => readPreference('localStorage', 'aily-api-model', 'deepseek-chat'))
@@ -93,7 +109,7 @@ export default function useLocalChat() {
     await organize(role)
   }
   const toggleTemporary = () => {
-    if (active.current || mutationCount.current) { setError('请先停止回复或等待保存，再切换会话模式'); return }
+    if (deleting.current || active.current || mutationCount.current) { setError('请先停止回复或等待保存，再切换会话模式'); return }
     temporaryRef.current = !temporaryRef.current; setTemporary(temporaryRef.current)
     temporaryConversationsRef.current = empty(); setTemporaryConversations(empty()); setDraft(''); setError('')
   }
@@ -111,11 +127,11 @@ export default function useLocalChat() {
     await organize(item.characterId)
   }
   const setSelected = (id: CharacterId) => {
-    if (active.current || mutationCount.current) { setError('请先停止回复或等待保存，再切换角色'); return }
-    selectedRef.current = id; setSelectedState(id); setDraft(''); setError(''); void saveSetting('selected', id).catch(() => setError('角色选择未能保存，请重试'))
+    if (deleting.current || active.current || mutationCount.current) { setError('请先停止回复或等待保存，再切换角色'); return }
+    selectedRef.current = id; setSelectedState(id); setDraft(''); setError(''); void observeWrite(saveSetting('selected', id)).catch(() => setError('角色选择未能保存，请重试'))
   }
   const saveOnboarding = async (profile: OnboardingProfile, messages: ChatMessage[], finish: boolean): Promise<void> => {
-    if (!ready || active.current || mutationCount.current) throw new Error(t('请先停止回复或等待本机数据保存'))
+    if (deleting.current || !ready || active.current || mutationCount.current) throw new Error(t('请先停止回复或等待本机数据保存'))
     mutationCount.current++
     try {
       await organization.current
@@ -143,8 +159,8 @@ export default function useLocalChat() {
     if (!ready || !onboarded) return
     let disposed = false
     let running = false
-    const tick = async () => {
-      if (running || disposed || document.visibilityState !== 'visible' || active.current || temporaryRef.current || mutationCount.current) return
+    const runTick = async () => {
+      if (deleting.current || !hasSafetyConsent() || running || disposed || document.visibilityState !== 'visible' || active.current || temporaryRef.current || mutationCount.current) return
       running = true
       try {
         for (const role of characters) {
@@ -157,6 +173,7 @@ export default function useLocalChat() {
       } catch { if (!disposed) setError('主动消息检查失败，未能确认保存；下次打开页面会重试。') }
       finally { running = false }
     }
+    const tick = () => { if (!running) proactiveTask.current = runTick(); return proactiveTask.current }
     void tick()
     const timer = window.setInterval(() => void tick(), 30_000)
     const wake = () => { void tick() }
@@ -165,7 +182,7 @@ export default function useLocalChat() {
     return () => { disposed = true; window.clearInterval(timer); document.removeEventListener('visibilitychange', wake); window.removeEventListener('aily-proactive-settings', wake) }
   }, [ready, onboarded])
   const send = async (options: { retryId?: number; replyToId?: number; attachment?: ChatMessage['attachment']; kind?: ChatMessage['kind'] } = {}) => {
-    if (!ready || active.current || mutationCount.current) return
+    if (deleting.current || !ready || active.current || mutationCount.current) return
     const role = selectedRef.current
     const isTemporary = temporaryRef.current
     const original = (isTemporary ? temporaryConversationsRef : conversationsRef).current[role]
@@ -247,7 +264,7 @@ export default function useLocalChat() {
   const removeMemory = async (id: string) => { await organization.current; const item = memoriesRef.current.find(memory => memory.id === id); await deleteMemory(id); memoriesRef.current = memoriesRef.current.filter(item => item.id !== id); setMemories(memoriesRef.current); if (item) await organize(item.characterId) }
   const clearMemories = async (role: CharacterId) => { await organization.current; await clearCharacterMemories(role); memoriesRef.current = memoriesRef.current.filter(item => item.characterId !== role); setMemories(memoriesRef.current); setSummaries(previous => previous.filter(summary => summary.characterId !== role)) }
   const withdraw = (id: number) => {
-    if (active.current) { setError('请先停止回复，再撤回消息'); return Promise.resolve() }
+    if (deleting.current || active.current) { setError('请先停止回复，再撤回消息'); return Promise.resolve() }
     const role = selectedRef.current
     if (temporaryRef.current) { apply(role, temporaryConversationsRef.current[role].map(message => message.id === id && message.from === 'user' ? { ...message, withdrawn: true, text: '', attachment: undefined } : message)); return Promise.resolve() }
     mutationCount.current++
@@ -267,8 +284,8 @@ export default function useLocalChat() {
     try { if (value) window[storage].setItem(key, value); else window[storage].removeItem(key) }
     catch { setError('浏览器无法保存配置，本次配置仅暂留内存。') }
   }
-  return { beforeDataChange: async () => { if (active.current || mutationCount.current) throw new Error(t('请先停止回复或等待保存')); await organization.current }, summaries, policies, changePolicy, approveProposal, temporary, toggleTemporary, chatMessages: temporary ? temporaryConversations[selected] : conversations[selected], ready, loadError: t(loadError), reload: load, onboarded, onboardingProfile, finishOnboarding, updateOnboarding, selected, setSelected, conversations, setConversations, memories, setMemories, draft, setDraft, replying, error: t(error), apiKey, endpoint, model,
+  return { prepareForDeletion: async () => { if (active.current || mutationCount.current || memoryLock.current) throw new Error(t('请先停止回复或等待保存')); deleting.current = true; try { await proactiveTask.current; await mutations.current; await Promise.all([...pendingWrites.current]); await organization.current } catch (failure) { deleting.current = false; throw failure } }, beforeDataChange: async () => { if (active.current || mutationCount.current) throw new Error(t('请先停止回复或等待保存')); await organization.current }, summaries, policies, changePolicy: tracked(changePolicy), approveProposal: tracked(approveProposal), temporary, toggleTemporary, chatMessages: temporary ? temporaryConversations[selected] : conversations[selected], ready, loadError: t(loadError), reload: load, onboarded, onboardingProfile, finishOnboarding, updateOnboarding, selected, setSelected, conversations, setConversations, memories, setMemories, draft, setDraft, replying, error: t(error), apiKey, endpoint, model,
     setApiKey: (value: string) => { setKey(value); writePreference('sessionStorage', 'aily-api-key', value) },
     setEndpoint: (value: string) => { setEndpointState(value); writePreference('localStorage', 'aily-api-endpoint', value) }, setModel: (value: string) => { setModelState(value); writePreference('localStorage', 'aily-api-model', value) },
-    send, stop: () => active.current?.abort(), saveConfirmed, editMemory, removeMemory, clearMemories, withdraw }
+    send, stop: () => active.current?.abort(), saveConfirmed: tracked(saveConfirmed), editMemory: tracked(editMemory), removeMemory: tracked(removeMemory), clearMemories: tracked(clearMemories), withdraw }
 }

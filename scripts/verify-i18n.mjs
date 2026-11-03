@@ -10,6 +10,8 @@ try {
   await page.getByRole('button', { name: 'Meet your companion' }).waitFor()
   assert.equal(await page.locator('html').getAttribute('lang'), 'en')
   await page.getByRole('combobox', { name: '界面语言 / Interface language' }).selectOption('zh-CN')
+  await page.getByRole('checkbox', { name: '我已年满 18 周岁', exact: true }).check()
+  await page.getByRole('checkbox', { name: '我理解 AI 身份与数据说明', exact: true }).check()
   await page.getByRole('button', { name: '遇见 TA' }).click()
   await page.getByRole('button', { name: '开始我们的故事' }).click()
   await page.getByRole('button', { name: '继续', exact: true }).click()

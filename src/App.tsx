@@ -1,4 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { flushSync } from 'react-dom'
+import SafetyPrivacyPanel, { SafetyConsent } from './SafetyPrivacyPanel'
+import { acceptSafetyConsent, acquireUsageLease, deleteLocalProfile, hasSafetyConsent } from './privacy'
 import { t, useI18n } from './i18n'
 import LanguageSettings from './LanguageSettings'
 import { ArrowLeft, Bell, BookHeart, ChevronRight, CircleUserRound, Heart, Home, Image, MemoryStick, MessageCircle, MoreHorizontal, Plus, Send, ShieldCheck, ShoppingBag, Sparkles, Volume2 } from 'lucide-react'
@@ -21,6 +24,25 @@ type Tab = 'home' | 'moments' | 'memories' | 'store' | 'profile'
 
 export default function App() {
   useI18n()
+  const [phase, setPhase] = useState<'loading' | 'active' | 'deleting' | 'deleted' | 'error'>('loading')
+  const [error, setError] = useState('')
+  const release = useRef<(() => Promise<void>) | null>(null)
+  useEffect(() => {
+    let disposed = false
+    void acquireUsageLease().then(lease => { if (disposed) void lease(); else { release.current = lease; setPhase('active') } }).catch(() => { setError('无法保护本机数据，请重新打开页面'); setPhase('error') })
+    return () => { disposed = true; void release.current?.() }
+  }, [])
+  const deleteProfile = async () => {
+    flushSync(() => setPhase('deleting')) // Unmount data consumers before releasing this tab's lease.
+    try { await release.current?.(); release.current = null; await deleteLocalProfile(); setPhase('deleted') }
+    catch (failure) { setError(failure instanceof Error ? failure.message : '删除未完成，部分资料可能已删除。请重试。'); setPhase('error') }
+  }
+  if (phase === 'active') return <AilyApp onDelete={deleteProfile} />
+  return <main className="app-shell loading-screen"><h1>{phase === 'deleted' ? t('本机使用资料已删除') : phase === 'error' ? t('操作未完成') : phase === 'deleting' ? t('正在删除本机资料…') : t('正在保护本机数据…')}</h1>{phase === 'error' && <><p role="alert">{t(error)}</p><p>{t('删除失败时可能已有部分资料被清除；尚未确认全部完成。')}</p><button onClick={() => void deleteProfile()}>{t('重试删除')}</button></>}{(phase === 'deleted' || phase === 'error') && <button onClick={() => window.location.reload()}>{phase === 'deleted' ? t('重新开始') : t('重新打开应用')}</button>}</main>
+}
+
+function AilyApp({ onDelete }: { onDelete: () => Promise<void> }) {
+  useI18n()
   const chat = useLocalChat()
   const { onboarded, selected, conversations, draft, setDraft, replying, error: chatError } = chat
   const [tab, setTab] = useState<Tab>('home')
@@ -28,6 +50,9 @@ export default function App() {
   const [gameOpen, setGameOpen] = useState(false)
   const [storyOpen, setStoryOpen] = useState(false)
   const [proactiveOpen, setProactiveOpen] = useState(false)
+  const [privacyOpen, setPrivacyOpen] = useState(false)
+  const [consented, setConsented] = useState(hasSafetyConsent)
+  const deleteProfile = async () => { await chat.prepareForDeletion(); await onDelete() }
   const [preferencesOpen, setPreferencesOpen] = useState(false)
   const userName = chat.onboardingProfile?.userName && chat.onboardingProfile.userName !== '你' ? chat.onboardingProfile.userName : t('我')
   const primaryName = characters.find(role => role.id === (chat.onboardingProfile?.characterId || selected))!.name
@@ -37,7 +62,9 @@ export default function App() {
   const finishOnboarding = chat.finishOnboarding
   const saveGameMemory = (text: string) => { void chat.saveConfirmed({ text, category: 'relationship' }).catch(() => alert(t("回忆保存失败，请重试"))) }
   if (!chat.ready) return <main className="app-shell loading-screen"><p>{chat.loadError || t("正在读取本机聊天与记忆…")}</p>{chat.loadError && <button onClick={chat.reload}>{t("重试读取")}</button>}</main>
-  if (!onboarded) return <Onboarding selected={selected} setSelected={setSelected} finish={finishOnboarding} apiKey={chat.apiKey} setApiKey={chat.setApiKey} />
+  if (onboarded && !consented && !hasSafetyConsent()) return <main className="onboarding"><LanguageSettings compact /><SafetyConsent returning onAccepted={() => { acceptSafetyConsent(); setConsented(true) }} /></main>
+  if (privacyOpen) return <main className="app-shell"><SafetyPrivacyPanel close={() => setPrivacyOpen(false)} onDelete={deleteProfile} /></main>
+  if (!onboarded) return <Onboarding selected={selected} setSelected={setSelected} finish={finishOnboarding} apiKey={chat.apiKey} setApiKey={chat.setApiKey} onSafetyAccepted={!consented ? () => { acceptSafetyConsent(); setConsented(true) } : undefined} />
   if (preferencesOpen) return <OnboardingEditor initial={chat.onboardingProfile || defaultOnboardingProfile(selected)} save={chat.updateOnboarding} close={() => setPreferencesOpen(false)} />
   if (chatOpen) return <><ChatPanel character={character} messages={chat.chatMessages} temporary={chat.temporary} toggleTemporary={chat.toggleTemporary} pendingCount={chat.memories.filter(memory => memory.characterId === selected && memory.state === 'pending').length} draft={draft} setDraft={setDraft} send={chat.send} close={() => { if (!replying) setChatOpen(false) }} saveMemory={chat.saveConfirmed} withdraw={chat.withdraw} stop={chat.stop} replying={replying} error={chatError} demo={!chat.apiKey} openGame={() => setGameOpen(true)} openStory={() => setStoryOpen(true)} />{gameOpen && <RockPaperScissors characterName={t(character.name)} onComplete={saveGameMemory} onClose={() => setGameOpen(false)} />}{storyOpen && (selected === 'lu' ? <SevenDayStory temporary={chat.temporary} onSaved={() => { void db.memories.toArray().then(chat.setMemories).catch(() => alert(t("故事已保存，回忆列表暂未刷新；重新打开应用可读取"))) }} onClose={() => setStoryOpen(false)} /> : <InteractiveStory characterName={t(character.name)} onComplete={saveGameMemory} onClose={() => setStoryOpen(false)} />)}</>
 
@@ -48,7 +75,7 @@ export default function App() {
     {tab === 'moments' && <MomentsScreen userName={userName} onChat={(text)=>{setSelected('lu');setDraft(text);setChatOpen(true)}} />}
     {tab === 'memories' && <MemoryPanel memories={chat.memories} selected={selected} onSave={chat.saveConfirmed} onUpdate={chat.editMemory} onDelete={chat.removeMemory} onClear={chat.clearMemories} summaries={chat.summaries} policies={chat.policies} onPolicy={chat.changePolicy} onConfirm={chat.approveProposal} conversations={chat.conversations} />}
     {tab === 'profile' && proactiveOpen && <ProactiveSettingsPanel selected={selected} close={() => setProactiveOpen(false)} />}
-    {tab === 'profile' && !proactiveOpen && <section className="screen" style={{ paddingBottom: 0 }}><button className="proactive-entry glass" aria-label={t("角色主动消息设置")} onClick={() => setProactiveOpen(true)}>{t("角色主动消息设置")}<ChevronRight size={18} /></button></section>}
+    {tab === 'profile' && !proactiveOpen && <section className="screen" style={{ paddingBottom: 0 }}><button className="proactive-entry glass" aria-label={t("角色主动消息设置")} onClick={() => setProactiveOpen(true)}>{t("角色主动消息设置")}<ChevronRight size={18} /></button><button className="proactive-entry glass" aria-label={t("安全与隐私")} onClick={() => setPrivacyOpen(true)}>{t("安全与隐私")}<ShieldCheck size={18} /></button></section>}
     {tab === 'profile' && !proactiveOpen && <><button className="secondary" style={{ margin: '0 20px 16px' }} onClick={() => setPreferencesOpen(true)}>{t("修改称呼与互动偏好")}</button><ProfileScreen userName={userName} primaryName={primaryName} beforeDataChange={chat.beforeDataChange} apiKey={chat.apiKey} endpoint={chat.endpoint} model={chat.model} setApiKey={chat.setApiKey} setEndpoint={chat.setEndpoint} setModel={chat.setModel} onImported={() => { void chat.reload() }} onCleared={() => { void chat.reload() }} /></>}
     {tab === 'store' && <GiftStorePanel selected={selected} />}
     {!(tab === 'profile' && proactiveOpen) && <nav className="bottom-nav glass">

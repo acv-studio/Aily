@@ -1,4 +1,7 @@
 export const panelEnglish: Record<string, string> = {
+  '预听语音消息': 'Preview voice message',
+  '语音附件不可用': 'Voice attachment unavailable',
+  '无法播放这段语音，请使用支持此录音格式的浏览器重试；录音不会发送给模型。': 'Unable to play this voice message. Try a browser that supports this recording format. Recordings are not sent to the model.',
   'LOCAL 本地话题摘要（确定性统计与原文摘录，非 AI 抽象总结）': 'LOCAL topic summary (deterministic statistics and original excerpts, not an AI-generated abstract)',
   '{count} 条': '{count} messages',
   '话题': 'Topics',

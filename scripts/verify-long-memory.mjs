@@ -11,6 +11,7 @@ try {
   await page.evaluate(async () => {
     const { saveSetting } = await import('/src/db.ts')
     await saveSetting('onboarded', true); await saveSetting('selected', 'lu')
+    localStorage.setItem('aily-safety-consent-v1', 'adult-ai-privacy-accepted')
   })
   await page.reload()
   await page.getByRole('button', { name: '去找他' }).click()

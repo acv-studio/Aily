@@ -11,6 +11,8 @@ try {
     await saveSetting('onboarded', true)
     await saveSetting('selected', 'lu')
     localStorage.setItem('aily.locale', 'zh-CN')
+    // Isolated adult-consented synthetic fixture, identical before/after.
+    localStorage.setItem('aily-safety-consent-v1', 'adult-ai-privacy-accepted')
   })
   await page.reload()
   await page.getByRole('button', { name: '我的', exact: true }).click()
