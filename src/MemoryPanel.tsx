@@ -7,11 +7,14 @@ import type { MemoryDraft } from './ChatPanel'
 import RelationshipPanel from './RelationshipPanel'
 import type { OnboardingProfile } from './onboarding'
 import RelationshipMemoriesView, { type RelationshipView } from './RelationshipMemoriesView'
+import MonthlyAlbumPanel from './MonthlyAlbumPanel'
 
 const categories = { profile: '用户偏好', relationship: '共同经历', context: '近期情境', emotion: '情绪与支持' }
-export default function MemoryPanel({ memories, selected, onSave, onUpdate, onDelete, onClear, summaries = [], policies = {}, onPolicy, onConfirm, conversations = {}, onBusyChange, profile, onProfile }: {
-  profile?: OnboardingProfile | null; onProfile?: (profile: OnboardingProfile) => Promise<void>
+export default function MemoryPanel({ memories, selected, onSave, onUpdate, onDelete, onClear, summaries = [], policies = {}, onPolicy, onConfirm, conversations = {}, onBusyChange, privateNames = [], profile, onProfile }: {
+  profile?: OnboardingProfile | null
+  onProfile?: (profile: OnboardingProfile) => Promise<void>
   onBusyChange?: (busy: boolean) => void
+  privateNames?: string[]
   summaries?: ConversationSummary[]; policies?: Partial<Record<CharacterId, MemoryPolicy>>
   onPolicy?: (role: CharacterId, policy: MemoryPolicy) => Promise<void>
   onConfirm?: (id: string) => Promise<void>
@@ -24,7 +27,7 @@ export default function MemoryPanel({ memories, selected, onSave, onUpdate, onDe
 }) {
   const { t, locale } = useI18n()
   const [role, setRole] = useState<CharacterId>(selected)
-  const [view, setView] = useState<RelationshipView | 'manage'>('manage')
+  const [view, setView] = useState<RelationshipView | 'manage' | 'album'>('manage')
   const [category, setCategory] = useState('all')
   const [search, setSearch] = useState('')
   const [editing, setEditing] = useState<ConfirmedMemory | null>(null)
@@ -49,8 +52,9 @@ export default function MemoryPanel({ memories, selected, onSave, onUpdate, onDe
     <RelationshipPanel key={role} role={role} memories={memories} policy={policy} profile={profile} onSave={onProfile} />
     {onPolicy && <details className="memory-card glass"><summary>{t('记忆与敏感信息控制')}</summary><label><input type="checkbox" checked={policy.extractionEnabled} disabled={busy} onChange={event => void run(() => onPolicy(role, { ...policy, extractionEnabled: event.target.checked }))} />{t('自动提议与摘要（关闭后仅保留原始聊天）')}</label>{Object.entries(categories).map(([key, value]) => <label key={key} style={{ display: 'block' }}><input type="checkbox" checked={!policy.disabledCategories.includes(key as MemoryDraft['category'])} disabled={busy} onChange={event => void run(() => onPolicy(role, { ...policy, disabledCategories: event.target.checked ? policy.disabledCategories.filter(item => item !== key) : [...policy.disabledCategories, key as MemoryDraft['category']] }))} />{t('允许{category}记忆', { category: t(value) })}</label>)}<p>{t('关闭某类会停止该类的提议、摘要及已有记忆引用；不删除原始聊天。健康、创伤、性和身份等敏感信息不会自动进入摘要。')}</p></details>}
     <input className="memory-search" aria-label={t('搜索记忆')} placeholder={t('搜索这位角色的记忆')} value={search} onChange={event => setSearch(event.target.value)} />
-    <div className="memory-view-switch" role="group" aria-label="回忆视图">{([['manage', '记忆管理'], ['cards', '回忆卡'], ['journals', '周记月记'], ['timeline', '时间轴']] as const).map(([value, label]) => <button key={value} disabled={busy} aria-pressed={view === value} onClick={() => { setView(value); setSourceIds([]) }}>{label}</button>)}</div>
-    {view !== 'manage' && <RelationshipMemoriesView key={`${role}:${view}`} view={view} role={role} selected={selected} memories={memories} policy={policy} messages={conversations[role] || []} search={search} category={category} onSave={onSave} externalBusy={busy} onBusyChange={setBusy} onManage={() => setView('manage')} />}
+    <div className="memory-view-switch" role="group" aria-label={t('回忆视图')}>{([['manage', '记忆管理'], ['cards', '回忆卡'], ['journals', '周记月记'], ['timeline', '时间轴'], ['album', '月度回忆册']] as const).map(([value, label]) => <button key={value} disabled={busy} aria-pressed={view === value} onClick={() => { setView(value); setSourceIds([]) }}>{t(label)}</button>)}</div>
+    {view !== 'manage' && view !== 'album' && <RelationshipMemoriesView key={`${role}:${view}`} view={view} role={role} selected={selected} memories={memories} policy={policy} messages={conversations[role] || []} search={search} category={category} onSave={onSave} externalBusy={busy} onBusyChange={setBusy} onManage={() => setView('manage')} />}
+    {view === 'album' && <MonthlyAlbumPanel key={`album:${role}`} externalBusy={busy} role={role} memories={memories} policy={policy} messages={conversations[role] || []} privateNames={privateNames} search={search} category={category} />}
     {view === 'manage' && <>
     <div className="memory-toolbar"><span>{t('{count} 条记忆 · {pending} 条待确认', { count: visible.filter(item => item.state !== 'pending').length, pending: visible.filter(item => item.state === 'pending').length })}</span><button onClick={() => { setAdding(true); setEditing(null); setText(''); setNewCategory('profile') }}>{t('＋ 添加记忆')}</button></div>
     <p className="memory-help">{t('手动添加保存到当前主角色：{name}', { name: t(characters.find(character => character.id === selected)?.name || '') })}</p>
