@@ -36,6 +36,32 @@ afterEach(() => {
   else Reflect.deleteProperty(HTMLElement.prototype, 'scrollIntoView')
 })
 
+describe('image authorization identity', () => {
+  it('resets consent when a replacement image finishes reading', async () => {
+    const readers: { result: string; onload: (() => void) | null }[] = []
+    vi.stubGlobal('FileReader', class {
+      result = 'data:image/png;base64,aGVsbG8='
+      onload: (() => void) | null = null
+      onerror = null
+      constructor() { readers.push(this) }
+      readAsDataURL() {}
+    })
+    const view = panel()
+    const fileInput = view.container.querySelector('input[type=file]')!
+    fireEvent.change(fileInput, { target: { files: [new File(['a'], 'a.png', { type: 'image/png' })] } })
+    await act(async () => { readers[0].onload?.() })
+    const consent = screen.getByRole('checkbox', { name: /同意将本次图片/ })
+    fireEvent.click(consent)
+    expect(consent).toBeChecked()
+    fireEvent.change(fileInput, { target: { files: [new File(['b'], 'b.png', { type: 'image/png' })] } })
+    fireEvent.click(consent) // Old image still visible during asynchronous replacement.
+    expect(consent).toBeChecked()
+    await act(async () => { readers[1].onload?.() })
+    expect(consent).not.toBeChecked()
+    expect(screen.getByText(/待发送：b.png/)).toBeInTheDocument()
+  })
+})
+
 describe('chat microphone lifecycle', () => {
   it('stops a permission result received after unmount without constructing a recorder', async () => {
     const { stream, stop } = audio()

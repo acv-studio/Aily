@@ -45,8 +45,8 @@ export default function useLocalChat() {
     try { await saveSetting('onboarded', true); await saveSetting('selected', selected); setOnboarded(true) } catch { setError('无法保存引导设置，请检查本机存储权限') }
   }
   const apply = (role: CharacterId, records: ChatMessage[]) => { conversationsRef.current = { ...conversationsRef.current, [role]: records }; if (mounted.current) setConversations(conversationsRef.current) }
-  const send = async (options: { retryId?: number; replyToId?: number; attachment?: ChatMessage['attachment']; kind?: ChatMessage['kind'] } = {}) => {
-    if (!ready || active.current || mutationCount.current) return
+  const send = async (options: { retryId?: number; replyToId?: number; attachment?: ChatMessage['attachment']; kind?: ChatMessage['kind']; imageConsent?: boolean } = {}) => {
+    if (!ready || active.current || mutationCount.current) { setError('正在处理聊天或本机保存，请稍后重试；草稿和附件未发送。'); throw new Error('聊天或保存忙碌') }
     const role = selectedRef.current
     const original = conversationsRef.current[role]
     const target = options.retryId === undefined ? undefined : original.find(message => message.id === options.retryId && message.from === 'user' && !message.withdrawn)
@@ -61,22 +61,32 @@ export default function useLocalChat() {
     try {
       records = await persistChatChanges(role, [user]); persisted = true; apply(role, records); if (!target) setDraft('')
       if (controller.signal.aborted) throw new DOMException('Aborted', 'AbortError')
-      // Attachments are local-only: no false claim that a text model can hear or see them.
-      if (user.kind === 'image' || user.kind === 'audio') { setError('附件已保存在本机；文字模型不会读取图片或语音。请另发文字描述。'); return }
+      if (user.kind === 'audio') { setError('录音已保存在本机；可使用语音听写输入文字，录音文件不发送给模型。'); return }
+      if (user.kind === 'image' && !options.imageConsent) { setError('图片已保存在本机，没有发送给模型；勾选识图授权后可发送新图片。'); return }
       await persistChatChanges(role, [{ ...user, status: 'sending' }, assistant])
       apply(role, [...records, assistant])
       const context = target ? records.slice(0, records.findIndex(item => item.id === user.id) + 1) : records
-      await streamReply({ characterId: role, messages: context, memories: memoriesRef.current, apiKey, endpoint, model, signal: controller.signal, onDelta: delta => { content += delta; apply(role, [...records, { ...assistant, text: content }]) } })
+      await streamReply({ characterId: role, messages: context, memories: memoriesRef.current, apiKey, endpoint, model, imageConsent: options.imageConsent, signal: controller.signal, onDelta: delta => { content += delta; apply(role, [...records, { ...assistant, text: content }]) } })
       const completed = await persistChatChanges(role, [{ ...user, status: 'sent' }, { ...assistant, text: content, status: 'sent' }]); apply(role, completed)
     } catch (failure) {
       const cancelled = controller.signal.aborted
       const failed = records.map(message => message.id === user.id ? { ...message, status: 'failed' as const } : message)
       const retained = content ? [...failed, { ...assistant, text: content, status: 'failed' as const }] : failed
       if (persisted) {
-        try { const saved = await persistChatChanges(role, [{ ...user, status: 'failed' }, ...(content ? [{ ...assistant, text: content, status: 'failed' as const }] : [{ ...assistant, text: '', status: 'failed' as const }])]); apply(role, saved); setError(cancelled ? '已停止回复，消息和已生成内容已保存；可重试。' : '回复未完成，消息已保存在本机；可重试。') }
+        try { const saved = await persistChatChanges(role, [{ ...user, status: 'failed' }, ...(content ? [{ ...assistant, text: content, status: 'failed' as const }] : [{ ...assistant, text: '', status: 'failed' as const }])]); apply(role, saved); setError(cancelled ? '已停止回复，消息和已生成内容已保存；可重试。' : user.kind === 'image' ? '识图未完成，图片已保留；请检查有效 Key、支持图片输入的模型与接口后重试。' : '回复未完成，消息已保存在本机；可重试。') }
         catch { apply(role, retained); setError('本机保存失败：当前内容仅暂留界面，请勿关闭页面并检查存储空间。') }
       } else { setError('消息未保存、未发送：请检查本机存储权限或空间。'); if (failure) return Promise.reject(failure) }
     } finally { if (active.current === controller) { active.current = null; if (mounted.current) setReplying(false) } }
+  }
+  const appendLocalMessage = async (role: CharacterId, text: string) => {
+    if (!ready || !mounted.current || active.current || mutationCount.current) throw new Error('聊天忙碌，暂不发送主动问候')
+    if (!characters.some(character => character.id === role) || !text.trim() || text.length > 1000) throw new Error('主动消息无效')
+    mutationCount.current++
+    try {
+      const message: ChatMessage = { id: nextId(), from: 'character', text, createdAt: new Date().toISOString(), time: new Date().toLocaleTimeString('zh-CN'), status: 'sent', kind: 'text' }
+      const records = await persistChatChanges(role, [message])
+      apply(role, records)
+    } finally { mutationCount.current-- }
   }
   const saveConfirmed = async (memory: MemoryDraft) => {
     if (!memory.text.trim() || memory.text.trim().length > 1000) throw new Error('记忆内容需为 1–1000 字')
@@ -109,5 +119,5 @@ export default function useLocalChat() {
   return { ready, loadError, reload: load, onboarded, finishOnboarding, selected, setSelected, conversations, setConversations, memories, setMemories, draft, setDraft, replying, error, apiKey, endpoint, model,
     setApiKey: (value: string) => { setKey(value); writePreference('sessionStorage', 'aily-api-key', value) },
     setEndpoint: (value: string) => { setEndpointState(value); writePreference('localStorage', 'aily-api-endpoint', value) }, setModel: (value: string) => { setModelState(value); writePreference('localStorage', 'aily-api-model', value) },
-    send, stop: () => active.current?.abort(), saveConfirmed, editMemory, removeMemory, clearMemories, withdraw }
+    send, appendLocalMessage, stop: () => active.current?.abort(), saveConfirmed, editMemory, removeMemory, clearMemories, withdraw }
 }

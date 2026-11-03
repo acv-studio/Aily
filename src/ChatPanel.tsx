@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { ArrowLeft, Search, Send, Square, Image as ImageIcon, Mic, Quote, X } from 'lucide-react'
 import type { Character } from './data'
 import type { ChatMessage, ConfirmedMemory } from './chatService'
+import SpeechControls from './SpeechControls'
 
 export type MemoryDraft = { text: string; category: NonNullable<ConfirmedMemory['category']>; sourceMessageId?: number }
 export interface ChatPanelProps {
@@ -9,7 +10,7 @@ export interface ChatPanelProps {
   messages: ChatMessage[]
   draft: string
   setDraft: (text: string) => void
-  send: (options?: { retryId?: number; replyToId?: number; attachment?: ChatMessage['attachment']; kind?: ChatMessage['kind'] }) => Promise<void>
+  send: (options?: { retryId?: number; replyToId?: number; attachment?: ChatMessage['attachment']; kind?: ChatMessage['kind']; imageConsent?: boolean }) => Promise<void>
   saveMemory: (memory: MemoryDraft) => Promise<void>
   withdraw: (id: number) => Promise<void>
   close: () => void
@@ -29,6 +30,8 @@ export default function ChatPanel(props: ChatPanelProps) {
   const [memory, setMemory] = useState<MemoryDraft>()
   const [notice, setNotice] = useState('')
   const [recording, setRecording] = useState(false)
+  const [imageConsent, setImageConsent] = useState(false)
+  const fileRequest = useRef(0)
   const [attachment, setAttachment] = useState<{ kind: ChatMessage['kind']; data: NonNullable<ChatMessage['attachment']> }>()
   const bottom = useRef<HTMLDivElement>(null)
   const recorder = useRef<MediaRecorder | null>(null)
@@ -57,9 +60,15 @@ export default function ChatPanel(props: ChatPanelProps) {
   const chooseFile = async (file?: File) => {
     if (!file) return
     if (!['image/png', 'image/jpeg', 'image/webp', 'image/gif'].includes(file.type) || file.size > 3 * 1024 * 1024) { setNotice('请选择 3MB 以内的 PNG、JPEG、WebP 或 GIF 图片'); return }
-    const dataUrl = await readDataUrl(file)
-    setAttachment({ kind: 'image', data: { dataUrl, mimeType: file.type, name: file.name } })
-    setNotice('图片仅保存在本机，不发送给文字模型；可以另写文字描述。')
+    const request = ++fileRequest.current
+    setImageConsent(false)
+    try {
+      const dataUrl = await readDataUrl(file)
+      if (!mounted.current || request !== fileRequest.current) return
+      setImageConsent(false)
+      setAttachment({ kind: 'image', data: { dataUrl, mimeType: file.type, name: file.name } })
+      setNotice('默认仅本机保存。识图需有效 Key 和支持图片输入的模型（可在设置中配置），本次授权不会上传历史图片。')
+    } catch { if (mounted.current) setNotice('无法读取图片，请重新选择') }
   }
   const record = async () => {
     if (recorder.current?.state === 'recording') { recorder.current.stop(); return }
@@ -117,7 +126,7 @@ export default function ChatPanel(props: ChatPanelProps) {
   }
   const submit = async () => {
     if (replying || recording || (!draft.trim() && !attachment)) return
-    try { await props.send({ replyToId: quote, attachment: attachment?.data, kind: attachment?.kind }); setQuote(undefined); setAttachment(undefined) }
+    try { await props.send({ replyToId: quote, attachment: attachment?.data, kind: attachment?.kind, imageConsent: attachment?.kind === 'image' && imageConsent }); setQuote(undefined); setAttachment(undefined); setImageConsent(false) }
     catch { /* parent exposes durable send errors */ }
   }
   return <main className="chat-screen">
@@ -148,14 +157,16 @@ export default function ChatPanel(props: ChatPanelProps) {
             {message.text && <button onClick={() => setMemory({ text: message.text, category: 'profile', sourceMessageId: message.id })}>记住这条</button>}
             {message.from === 'user' && <button onClick={() => props.withdraw(message.id)}>撤回</button>}
           </div>}
-          {message.status === 'failed' && message.from === 'user' && <button className="retry" onClick={() => props.send({ retryId: message.id })}>回复未完成 · 重试</button>}
+          {message.status === 'failed' && message.from === 'user' && <button className="retry" disabled={replying} onClick={() => { const consent = message.kind === 'image' && window.confirm('重试将把这张图片再次发送给设置中配置的模型服务，是否同意？'); if (message.kind !== 'image' || consent) void props.send({ retryId: message.id, imageConsent: consent }).catch(() => { /* Parent exposes retry errors. */ }) }}>回复未完成 · 重试</button>}
         </div>
       </div>)}<div ref={bottom} />
     </section>
     {props.error && <p className="chat-error" role="alert">{props.error}</p>}
     {notice && <div className="chat-notice">{notice}<button aria-label="关闭提示" onClick={() => setNotice('')}><X size={14} /></button></div>}
     {quoted && <div className="quoted-preview">引用：{quoted.withdrawn ? '已撤回' : quoted.text}<button onClick={() => setQuote(undefined)}>取消</button></div>}
-    {attachment && <div className="quoted-preview">待发送：{attachment.data.name}<button onClick={() => setAttachment(undefined)}>移除</button></div>}
+    {attachment && <div className="quoted-preview">待发送：{attachment.data.name}<button onClick={() => { fileRequest.current++; setAttachment(undefined); setImageConsent(false) }}>移除</button></div>}
+    {attachment?.kind === 'image' && <label className="chat-notice"><input type="checkbox" checked={imageConsent} disabled={replying} onChange={event => setImageConsent(event.target.checked)} />同意将本次图片发送给已配置的模型服务进行识图</label>}
+    <details className="advanced-chat"><summary>语音与通话</summary><SpeechControls draft={draft} setDraft={setDraft} messages={messages} replying={replying || recording} /><p>实时语音／视频通话尚未接入服务；听写加朗读不等于实时通话。</p></details>
     <div className="quick-replies"><button onClick={props.openStory}>⌁ 共同故事</button><button onClick={props.openGame}>✊ 猜拳</button></div>
     <footer className="composer glass">
       <label className="attachment-button" aria-label="分享图片"><ImageIcon size={18} /><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" disabled={replying} onChange={event => { void chooseFile(event.target.files?.[0]); event.target.value = '' }} /></label>

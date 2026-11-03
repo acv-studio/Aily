@@ -9,6 +9,7 @@ import { decryptBackup, encryptBackup } from './cryptoBackup'
 import ChatPanel from './ChatPanel'
 import MemoryPanel from './MemoryPanel'
 import useLocalChat from './useLocalChat'
+import ProactiveSettings from './ProactiveSettings'
 
 type Tab = 'home' | 'moments' | 'memories' | 'profile'
 
@@ -26,7 +27,8 @@ export default function App() {
   const saveGameMemory = (text: string) => { void chat.saveConfirmed({ text, category: 'relationship' }).catch(() => alert('回忆保存失败，请重试')) }
   if (!chat.ready) return <main className="app-shell loading-screen"><p>{chat.loadError || '正在读取本机聊天与记忆…'}</p>{chat.loadError && <button onClick={chat.reload}>重试读取</button>}</main>
   if (!onboarded) return <Onboarding selected={selected} setSelected={setSelected} finish={finishOnboarding} />
-  if (chatOpen) return <><ChatPanel character={character} messages={messages} draft={draft} setDraft={setDraft} send={chat.send} close={() => setChatOpen(false)} saveMemory={chat.saveConfirmed} withdraw={chat.withdraw} stop={chat.stop} replying={replying} error={chatError} demo={!chat.apiKey} openGame={() => setGameOpen(true)} openStory={() => setStoryOpen(true)} />{gameOpen && <RockPaperScissors characterName={character.name} onComplete={saveGameMemory} onClose={() => setGameOpen(false)} />}{storyOpen && <InteractiveStory characterName={character.name} onComplete={saveGameMemory} onClose={() => setStoryOpen(false)} />}</>
+  const proactive = <ProactiveSettings selected={selected} busy={replying} onMessage={chat.appendLocalMessage} latestUserText={messages.filter(message => message.from === 'user' && !message.withdrawn && message.kind !== 'image' && message.kind !== 'audio').at(-1)?.text} />
+  if (chatOpen) return <><div hidden>{proactive}</div><ChatPanel character={character} messages={messages} draft={draft} setDraft={setDraft} send={chat.send} close={() => setChatOpen(false)} saveMemory={chat.saveConfirmed} withdraw={chat.withdraw} stop={chat.stop} replying={replying} error={chatError} demo={!chat.apiKey} openGame={() => setGameOpen(true)} openStory={() => setStoryOpen(true)} />{gameOpen && <RockPaperScissors characterName={character.name} onComplete={saveGameMemory} onClose={() => setGameOpen(false)} />}{storyOpen && <InteractiveStory characterName={character.name} onComplete={saveGameMemory} onClose={() => setStoryOpen(false)} />}</>
 
   return <main className="app-shell">
     <div className="ambient ambient-one" /><div className="ambient ambient-two" />
@@ -35,6 +37,7 @@ export default function App() {
     {tab === 'moments' && <MomentsScreen onChat={(text)=>{setSelected('lu');setDraft(text);setChatOpen(true)}} />}
     {tab === 'memories' && <MemoryPanel memories={chat.memories} selected={selected} onSave={chat.saveConfirmed} onUpdate={chat.editMemory} onDelete={chat.removeMemory} onClear={chat.clearMemories} />}
     {tab === 'profile' && <ProfileScreen apiKey={chat.apiKey} endpoint={chat.endpoint} model={chat.model} setApiKey={chat.setApiKey} setEndpoint={chat.setEndpoint} setModel={chat.setModel} onImported={data => { chat.setConversations({ lu: [], chen: [], gu: [], ...data.conversations }); chat.setMemories(data.memories) }} onCleared={() => { chat.setConversations({ lu: [], chen: [], gu: [] }); chat.setMemories([]) }} />}
+    <div className="proactive-wrapper" hidden={tab !== 'profile'}>{proactive}</div>
     <nav className="bottom-nav glass">
       <NavButton active={tab==='home'} icon={<MessageCircle/>} label="消息" onClick={()=>setTab('home')}/>
       <NavButton active={tab==='moments'} icon={<Sparkles/>} label="此刻" onClick={()=>setTab('moments')}/>
