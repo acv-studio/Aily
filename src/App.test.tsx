@@ -11,6 +11,7 @@ afterEach(() => { cleanup(); vi.restoreAllMocks() })
 async function confirmSafetyConsent() {
   expect(await screen.findByRole('button', { name: '确认并继续' })).toBeDisabled()
   fireEvent.click(screen.getByLabelText('我已年满 18 周岁'))
+  expect(screen.getByRole('button', { name: '确认并继续' })).toBeDisabled()
   fireEvent.click(screen.getByLabelText('我理解 AI 身份与数据说明'))
   fireEvent.click(screen.getByRole('button', { name: '确认并继续' }))
 }
@@ -55,7 +56,9 @@ describe('Aily core journey', () => {
     expect(screen.getByRole('progressbar', { name: '首次引导进度' })).toHaveAttribute('max', '9')
     expect(screen.getByRole('button', { name: /遇见 TA/ })).toBeEnabled()
     expect(screen.queryByRole('button', { name: /去找他/ })).not.toBeInTheDocument()
-    expect(screen.getByText(/记录保存在当前设备/)).toBeInTheDocument()
+    expect(screen.getByText(/AI 角色互动 · 记录保存在当前设备/)).toBeInTheDocument()
+    expect(screen.getByText(/第 1 \/ 9 步 · 初遇/)).toBeInTheDocument()
+    expect((await loadLocalData()).settings.onboarded).not.toBe(true)
   })
 
   it('lets previously onboarded users add preferences without restarting or switching characters', async () => {
@@ -88,6 +91,8 @@ describe('Aily core journey', () => {
     fireEvent.click(screen.getByRole('button', { name: '继续' }))
     fireEvent.click(screen.getByRole('button', { name: '发送试聊' }))
     fireEvent.click(screen.getByRole('button', { name: '称呼没问题，继续' }))
+    expect(screen.getByText(/必要的聊天片段、相关记忆与互动偏好会直发 DeepSeek/)).toBeInTheDocument()
+    expect(screen.getByText(/API Key 只保留在本次浏览器会话，不包含在备份内/)).toBeInTheDocument()
     expect((await loadLocalData()).settings.onboarded).not.toBe(true)
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: '完成引导' })) })
     expect(screen.queryByRole('button', { name: /去找他/ })).not.toBeInTheDocument()

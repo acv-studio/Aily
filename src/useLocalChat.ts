@@ -73,7 +73,7 @@ export default function useLocalChat() {
       for (const role of characters) queueOrganization(role.id)
       setReady(true)
     }
-    catch { if (mounted.current) setLoadError('无法读取本机数据。请允许浏览器存储后重试；未覆盖任何记录。') }
+    catch { if (mounted.current) setLoadError('无法读取本机数据，页面资料可能尚未更新。请允许浏览器存储后重试读取。') }
   }
   useEffect(() => { mounted.current = true; void load(); return () => { mounted.current = false; active.current?.abort() } }, [])
   const selectedRef = useRef(selected); selectedRef.current = selected

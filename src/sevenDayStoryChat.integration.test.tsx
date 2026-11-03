@@ -20,6 +20,7 @@ it('refreshes story memories without interrupting an active streamed reply', asy
   render(<App />)
   expect(await screen.findByRole('button', { name: '确认并继续' })).toBeDisabled()
   fireEvent.click(screen.getByLabelText('我已年满 18 周岁'))
+  expect(screen.getByRole('button', { name: '确认并继续' })).toBeDisabled()
   fireEvent.click(screen.getByLabelText('我理解 AI 身份与数据说明'))
   fireEvent.click(screen.getByRole('button', { name: '确认并继续' }))
   fireEvent.click(await screen.findByRole('button', { name: /去找他/ }))
