@@ -1,8 +1,11 @@
 import 'fake-indexeddb/auto'
 import Dexie from 'dexie'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { clearAllData, clearCharacterData, clearCharacterMemories, db, deleteMemory, exportData, importData, initializeLocalData, loadLocalData, loadRoleConversation, persistChatChanges, saveConversation, saveMemory, saveSetting, updateMemory } from './db'
+import { archiveExpiredMemories, confirmProposal, forgottenSourceIds, loadMemoryPolicy, loadSummaries, saveMemoryPolicy, saveProposals, saveSummaries, clearAllData, clearCharacterData, clearCharacterMemories, db, deleteMemory, exportData, importData, initializeLocalData, loadLocalData, loadRoleConversation, persistChatChanges, saveConversation, saveMemory, saveSetting, updateMemory } from './db'
 import type { ChatMessage, ConfirmedMemory } from './chatService'
+import { defaultMemoryPolicy, type ConversationSummary } from './longMemory'
+
+const summary: ConversationSummary = { id: 's1', characterId: 'lu', period: 'day', periodKey: '2026-01-01', text: 'summary text', sourceMessageIds: [1], updatedAt: '2026-01-01T00:00:00.000Z' }
 
 const message: ChatMessage = { id: 1, from: 'user', text: '陆', time: '现在' }
 const memory: ConfirmedMemory = { id: 'm1', characterId: 'lu', text: '旧记忆', confirmedAt: '2026-01-01T00:00:00.000Z' }
@@ -17,6 +20,239 @@ beforeEach(async () => {
 })
 
 describe('local data repository', () => {
+  it('upgrades a populated v2 database without replacing data', async () => {
+    await db.delete()
+    const old = new Dexie('aily')
+    old.version(2).stores({ conversationMessages: '[characterId+id], characterId, time, status', memories: 'id, characterId, confirmedAt', settings: 'key' })
+    await old.open()
+    await old.table('conversationMessages').put({ ...message, characterId: 'lu' })
+    await old.table('memories').put(memory)
+    await old.table('settings').put({ key: 'selected', value: 'gu' })
+    old.close()
+    await db.open()
+    expect(db.verno).toBe(3)
+    expect(await loadLocalData()).toMatchObject({ conversations: { lu: [message] }, memories: [memory], summaries: [], settings: { selected: 'gu' } })
+    await saveSummaries('lu', [summary])
+    db.close(); await db.open()
+    expect(await loadSummaries('lu')).toEqual([summary])
+  })
+
+  it('replaces summaries atomically and isolates roles and duplicate IDs', async () => {
+    await saveSummaries('lu', [summary])
+    const other: ConversationSummary = { ...summary, id: 's2', characterId: 'chen' }
+    await saveSummaries('chen', [other])
+    await expect(saveSummaries('lu', [{ ...summary, id: 's2' }])).rejects.toThrow()
+    await expect(saveSummaries('lu', [summary, summary])).rejects.toThrow()
+    vi.spyOn(db.summaries, 'bulkPut').mockRejectedValueOnce(new Error('summary failure'))
+    await expect(saveSummaries('lu', [{ ...summary, text: 'new' }])).rejects.toThrow('summary failure')
+    expect(await loadSummaries('lu')).toEqual([summary])
+    expect(await loadSummaries('chen')).toEqual([other])
+    await saveSummaries('lu', [])
+    expect(await loadSummaries('lu')).toEqual([])
+  })
+
+  it('persists independent validated policies and invalidates only that role summaries', async () => {
+    expect(await loadMemoryPolicy('lu')).toEqual(defaultMemoryPolicy)
+    await saveSummaries('lu', [summary])
+    await saveSummaries('chen', [{ ...summary, id: 's2', characterId: 'chen' }])
+    const policy = { disabledCategories: ['emotion' as const], extractionEnabled: false }
+    await saveMemoryPolicy('lu', policy)
+    await saveMemoryPolicy('gu', { disabledCategories: [], extractionEnabled: true })
+    db.close(); await db.open()
+    expect(await loadMemoryPolicy('lu')).toEqual(policy)
+    expect(await loadMemoryPolicy('chen')).toEqual(defaultMemoryPolicy)
+    expect(await loadSummaries('lu')).toEqual([])
+    expect(await loadSummaries('chen')).toHaveLength(1)
+    const raw = await exportData()
+    expect(JSON.parse(raw)).toMatchObject({ version: 2, summaries: [{ characterId: 'chen' }], settings: { memoryPolicies: { lu: policy } } })
+    await importData(raw)
+    expect(await loadMemoryPolicy('lu')).toEqual(policy)
+  })
+
+  it('inserts proposals idempotently without overwriting decisions and confirms same-role conflicts', async () => {
+    await saveMemory({ ...memory, sourceMessageId: 1 })
+    await saveMemory({ ...memory, id: 'other', characterId: 'chen' })
+    const candidate: ConfirmedMemory = { ...memory, id: 'new', text: 'new fact', sourceMessageId: 2, conflictIds: ['m1', 'other', 'new', 'missing'] }
+    await Promise.all([saveProposals([candidate]), saveProposals([candidate])])
+    expect(await db.memories.get('new')).toMatchObject({ state: 'pending', enabled: false })
+    await saveSummaries('lu', [summary])
+    const confirmed = await confirmProposal('new')
+    expect(confirmed).toMatchObject({ state: 'confirmed', enabled: true })
+    expect(await db.memories.get('m1')).toMatchObject({ state: 'archived', enabled: false })
+    expect(await db.memories.get('other')).toEqual({ ...memory, id: 'other', characterId: 'chen' })
+    expect(await forgottenSourceIds('lu')).toEqual([1])
+    expect(await loadSummaries('lu')).toEqual([])
+    await saveProposals([{ ...candidate, text: 'stale extraction' }])
+    expect(await db.memories.get('new')).toEqual(confirmed)
+    expect(await confirmProposal('new')).toEqual(confirmed)
+    await updateMemory('new', { state: 'rejected', enabled: false })
+    await saveProposals([candidate])
+    expect((await db.memories.get('new'))?.state).toBe('rejected')
+    expect((await confirmProposal('new'))?.state).toBe('rejected')
+  })
+
+  it('rejects stale policy summaries before deleting current digests', async () => {
+    const oldPolicy = await loadMemoryPolicy('lu')
+    await saveSummaries('lu', [summary], oldPolicy)
+    const newPolicy = { disabledCategories: ['emotion' as const], extractionEnabled: true }
+    await saveMemoryPolicy('lu', newPolicy)
+    const fresh = { ...summary, text: 'fresh permitted digest' }
+    await saveSummaries('lu', [fresh], newPolicy)
+    const replacement = vi.spyOn(db.summaries, 'bulkPut')
+    await expect(saveSummaries('lu', [{ ...summary, text: 'stale digest' }], oldPolicy)).rejects.toThrow()
+    expect(replacement).not.toHaveBeenCalled()
+    expect(await loadSummaries('lu')).toEqual([fresh])
+    expect(await loadMemoryPolicy('lu')).toEqual(newPolicy)
+  })
+
+  it('rejects a confirmation when another decision changes the expected conflict set', async () => {
+    await saveProposals([
+      { ...memory, id: 'first', text: '我喜欢咖啡', sourceMessageId: 1, conflictIds: [] },
+      { ...memory, id: 'second', text: '我不喜欢咖啡', sourceMessageId: 2, conflictIds: [] },
+    ])
+    // Both were pending at the time the empty expected set was observed.
+    const first = await confirmProposal('first', [])
+    await saveSummaries('lu', [summary])
+    const before = await db.memories.toArray()
+    await expect(confirmProposal('second', [])).rejects.toThrow()
+    expect(await db.memories.toArray()).toEqual(before)
+    expect(await db.memories.get('first')).toEqual(first)
+    expect((await db.memories.get('second'))?.state).toBe('pending')
+    expect(await forgottenSourceIds('lu')).toEqual([])
+    expect(await loadSummaries('lu')).toEqual([summary])
+    // A refreshed and explicitly accepted conflict decision succeeds atomically.
+    await updateMemory('second', { conflictIds: ['first'] })
+    expect(await confirmProposal('second', ['first'])).toMatchObject({ state: 'confirmed', enabled: true })
+    expect(await db.memories.get('first')).toMatchObject({ state: 'archived', enabled: false })
+    expect(await forgottenSourceIds('lu')).toEqual([1])
+    expect(await loadSummaries('lu')).toEqual([])
+  })
+
+  it('checked confirmation never archives conflict IDs changed outside the accepted decision', async () => {
+    await saveMemory({ ...memory, id: 'accepted-old', text: '我喜欢咖啡', sourceMessageId: 1 })
+    await saveMemory({ ...memory, id: 'unapproved', text: '我喜欢海边', sourceMessageId: 3 })
+    await saveProposals([{ ...memory, id: 'new', text: '我不喜欢咖啡', sourceMessageId: 2, conflictIds: ['accepted-old'] }])
+    // Simulate a stale concurrent writer modifying the candidate after consent.
+    await updateMemory('new', { conflictIds: ['unapproved'] })
+    try { await confirmProposal('new', ['accepted-old']) } catch { /* Rejecting stale candidate metadata is also safe. */ }
+    expect(await db.memories.get('unapproved')).toEqual({ ...memory, id: 'unapproved', text: '我喜欢海边', sourceMessageId: 3 })
+    expect((await forgottenSourceIds('lu')).includes(3)).toBe(false)
+    const candidate = await db.memories.get('new')
+    if (candidate?.state === 'confirmed') {
+      expect(await db.memories.get('accepted-old')).toMatchObject({ state: 'archived', enabled: false })
+      expect(await forgottenSourceIds('lu')).toEqual([1])
+    } else {
+      expect(candidate?.state).toBe('pending')
+      expect((await db.memories.get('accepted-old'))?.state).toBeUndefined()
+      expect(await forgottenSourceIds('lu')).toEqual([])
+    }
+  })
+
+  it('refuses stale proposal batches after policy disable or source forgetting', async () => {
+    await saveMemoryPolicy('lu', { disabledCategories: ['profile'], extractionEnabled: true })
+    await saveProposals([{ ...memory, id: 'disabled-category', category: 'profile' }])
+    expect(await db.memories.count()).toBe(0)
+    await saveMemoryPolicy('lu', { disabledCategories: [], extractionEnabled: false })
+    await saveProposals([{ ...memory, id: 'disabled-extraction' }])
+    expect(await db.memories.count()).toBe(0)
+    await saveMemoryPolicy('lu', defaultMemoryPolicy)
+    await saveMemory({ ...memory, sourceMessageId: 1 })
+    await deleteMemory('m1')
+    await saveProposals([{ ...memory, id: 'forgotten-source', sourceMessageId: 1 }])
+    expect(await db.memories.count()).toBe(0)
+  })
+
+  it('rolls back conflict archival and confirmation together', async () => {
+    await saveMemory({ ...memory, sourceMessageId: 1 })
+    await saveProposals([{ ...memory, id: 'new', conflictIds: ['m1'] }])
+    await saveSummaries('lu', [summary])
+    vi.spyOn(db.settings, 'put').mockRejectedValueOnce(new Error('quota'))
+    await expect(confirmProposal('new')).rejects.toThrow('quota')
+    expect(await db.memories.get('m1')).toEqual({ ...memory, sourceMessageId: 1 })
+    expect((await db.memories.get('new'))?.state).toBe('pending')
+    expect(await loadSummaries('lu')).toEqual([summary])
+    expect(await forgottenSourceIds('lu')).toEqual([])
+  })
+
+  it('archives expired legacy and active memories without reviving rejected or future items', async () => {
+    await saveMemory({ ...memory, expiresAt: '2026-01-01T00:00:00.000Z', sourceMessageId: 1, pinned: true })
+    await saveMemory({ ...memory, id: 'future', state: 'confirmed', expiresAt: '2027-01-01T00:00:00.000Z' })
+    await saveMemory({ ...memory, id: 'rejected', state: 'rejected', expiresAt: memory.confirmedAt })
+    await saveSummaries('lu', [summary])
+    expect(await archiveExpiredMemories('2026-01-01T00:00:00.000Z')).toBe(1)
+    expect(await db.memories.get('m1')).toMatchObject({ state: 'archived', enabled: false })
+    expect((await db.memories.get('future'))?.state).toBe('confirmed')
+    expect((await db.memories.get('rejected'))?.state).toBe('rejected')
+    expect(await archiveExpiredMemories('2026-01-01T00:00:00.000Z')).toBe(0)
+    expect(await loadSummaries('lu')).toEqual([])
+    expect(await forgottenSourceIds('lu')).toEqual([1])
+  })
+
+  it('rolls back deletion and clear-memory tombstones when summary removal fails', async () => {
+    await saveConversation('lu', [message])
+    await saveMemory({ ...memory, sourceMessageId: 1 })
+    await saveSummaries('lu', [summary])
+    vi.spyOn(db.settings, 'put').mockRejectedValueOnce(new Error('forget failure'))
+    await expect(deleteMemory('m1')).rejects.toThrow('forget failure')
+    expect(await db.memories.get('m1')).toMatchObject(memory)
+    expect(await loadSummaries('lu')).toEqual([summary])
+    expect(await forgottenSourceIds('lu')).toEqual([])
+    vi.spyOn(db.settings, 'put').mockRejectedValueOnce(new Error('clear failure'))
+    await expect(clearCharacterMemories('lu')).rejects.toThrow('clear failure')
+    expect(await db.memories.get('m1')).toMatchObject(memory)
+    expect(await loadSummaries('lu')).toEqual([summary])
+    expect(await forgottenSourceIds('lu')).toEqual([])
+  })
+
+  it('validates the full proposal batch before inserting and rolls back failed batches', async () => {
+    await expect(saveProposals([memory, { ...memory, id: 'bad', importance: 0 as never }])).rejects.toThrow()
+    expect(await db.memories.count()).toBe(0)
+    vi.spyOn(db.settings, 'put').mockRejectedValueOnce(new Error('batch failure'))
+    await expect(saveProposals([memory])).rejects.toThrow('batch failure')
+    expect(await db.memories.count()).toBe(0)
+  })
+
+  it('forgets deleted sources across backups and rejects stale summary regeneration', async () => {
+    await saveMemory({ ...memory, sourceMessageId: 1 })
+    await saveSummaries('lu', [summary])
+    await saveSummaries('chen', [{ ...summary, id: 's2', characterId: 'chen' }])
+    await deleteMemory(memory.id)
+    expect(await loadSummaries('lu')).toEqual([])
+    expect(await loadSummaries('chen')).toHaveLength(1)
+    expect(await forgottenSourceIds('lu')).toEqual([1])
+    await expect(saveSummaries('lu', [summary])).rejects.toThrow()
+    await importData(await exportData())
+    expect(await forgottenSourceIds('lu')).toEqual([1])
+    await expect(saveSummaries('lu', [summary])).rejects.toThrow()
+  })
+
+  it('corrections and disabling scrub summaries and retain source exclusions', async () => {
+    await saveMemory({ ...memory, sourceMessageId: 1 })
+    await saveSummaries('lu', [summary])
+    await updateMemory('m1', 'corrected text')
+    expect(await loadSummaries('lu')).toEqual([])
+    expect(await forgottenSourceIds('lu')).toEqual([1])
+    await saveSummaries('lu', [{ ...summary, sourceMessageIds: [2] }])
+    await updateMemory('m1', { enabled: false })
+    expect(await loadSummaries('lu')).toEqual([])
+  })
+
+  it('clear memories excludes all previous chat and summary sources; full clears remove summaries', async () => {
+    await saveConversation('lu', [message, { ...message, id: 2 }])
+    await saveMemory({ ...memory, sourceMessageId: 3 })
+    await saveSummaries('lu', [{ ...summary, sourceMessageIds: [4] }])
+    await saveSummaries('chen', [{ ...summary, id: 's2', characterId: 'chen' }])
+    await clearCharacterMemories('lu')
+    expect(await forgottenSourceIds('lu')).toEqual([1, 2, 3, 4])
+    expect(await loadSummaries('lu')).toEqual([])
+    expect(await loadRoleConversation('lu')).toHaveLength(2)
+    await clearCharacterData('chen')
+    expect(await loadSummaries('chen')).toEqual([])
+    await clearAllData()
+    expect((await loadLocalData()).summaries).toEqual([])
+    expect(await forgottenSourceIds('lu')).toEqual([])
+  })
+
   it('isolates identical message IDs across all characters and conversation replacement', async () => {
     await saveConversation('lu', [message])
     await saveConversation('chen', [{ ...message, text: '陈' }])
@@ -98,7 +334,7 @@ describe('local data repository', () => {
     await old.table('settings').put({ key: 'selected', value: 'chen' })
     old.close()
     await db.open()
-    expect(db.verno).toBe(2)
+    expect(db.verno).toBe(3)
     expect(db.messages.schema.primKey.keyPath).toEqual(['characterId', 'id'])
     expect((await loadLocalData()).memories).toEqual([memory])
     expect((await loadLocalData()).settings.selected).toBe('chen')
@@ -206,11 +442,62 @@ describe('local data repository', () => {
 
   it('round-trips supported optional message and memory fields', async () => {
     const richMessage: ChatMessage = { ...message, replyToId: 0, withdrawn: false, kind: 'image', attachment: { name: 'photo.png', mimeType: 'image/png', dataUrl: 'data:image/png;base64,aGVsbG8=' }, createdAt: '2026-01-01T00:00:00.000Z', memory: true, status: 'sent' }
-    const richMemory: ConfirmedMemory = { ...memory, category: 'profile', sourceMessageId: 1, updatedAt: memory.confirmedAt, enabled: false }
+    const richMemory: ConfirmedMemory = { ...memory, category: 'profile', sourceMessageId: 1, updatedAt: memory.confirmedAt, enabled: false, state: 'archived', importance: 5, pinned: true, expiresAt: memory.confirmedAt, originalText: 'original', sensitive: true, conflictIds: ['old'], topics: ['work'] }
     await saveConversation('lu', [richMessage]); await saveMemory(richMemory)
     const data = await importData(await exportData())
     expect(data.conversations.lu).toEqual([richMessage])
     expect(data.memories).toEqual([richMemory])
+  })
+
+  const invalidV2Cases: [string, unknown][] = [
+    ['summary period', { summaries: [{ ...summary, period: 'hour' }] }],
+    ['summary role', { summaries: [{ ...summary, characterId: 'stranger' }] }],
+    ['summary source', { summaries: [{ ...summary, sourceMessageIds: [-1] }] }],
+    ['duplicate summary', { summaries: [summary, summary] }],
+    ['summary secret', { summaries: [{ ...summary, apiKey: 'secret' }] }],
+    ['non-array summaries', { summaries: {} }],
+    ['null summaries', { summaries: null }],
+    ['null settings', { settings: null }],
+    ['non-ISO expiry', { memories: [{ ...memory, expiresAt: '2026-01-01' }] }],
+    ['policy category', { settings: { memoryPolicies: { lu: { disabledCategories: ['secret'], extractionEnabled: true } } } }],
+    ['policy duplicate category', { settings: { memoryPolicies: { lu: { disabledCategories: ['emotion', 'emotion'], extractionEnabled: true } } } }],
+    ['policy unknown role', { settings: { memoryPolicies: { stranger: defaultMemoryPolicy } } }],
+    ['policy credentials', { settings: { memoryPolicies: { lu: { ...defaultMemoryPolicy, apiKey: 'secret' } } } }],
+    ['policy enabled type', { settings: { memoryPolicies: { lu: { disabledCategories: [], extractionEnabled: 'false' } } } }],
+    ['forgotten source type', { settings: { '__forgotten:lu': ['1'] } }],
+    ['forgotten summary source', { summaries: [summary], settings: { '__forgotten:lu': [1] } }],
+    ['memory state', { memories: [{ ...memory, state: 'unknown' }] }],
+    ['memory importance', { memories: [{ ...memory, importance: 6 }] }],
+    ['memory importance fractional', { memories: [{ ...memory, importance: 1.5 }] }],
+    ['memory expiry', { memories: [{ ...memory, expiresAt: 'tomorrow' }] }],
+    ['memory pinned', { memories: [{ ...memory, pinned: 'true' }] }],
+    ['memory sensitive', { memories: [{ ...memory, sensitive: 1 }] }],
+    ['memory conflict IDs', { memories: [{ ...memory, conflictIds: [1] }] }],
+    ['memory topics', { memories: [{ ...memory, topics: {} }] }],
+  ]
+  it.each(invalidV2Cases)('rejects v2 %s before replacing any store', async (_name, changes) => {
+    await saveSummaries('lu', [summary])
+    const clear = vi.spyOn(db.summaries, 'clear')
+    await expect(importData(JSON.stringify({ ...backup(), version: 2, summaries: [], ...(changes as object) }))).rejects.toThrow('不是有效的 Aily 备份文件')
+    expect(clear).not.toHaveBeenCalled()
+    expect(await loadSummaries('lu')).toEqual([summary])
+  })
+
+  it('v1 import clears summaries and restores default policies without requiring new fields', async () => {
+    await saveSummaries('lu', [summary])
+    await saveMemoryPolicy('lu', { disabledCategories: ['emotion'], extractionEnabled: false })
+    const imported = await importData(JSON.stringify(backup()))
+    expect(imported.summaries).toEqual([])
+    expect(await loadMemoryPolicy('lu')).toEqual(defaultMemoryPolicy)
+  })
+
+  it('rolls back summary replacement with other stores if v2 import fails', async () => {
+    await saveConversation('gu', [message])
+    await saveSummaries('lu', [summary])
+    vi.spyOn(db.summaries, 'bulkPut').mockRejectedValueOnce(new Error('summary import failure'))
+    await expect(importData(JSON.stringify({ ...backup(), version: 2, summaries: [] }))).rejects.toThrow('summary import failure')
+    expect(await loadSummaries('lu')).toEqual([summary])
+    expect(await loadRoleConversation('gu')).toEqual([message])
   })
 
   const invalidCases: [string, (data: ReturnType<typeof backup>) => unknown][] = [
