@@ -1,6 +1,8 @@
 import type { ConfirmedMemory } from './chatService'
 import type { CharacterId } from './data'
 
+// Chinese source strings are also persisted scheduler keys. Keep them stable;
+// display consumers translate stage.name/description with t at render time.
 export const stages = [
   { name: '初遇', threshold: 0, description: '开始认识彼此' },
   { name: '熟悉', threshold: 2, description: '记住彼此的小习惯' },

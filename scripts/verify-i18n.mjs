@@ -1,0 +1,73 @@
+import { chromium } from 'playwright'
+import assert from 'node:assert/strict'
+import { readdir, readFile } from 'node:fs/promises'
+const browser = await chromium.launch()
+const url = process.env.AILY_URL || 'http://127.0.0.1:4192/'
+try {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'en-US', colorScheme: 'dark' })
+  const page = await context.newPage()
+  await page.goto(url)
+  await page.getByRole('button', { name: 'Meet your companion' }).waitFor()
+  assert.equal(await page.locator('html').getAttribute('lang'), 'en')
+  await page.getByRole('combobox', { name: '界面语言 / Interface language' }).selectOption('zh-CN')
+  await page.getByRole('button', { name: '遇见 TA' }).click()
+  await page.getByRole('button', { name: '开始我们的故事' }).click()
+  await page.getByRole('button', { name: '去找他' }).click()
+  await page.getByRole('textbox', { name: '发消息', exact: true }).fill('记住，我喜欢海边散步')
+  await page.getByRole('button', { name: '发送消息', exact: true }).click()
+  await page.getByRole('button', { name: '返回消息' }).waitFor({ state: 'visible' })
+  await page.waitForFunction(() => !document.querySelector('button[aria-label="返回消息"]')?.disabled)
+  await page.getByRole('button', { name: '返回消息' }).click()
+  await page.getByRole('button', { name: '回忆', exact: true }).click()
+  await page.getByRole('button', { name: '确认记住', exact: true }).click()
+  await page.getByRole('button', { name: '我的', exact: true }).click()
+  await page.getByRole('combobox', { name: '界面语言 / Interface language' }).selectOption('en')
+  await page.getByRole('combobox', { name: 'Chat language' }).selectOption('en')
+  await page.reload()
+  await page.getByRole('button', { name: 'Profile', exact: true }).click()
+  assert.equal(await page.getByRole('combobox', { name: '界面语言 / Interface language' }).inputValue(), 'en')
+  assert.equal(await page.getByRole('combobox', { name: 'Chat language' }).inputValue(), 'en')
+  await page.getByRole('button', { name: 'Memories', exact: true }).click()
+  await page.getByRole('textbox', { name: 'Search memories' }).fill('ocean')
+  await page.getByRole('heading', { name: '记住，我喜欢海边散步', exact: true }).waitFor()
+  await page.getByRole('button', { name: 'Messages', exact: true }).click()
+  await page.getByRole('button', { name: 'Talk to him' }).click()
+  await page.getByRole('textbox', { name: 'Message', exact: true }).fill('I want to walk by the ocean')
+  await page.getByRole('button', { name: 'Send message', exact: true }).click()
+  await page.waitForFunction(() => !document.querySelector('button[aria-label="Back to messages"]')?.disabled)
+  const replies = await page.locator('.message-row:not(.mine) .bubble').allTextContents()
+  assert.ok(replies.at(-1).includes('记住，我喜欢海边散步'), 'English recall retains original Chinese quote')
+  assert.ok(replies.at(-1).includes('Local demo reply'), 'English demo clearly labeled')
+  await page.reload()
+  const facts = await page.evaluate(async () => {
+    const { loadLocalData } = await import('/src/db.ts')
+    const data = await loadLocalData()
+    return { memory: data.memories.find(m => m.text === '记住，我喜欢海边散步'), messages: data.conversations.lu }
+  })
+  assert.equal(facts.memory.language, 'zh-CN')
+  assert.ok(facts.messages.some(m => m.text === '记住，我喜欢海边散步'))
+  // Literal translation keys must have English entries; raw user data is deliberately exempt.
+  const keys = new Set()
+  for (const name of await readdir('src')) {
+    if (!/\.(tsx?|css)$/.test(name) || /\.test\./.test(name)) continue
+    const source = await readFile(`src/${name}`, 'utf8')
+    for (const match of source.matchAll(/\bt\(\s*(['"])([^'"\n]+)\1/g)) if (/[\u3400-\u9fff]/u.test(match[2])) keys.add(match[2])
+  }
+  const missing = await page.evaluate(async keys => {
+    const { english } = await import('/src/i18n.tsx')
+    return keys.filter(key => !Object.hasOwn(english, key))
+  }, [...keys])
+  assert.deepEqual(missing, [], 'All literal Chinese UI keys have English translations')
+  await page.getByRole('button', { name: 'Store', exact: true }).click()
+  assert.equal(await page.locator('body').evaluate(el => el.scrollWidth > innerWidth), false, 'No store horizontal overflow at 390px')
+  await context.close()
+  // Independent browsing contexts verify fresh system defaults and cross-tab storage sync.
+  const zhContext = await browser.newContext({ locale: 'zh-CN' })
+  const first = await zhContext.newPage(); await first.goto(url)
+  await first.getByRole('button', { name: '遇见 TA' }).waitFor()
+  const second = await zhContext.newPage(); await second.goto(url)
+  await first.getByRole('combobox', { name: '界面语言 / Interface language' }).selectOption('en')
+  await second.getByRole('button', { name: 'Meet your companion' }).waitFor()
+  await zhContext.close()
+  console.log('Verified fresh zh/en defaults, live switch, cross-tab sync, persisted independent chat language, bilingual recall with unchanged originals, reload, translation coverage and mobile overflow.')
+} finally { await browser.close() }

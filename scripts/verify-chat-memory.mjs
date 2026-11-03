@@ -2,7 +2,7 @@ import { chromium } from 'playwright'
 import assert from 'node:assert/strict'
 const browser = await chromium.launch()
 try {
-  const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1 })
+  const page = await browser.newPage({ locale: 'zh-CN', viewport: { width: 390, height: 844 }, deviceScaleFactor: 1 })
   const errors = []
   page.on('pageerror', error => errors.push(error.message))
   await page.goto(process.env.AILY_URL || 'http://127.0.0.1:4173/')

@@ -1,3 +1,4 @@
+import { t } from './i18n'
 import Dexie, { type EntityTable, type Table } from 'dexie'
 import type { CharacterId } from './data'
 import type { ChatMessage, ConfirmedMemory } from './chatService'
@@ -11,7 +12,7 @@ const characterIds = ['lu', 'chen', 'gu'] as const
 const legacyKey = 'aily-demo-state'
 const migrationKey = '__legacyMigrated'
 const conversationKey = (id: CharacterId) => `__conversation:${id}`
-const backupError = () => new Error('不是有效的 Aily 备份文件')
+const backupError = () => new Error(t('不是有效的 Aily 备份文件'))
 
 class AilyDatabase extends Dexie {
   messages!: Table<StoredMessage, [CharacterId, number]>
@@ -105,7 +106,7 @@ function validAttachment(value: unknown): boolean {
 
 function validateMemory(value: unknown): ConfirmedMemory {
   check(isRecord(value))
-  keys(value, ['id', 'characterId', 'text', 'confirmedAt', 'category', 'sourceMessageId', 'updatedAt', 'enabled', 'state', 'importance', 'pinned', 'expiresAt', 'originalText', 'sensitive', 'conflictIds', 'topics'])
+  keys(value, ['id', 'characterId', 'text', 'confirmedAt', 'category', 'sourceMessageId', 'updatedAt', 'enabled', 'state', 'importance', 'pinned', 'expiresAt', 'originalText', 'sensitive', 'conflictIds', 'topics', 'language'])
   check(string(value.id, 256, true) && character(value.characterId) && string(value.text, 10_000, true) && timestamp(value.confirmedAt))
   optional(value, 'category', item => ['profile', 'relationship', 'context', 'emotion'].includes(item as string))
   optional(value, 'sourceMessageId', messageId)
@@ -119,6 +120,7 @@ function validateMemory(value: unknown): ConfirmedMemory {
   optional(value, 'sensitive', item => typeof item === 'boolean')
   optional(value, 'conflictIds', item => stringArray(item, 256))
   optional(value, 'topics', item => stringArray(item, 256))
+  optional(value, 'language', item => ['zh-CN', 'en', 'mixed'].includes(item as string))
   return { ...value } as ConfirmedMemory
 }
 

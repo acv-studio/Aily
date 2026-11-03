@@ -7,7 +7,7 @@ const evidence = 'docs/evidence/gift-demo'
 await mkdir(evidence, { recursive: true })
 const browser = await chromium.launch()
 try {
-  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, colorScheme: 'dark', reducedMotion: 'reduce' })
+  const context = await browser.newContext({ locale: 'zh-CN', viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, colorScheme: 'dark', reducedMotion: 'reduce' })
   const page = await context.newPage()
   const errors = []
   page.on('pageerror', error => errors.push(error.message))
