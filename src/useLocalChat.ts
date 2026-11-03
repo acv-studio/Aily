@@ -249,7 +249,7 @@ export default function useLocalChat() {
         if (message.from === 'user') lastUserForgotten = !!message.withdrawn || forgotten.has(message.id)
         return !forgotten.has(message.id) && !lastUserForgotten
       })
-      await streamReply({ characterId: role, replyMode, onboardingProfile: onboardingProfileRef.current, messages: context, memories: isTemporary ? [] : await db.memories.toArray(), summaries: isTemporary ? [] : await loadSummaries(role), memoryPolicy: await loadMemoryPolicy(role), apiKey, endpoint, model, signal: controller.signal, onDelta: delta => { content += delta; apply(role, [...records, { ...assistant, text: content }]) } })
+      await streamReply({ characterId: role, replyMode, locale: resolveChatLocale(user.text), onboardingProfile: onboardingProfileRef.current, messages: context, memories: isTemporary ? [] : await db.memories.toArray(), summaries: isTemporary ? [] : await loadSummaries(role), memoryPolicy: await loadMemoryPolicy(role), apiKey, endpoint, model, signal: controller.signal, onDelta: delta => { content += delta; apply(role, [...records, { ...assistant, text: content }]) } })
       const completed = await persist(role, [{ ...user, status: 'sent' }, { ...assistant, text: content, status: 'sent' }]); apply(role, completed)
     } catch (failure) {
       const cancelled = controller.signal.aborted
@@ -325,5 +325,6 @@ export default function useLocalChat() {
     onboardingProfile, updateOnboarding, replyMode: currentReplyMode(selected), setReplyMode: tracked(changeReplyMode), modeSaving,
     setApiKey: (value: string) => { setKey(value); writePreference('sessionStorage', 'aily-api-key', value) },
     setEndpoint: (value: string) => { setEndpointState(value); writePreference('localStorage', 'aily-api-endpoint', value) }, setModel: (value: string) => { setModelState(value); writePreference('localStorage', 'aily-api-model', value) },
+    replyMode: currentReplyMode(selected), setReplyMode: tracked(changeReplyMode), modeSaving,
     send, stop: () => active.current?.abort(), saveConfirmed: tracked(saveConfirmed), editMemory: tracked(editMemory), removeMemory: tracked(removeMemory), clearMemories: tracked(clearMemories), withdraw }
 }

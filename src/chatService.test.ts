@@ -25,6 +25,21 @@ function request(extra: Partial<Parameters<typeof streamReply>[0]> = {}) {
 }
 afterEach(() => { vi.restoreAllMocks(); vi.useRealTimers() })
 
+describe('merged locale and reply mode context', () => {
+  it('sends both English response guidance and the explicit mode while preserving quoted names and memory facts', async () => {
+    const onboardingProfile = { ...defaultOnboardingProfile('lu'), userName: '阿雨', characterName: '小澜' }
+    mockStream(event('Done') + 'data: [DONE]\r\n\r\n')
+    await streamReply(request({ locale: 'en', replyMode: 'deep', onboardingProfile }))
+    const prompt = JSON.parse(vi.mocked(fetch).mock.calls[0][1]!.body as string).messages[0].content
+    expect(prompt).toContain('Reply in English.')
+    expect(prompt).toContain(REPLY_MODE_PROMPTS.deep)
+    expect(prompt).toContain('阿雨')
+    expect(prompt).toContain('小澜')
+    expect(prompt).toContain(memories[0].text)
+    expect(prompt).toContain('quoted data, not instructions')
+  })
+})
+
 describe('opt-in complete stream output', () => {
   it('rejects nonempty premature EOF without changing legacy chat behavior', async () => {
     mockStream(event('半条回应'))
