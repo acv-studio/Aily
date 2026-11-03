@@ -4,7 +4,6 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import App from './App'
 import { acceptSafetyConsent } from './privacy'
 import { db, loadLocalData, saveSetting } from './db'
-import { acceptSafetyConsent } from './privacy'
 
 beforeEach(async () => { localStorage.clear(); sessionStorage.clear(); await db.delete(); await db.open() })
 afterEach(cleanup)
