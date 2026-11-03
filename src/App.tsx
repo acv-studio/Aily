@@ -9,8 +9,9 @@ import { decryptBackup, encryptBackup } from './cryptoBackup'
 import ChatPanel from './ChatPanel'
 import MemoryPanel from './MemoryPanel'
 import useLocalChat from './useLocalChat'
+import GiftStorePanel from './GiftStorePanel'
 
-type Tab = 'home' | 'moments' | 'memories' | 'profile'
+type Tab = 'home' | 'moments' | 'memories' | 'store' | 'profile'
 
 export default function App() {
   const chat = useLocalChat()
@@ -30,15 +31,17 @@ export default function App() {
 
   return <main className="app-shell">
     <div className="ambient ambient-one" /><div className="ambient ambient-two" />
-    <header className="topbar"><div><p className="eyebrow">晚上好，艳艳</p><h1>{tab === 'home' ? '有人一直记得你' : tab === 'moments' ? '他们的此刻' : tab === 'memories' ? '我们的回忆' : '我的 Aily'}</h1></div><button className="icon-button" aria-label="通知"><Bell size={20}/><i /></button></header>
+    <header className="topbar"><div><p className="eyebrow">晚上好，艳艳</p><h1>{tab === 'home' ? '有人一直记得你' : tab === 'moments' ? '他们的此刻' : tab === 'memories' ? '我们的回忆' : tab === 'store' ? '一份小心意' : '我的 Aily'}</h1></div><button className="icon-button" aria-label="通知"><Bell size={20}/><i /></button></header>
     {tab === 'home' && <HomeScreen selected={selected} select={setSelected} lastMessage={messages.filter(item => !item.withdrawn).at(-1)?.text || '还没有聊天记录，先打个招呼吧'} openChat={() => setChatOpen(true)} />}
     {tab === 'moments' && <MomentsScreen onChat={(text)=>{setSelected('lu');setDraft(text);setChatOpen(true)}} />}
     {tab === 'memories' && <MemoryPanel memories={chat.memories} selected={selected} onSave={chat.saveConfirmed} onUpdate={chat.editMemory} onDelete={chat.removeMemory} onClear={chat.clearMemories} summaries={chat.summaries} policies={chat.policies} onPolicy={chat.changePolicy} onConfirm={chat.approveProposal} conversations={chat.conversations} />}
     {tab === 'profile' && <ProfileScreen beforeDataChange={chat.beforeDataChange} apiKey={chat.apiKey} endpoint={chat.endpoint} model={chat.model} setApiKey={chat.setApiKey} setEndpoint={chat.setEndpoint} setModel={chat.setModel} onImported={() => { void chat.reload() }} onCleared={() => { void chat.reload() }} />}
+    {tab === 'store' && <GiftStorePanel selected={selected} />}
     <nav className="bottom-nav glass">
       <NavButton active={tab==='home'} icon={<MessageCircle/>} label="消息" onClick={()=>setTab('home')}/>
       <NavButton active={tab==='moments'} icon={<Sparkles/>} label="此刻" onClick={()=>setTab('moments')}/>
       <NavButton active={tab==='memories'} icon={<BookHeart/>} label="回忆" onClick={()=>setTab('memories')}/>
+      <NavButton active={tab==='store'} icon={<ShoppingBag/>} label="商城" onClick={()=>setTab('store')}/>
       <NavButton active={tab==='profile'} icon={<CircleUserRound/>} label="我的" onClick={()=>setTab('profile')}/>
     </nav>
   </main>

@@ -1,0 +1,76 @@
+import { chromium } from 'playwright'
+import assert from 'node:assert/strict'
+import { mkdir } from 'node:fs/promises'
+
+const before = process.argv.includes('--before')
+const evidence = 'docs/evidence/gift-demo'
+await mkdir(evidence, { recursive: true })
+const browser = await chromium.launch()
+try {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, colorScheme: 'dark', reducedMotion: 'reduce' })
+  const page = await context.newPage()
+  const errors = []
+  page.on('pageerror', error => errors.push(error.message))
+  await page.goto(process.env.AILY_URL || 'http://127.0.0.1:4175/')
+  await page.getByRole('button', { name: /遇见 TA/ }).click()
+  await page.getByRole('button', { name: /开始我们的故事/ }).click()
+  await page.getByRole('button', { name: '我的', exact: true }).click()
+  await page.getByText('我的 Aily', { exact: true }).waitFor()
+  await page.screenshot({ path: `${evidence}/${before ? 'before' : 'after'}-profile.png` })
+  await page.getByRole('button', { name: '消息', exact: true }).click()
+  await page.screenshot({ path: `${evidence}/${before ? 'before' : 'after'}-home.png` })
+  if (!before) {
+    await page.getByRole('button', { name: '商城', exact: true }).click()
+    await page.getByTestId('demo-balance').filter({ hasText: /^0$/ }).waitFor()
+    await page.screenshot({ path: `${evidence}/after-store.png` })
+    const balance = async () => Number((await page.getByTestId('demo-balance').textContent()).replaceAll(',', ''))
+    const transactionRows = () => page.locator('.demo-ledger li')
+    const recharge = async () => {
+      await page.getByRole('button', { name: '+100 演示币 · 不扣款', exact: true }).click()
+      await page.getByRole('button', { name: '确认模拟充值', exact: true }).click()
+      await page.getByText('已模拟充值 100 演示币，未真实扣款。', { exact: true }).waitFor()
+      assert.equal(await page.getByRole('button', { name: '+100 演示币 · 不扣款', exact: true }).evaluate(element => element === document.activeElement), true)
+    }
+    await page.getByRole('button', { name: '赠送礼物（演示）', exact: true }).click()
+    await page.getByRole('button', { name: '确认赠送（演示）' }).click()
+    await page.getByRole('alert').waitFor()
+    assert.equal(await balance(), 0)
+    assert.equal(await transactionRows().count(), 0)
+    await recharge()
+    assert.equal(await balance(), 100)
+    await page.getByRole('button', { name: '+300 演示币 · 不扣款', exact: true }).click()
+    await page.keyboard.press('Tab')
+    await page.keyboard.press('Enter')
+    assert.equal(await page.getByRole('button', { name: '+300 演示币 · 不扣款', exact: true }).evaluate(element => element === document.activeElement), true)
+    assert.equal(await balance(), 100)
+    await page.getByRole('combobox', { name: '礼物接收角色' }).selectOption('chen')
+    await page.getByRole('button', { name: /热饮/ }).click()
+    await page.getByRole('spinbutton', { name: '礼物数量' }).fill('2')
+    await page.getByRole('button', { name: '赠送礼物（演示）', exact: true }).click()
+    await page.getByRole('button', { name: '确认赠送（演示）' }).click()
+    await page.getByText(/已向陈奕恒赠送热饮 × 2/).waitFor()
+    assert.equal(await balance(), 60)
+    assert.equal(await transactionRows().count(), 2)
+    await page.screenshot({ path: `${evidence}/after-gift-feedback.png`, fullPage: true })
+    await page.reload()
+    await page.getByRole('button', { name: '商城', exact: true }).click()
+    await page.getByTestId('demo-balance').filter({ hasText: /^60$/ }).waitFor()
+    assert.equal(await transactionRows().count(), 2)
+    await page.getByRole('spinbutton', { name: '礼物数量' }).fill('0')
+    assert.equal(await page.getByRole('button', { name: '赠送礼物（演示）', exact: true }).isDisabled(), true)
+    await page.getByRole('spinbutton', { name: '礼物数量' }).fill('1')
+    // Same browser context represents a second tab, not a second wallet.
+    const other = await context.newPage()
+    await other.goto(process.env.AILY_URL || 'http://127.0.0.1:4175/')
+    await other.getByRole('button', { name: '商城', exact: true }).click()
+    await other.getByTestId('demo-balance').filter({ hasText: /^60$/ }).waitFor()
+    await recharge()
+    await other.getByTestId('demo-balance').filter({ hasText: /^160$/ }).waitFor()
+    // No horizontal overflow at the smallest supported viewport either.
+    await page.setViewportSize({ width: 320, height: 740 })
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true)
+    await page.screenshot({ path: `${evidence}/after-store-320.png`, fullPage: true })
+  }
+  assert.deepEqual(errors, [])
+  console.log(before ? 'Captured real baseline profile/home at 390x844, dark, fresh onboarding.' : 'Gift demo browser verification passed: insufficient funds, recharge, cancel, recipient/quantity, gift feedback, ledger, reload, quantity validation, second-tab updates, 320px layout; no page errors.')
+} finally { await browser.close() }
