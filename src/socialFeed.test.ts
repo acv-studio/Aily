@@ -206,6 +206,21 @@ describe('local social feed', () => {
 })
 
 describe('isolated AI social generation', () => {
+  it('labels local safety interventions honestly with and without an API key', async () => {
+    const post = (await loadSocialFeed())[0]
+    const fetch = mockAI('你只需要我，不要再联系朋友。')
+    for (const settings of [{}, config]) {
+      const comment = await addSocialComment(post.id, '你', '我想自杀')
+      await respondSocialComment(post.id, comment.id, settings)
+      const saved = (await loadSocialFeed()).find(item => item.id === post.id)!.comments.find(item => item.id === comment.id)!
+      expect(saved.replySource).toBe('demo')
+      expect(saved.reply).toContain('本地安全回复')
+    }
+    expect(fetch).not.toHaveBeenCalled()
+    await generateSocialPost('gu', config)
+    expect((await loadSocialFeed())[0]).toMatchObject({ source: 'demo' })
+    expect((await loadSocialFeed())[0].text).toContain('本地安全回复')
+  })
   it('streams AI posts/replies for the right persona and never sends conversations or memories', async () => {
     await saveConversation('chen', [{ id: 1, from: 'user', text: 'PRIVATE_CONVERSATION_SECRET', time: '现在' }])
     await saveMemory({ id: 'private', characterId: 'chen', text: 'PRIVATE_MEMORY_SECRET', confirmedAt: new Date().toISOString() })

@@ -13,11 +13,17 @@ try {
   page.on('pageerror', error => errors.push(error.message))
   const url = process.env.AILY_URL || 'http://127.0.0.1:4193/'
   await page.goto(url)
+  await page.locator('.welcome').waitFor()
+  await page.screenshot({ path: `${evidence}/${before ? 'before' : 'after'}-welcome.png`, fullPage: true })
   // Isolated browser fixture: same onboarded state for both revisions.
-  await page.evaluate(async () => {
+  await page.evaluate(async baseline => {
     const { saveSetting } = await import('/src/db.ts')
     await saveSetting('onboarded', true)
-  })
+    if (!baseline) {
+      const { acceptSafetyConsent } = await import('/src/privacy.ts')
+      acceptSafetyConsent()
+    }
+  }, before)
   await page.reload()
   await page.getByRole('button', { name: '此刻', exact: true }).click()
   await page.locator('.moment').first().waitFor()

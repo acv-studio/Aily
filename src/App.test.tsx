@@ -3,6 +3,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import App from './App'
 import { db, loadLocalData, saveSetting } from './db'
+import { acceptSafetyConsent } from './privacy'
 
 beforeEach(async () => { localStorage.clear(); sessionStorage.clear(); await db.delete(); await db.open() })
 afterEach(cleanup)
@@ -28,6 +29,7 @@ describe('Aily core journey', () => {
   })
 
   it('lets previously onboarded users add preferences without restarting or switching characters', async () => {
+    acceptSafetyConsent()
     await saveSetting('onboarded', true)
     await saveSetting('selected', 'chen')
     render(<App />)
