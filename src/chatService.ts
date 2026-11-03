@@ -53,6 +53,10 @@ export type StreamRequest = {
   model?: string
   signal?: AbortSignal
   timeoutMs?: number
+  /** Opt in when callers persist only fully completed model output. */
+  requireCompletion?: boolean
+  /** Notify callers when guardrails replace model output with local copy. */
+  onLocalSafety?: () => void
   onDelta: (text: string) => void
 }
 
@@ -146,7 +150,8 @@ export function buildContext(characterId: CharacterId, messages: ChatMessage[], 
   // Bounded, deterministic excerpts, not an inferred summary or the entire history.
   const query = history.filter(message => message.from === 'user').at(-1)?.text || ''
   const synopsis = summaries === undefined ? history.slice(Math.max(0, boundary - 6), boundary).map(message => ({
-    speaker: message.from, excerpt: message.text.slice(0, 100),
+    // Leave room for both mandatory safety boundaries and onboarding preferences.
+    speaker: message.from, excerpt: message.text.slice(0, 85),
   })) : summaries.filter(summary => summary.characterId === characterId && policy?.extractionEnabled !== false
     && safeContextText(summary.text) && !summary.sourceMessageIds.some(id => excludedIds.has(id)) && semanticScore(query, summary.text) > 0)
     .sort((a, b) => b.periodKey.localeCompare(a.periodKey)).slice(0, 2).map(summary => ({ period: summary.period, periodKey: summary.periodKey, digest: summary.text.slice(0, 700) }))
@@ -238,6 +243,7 @@ export async function streamReply(request: StreamRequest) {
     let data: string[] = []
     let dataLength = 0
     let finished = false
+    let stopped = false
     let output = ''
     const dispatch = () => {
       if (!data.length) return
