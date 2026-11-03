@@ -6,6 +6,7 @@ export type OnboardingProfile = {
   userName: string
   characterName: string
   familiarNames: boolean
+  exclusiveNames?: Partial<Record<CharacterId, string>>
   chatLength: 'short' | 'long'
   proactiveFrequency: 'off' | 'daily' | 'occasional'
   banter: boolean
@@ -22,7 +23,7 @@ export type OnboardingProfile = {
 export function defaultOnboardingProfile(characterId: CharacterId): OnboardingProfile {
   return {
     characterId, userName: '你', characterName: characters.find(role => role.id === characterId)!.name,
-    familiarNames: false, chatLength: 'short', proactiveFrequency: 'off', banter: false,
+    familiarNames: false, exclusiveNames: {}, chatLength: 'short', proactiveFrequency: 'off', banter: false,
     supportStyle: 'listen', blockedTopics: '', notificationStart: '09:00', notificationEnd: '22:00',
     adultEnabled: false, ageConfirmed: false, adultConsent: false, safeWord: '停',
   }
@@ -43,12 +44,20 @@ export function validateOnboardingProfile(value: unknown): OnboardingProfile {
   const fail = () => { throw new Error(t('引导设置无效：请检查称呼、偏好、通知时段及独立成年与同意确认')) }
   if (!record(value) || !isRole(value.characterId)) return fail()
   const allowed = Object.keys(defaultOnboardingProfile(value.characterId))
-  if (Object.keys(value).some(key => !allowed.includes(key)) || allowed.some(key => !Object.hasOwn(value, key))) return fail()
+  if (Object.keys(value).some(key => !allowed.includes(key)) || allowed.some(key => key !== 'exclusiveNames' && !Object.hasOwn(value, key))) return fail()
+  const exclusiveNames: Partial<Record<CharacterId, string>> = {}
+  if (Object.hasOwn(value, 'exclusiveNames')) {
+    if (!record(value.exclusiveNames)) return fail()
+    for (const [key, name] of Object.entries(value.exclusiveNames)) {
+      if (!isRole(key) || !text(name, 80, true)) return fail()
+      exclusiveNames[key] = name.trim()
+    }
+  }
   if (!text(value.userName, 80, true) || !text(value.characterName, 80, true) || !text(value.blockedTopics, 2000) || !text(value.safeWord, 80)) return fail()
   for (const key of ['familiarNames', 'banter', 'adultEnabled', 'ageConfirmed', 'adultConsent']) if (typeof value[key] !== 'boolean') return fail()
   if (!['short', 'long'].includes(value.chatLength as string) || !['off', 'daily', 'occasional'].includes(value.proactiveFrequency as string) || !['listen', 'comfort'].includes(value.supportStyle as string)) return fail()
   if (!clock(value.notificationStart) || !clock(value.notificationEnd)) return fail()
-  const profile = { ...value, userName: value.userName.trim(), characterName: value.characterName.trim(), blockedTopics: value.blockedTopics.trim(), safeWord: value.safeWord.trim() } as OnboardingProfile
+  const profile = { ...value, exclusiveNames, userName: value.userName.trim(), characterName: value.characterName.trim(), blockedTopics: value.blockedTopics.trim(), safeWord: value.safeWord.trim() } as OnboardingProfile
   if (profile.adultEnabled && !adultAuthorizationAllowed(profile)) return fail()
   return profile
 }
@@ -57,6 +66,11 @@ export function validateOnboardingProfile(value: unknown): OnboardingProfile {
 export function normalizeOnboardingProfile(value: unknown): OnboardingProfile | null {
   if (!record(value) || !isRole(value.characterId)) return null
   const profile = defaultOnboardingProfile(value.characterId)
+  if (record(value.exclusiveNames)) {
+    for (const [key, name] of Object.entries(value.exclusiveNames)) {
+      if (isRole(key) && text(name, 80, true)) profile.exclusiveNames![key] = name.trim()
+    }
+  }
   for (const key of ['userName', 'characterName'] as const) if (text(value[key], 80, true)) profile[key] = value[key].trim()
   if (text(value.blockedTopics, 2000)) profile.blockedTopics = value.blockedTopics.trim()
   if (text(value.safeWord, 80)) profile.safeWord = value.safeWord.trim()

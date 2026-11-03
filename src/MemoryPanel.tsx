@@ -4,9 +4,12 @@ import type { ChatMessage, ConfirmedMemory } from './chatService'
 import { defaultMemoryPolicy, displaySummary, semanticScore, type ConversationSummary, type MemoryPolicy } from './longMemory'
 import { characters, type CharacterId } from './data'
 import type { MemoryDraft } from './ChatPanel'
+import RelationshipPanel from './RelationshipPanel'
+import type { OnboardingProfile } from './onboarding'
 
 const categories = { profile: '用户偏好', relationship: '共同经历', context: '近期情境', emotion: '情绪与支持' }
-export default function MemoryPanel({ memories, selected, onSave, onUpdate, onDelete, onClear, summaries = [], policies = {}, onPolicy, onConfirm, conversations = {} }: {
+export default function MemoryPanel({ memories, selected, onSave, onUpdate, onDelete, onClear, summaries = [], policies = {}, onPolicy, onConfirm, conversations = {}, profile, onProfile }: {
+  profile?: OnboardingProfile | null; onProfile?: (profile: OnboardingProfile) => Promise<void>
   summaries?: ConversationSummary[]; policies?: Partial<Record<CharacterId, MemoryPolicy>>
   onPolicy?: (role: CharacterId, policy: MemoryPolicy) => Promise<void>
   onConfirm?: (id: string) => Promise<void>

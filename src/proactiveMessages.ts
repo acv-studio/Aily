@@ -83,7 +83,7 @@ async function relationshipStage(role: CharacterId, now: Date): Promise<string> 
   // Legacy confirmed records have no state; pending/archived/rejected never count.
   const eligible = memories.filter(memory => canRecall(memory, policy, now) && memory.sensitive !== true && !isSensitive(memory.text)
     && Number.isFinite(Date.parse(memory.confirmedAt)) && Date.parse(memory.confirmedAt) <= now.getTime())
-  return getRelationship(role, eligible).stage.name
+  return getRelationship(role, eligible, policy, now.getTime()).stage.name
 }
 
 export async function loadProactiveSettings(role: CharacterId): Promise<ProactiveSettings> {
