@@ -1,0 +1,14 @@
+.safety-consent { padding: 20px; margin-top: 22px; text-align: left; }
+.safety-consent h2 { font-size: 20px; margin-top: 0; }
+.safety-consent p, .safety-panel p { font-size: 14px; line-height: 1.7; color: #bdc4d6; overflow-wrap: anywhere; }
+.safety-consent label, .safety-panel label { display: flex; align-items: center; gap: 10px; margin: 15px 0; font-size: 14px; }
+.safety-consent input[type=checkbox] { width: 18px; height: 18px; flex-shrink: 0; accent-color: #b59bff; }
+.safety-consent .primary { width: 100%; margin-top: 14px; }
+.safety-consent button:disabled, .safety-panel button:disabled { opacity: .45; cursor: not-allowed; }
+.safety-panel { padding-bottom: 32px; }
+.safety-panel article { margin: 18px 0; padding: 20px; }
+.safety-panel h3 { font-size: 17px; }
+.safety-panel label { flex-direction: column; align-items: stretch; }
+.safety-panel input { min-width: 0; padding: 12px; border: 1px solid #777; border-radius: 10px; background: #171925; color: white; }
+.danger-action { padding: 12px 16px; border: 1px solid #f09caa; border-radius: 12px; color: #ffc0c9; background: #392230; }
+.safety-panel [role=alert], .safety-consent [role=alert] { color: #ffc0c9; }

@@ -2,10 +2,12 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import App from './App'
 import { db } from './db'
+import { acceptSafetyConsent } from './privacy'
 import { streamReply } from './chatService'
 vi.mock('./chatService', async () => ({ ...await vi.importActual('./chatService'), streamReply: vi.fn() }))
 beforeEach(async () => {
   localStorage.clear(); sessionStorage.clear(); await db.delete(); await db.open()
+  acceptSafetyConsent()
   await db.settings.bulkPut([{ key: 'onboarded', value: true }, { key: 'selected', value: 'lu' }])
   Element.prototype.scrollIntoView = vi.fn()
 })
@@ -18,6 +20,11 @@ it('refreshes story memories without interrupting an active streamed reply', asy
     request.onDelta('，完整回复')
   })
   render(<App />)
+  expect(await screen.findByRole('button', { name: '确认并继续' })).toBeDisabled()
+  fireEvent.click(screen.getByLabelText('我已年满 18 周岁'))
+  expect(screen.getByRole('button', { name: '确认并继续' })).toBeDisabled()
+  fireEvent.click(screen.getByLabelText('我理解 AI 身份与数据说明'))
+  fireEvent.click(screen.getByRole('button', { name: '确认并继续' }))
   fireEvent.click(await screen.findByRole('button', { name: /去找他/ }))
   fireEvent.change(screen.getByRole('textbox', { name: '发消息' }), { target: { value: '你好' } })
   fireEvent.click(screen.getByRole('button', { name: '发送消息' }))

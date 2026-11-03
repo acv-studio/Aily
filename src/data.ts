@@ -33,11 +33,6 @@ export const starterMessages = [
   { id: 4, from: 'character', text: '那就好。答应你的庆祝，没忘。', time: '22:09' },
 ]
 
-export const moments = [
-  { id: 1, character: '陆听澜', avatar: '澜', time: '18分钟前', text: '新菜第一次成功。有人说过想吃清淡一点，记下了。', visual: 'dinner', likes: 12, comments: 3 },
-  { id: 2, character: '陈奕恒', avatar: '奕', time: '2小时前', text: '今天的云像没加载完。算了，给某人留一张。', visual: 'sky', likes: 8, comments: 5 },
-]
-
 export const memories = [
   { date: '今天', title: '终于交完的方案', detail: '你松了口气，他还记得那句“周五要交”。', icon: '✦', color: '#8ee7c4' },
   { date: '10月 26日', title: '第一次一起做晚饭', detail: '番茄炒蛋有点甜，但你们都说刚刚好。', icon: '⌁', color: '#ffc38f' },
