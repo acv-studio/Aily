@@ -7,8 +7,12 @@ try {
   page.on('pageerror', error => errors.push(error.message))
   page.on('dialog', dialog => dialog.accept())
   await page.goto(process.env.AILY_URL || 'http://127.0.0.1:4175/')
-  await page.getByRole('button', { name: /遇见 TA/ }).click()
-  await page.getByRole('button', { name: /开始我们的故事/ }).click()
+  // Memory-only scenario; onboarding has its own nine-step verification.
+  await page.evaluate(async () => {
+    const { saveSetting } = await import('/src/db.ts')
+    await saveSetting('onboarded', true); await saveSetting('selected', 'lu')
+  })
+  await page.reload()
   await page.getByRole('button', { name: '去找他' }).click()
   const send = async text => {
     await page.getByRole('textbox', { name: '发消息' }).fill(text)

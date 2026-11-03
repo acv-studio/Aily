@@ -6,8 +6,11 @@ try {
   const errors = []
   page.on('pageerror', error => errors.push(error.message))
   await page.goto(process.env.AILY_URL || 'http://127.0.0.1:4173/')
-  await page.getByRole('button', { name: /遇见 TA/ }).click()
-  await page.getByRole('button', { name: /开始我们的故事/ }).click()
+  await page.evaluate(async () => {
+    const { saveSetting } = await import('/src/db.ts')
+    await saveSetting('onboarded', true); await saveSetting('selected', 'lu')
+  })
+  await page.reload()
   await page.getByRole('button', { name: '去找他' }).click()
   await page.getByRole('textbox', { name: '发消息' }).fill('我喜欢清淡的晚饭')
   await page.getByRole('button', { name: '发送消息', exact: true }).click()

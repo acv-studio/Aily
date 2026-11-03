@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { mkdir } from 'node:fs/promises'
 
 const before = process.argv.includes('--before')
-const evidence = 'docs/evidence/gift-demo'
+const evidence = process.env.AILY_EVIDENCE_DIR || 'docs/evidence/gift-demo'
 await mkdir(evidence, { recursive: true })
 const browser = await chromium.launch()
 try {
@@ -12,8 +12,11 @@ try {
   const errors = []
   page.on('pageerror', error => errors.push(error.message))
   await page.goto(process.env.AILY_URL || 'http://127.0.0.1:4175/')
-  await page.getByRole('button', { name: /遇见 TA/ }).click()
-  await page.getByRole('button', { name: /开始我们的故事/ }).click()
+  await page.evaluate(async () => {
+    const { saveSetting } = await import('/src/db.ts')
+    await saveSetting('onboarded', true); await saveSetting('selected', 'lu')
+  })
+  await page.reload()
   await page.getByRole('button', { name: '我的', exact: true }).click()
   await page.getByText('我的 Aily', { exact: true }).waitFor()
   await page.screenshot({ path: `${evidence}/${before ? 'before' : 'after'}-profile.png` })

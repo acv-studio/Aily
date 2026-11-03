@@ -51,7 +51,7 @@ describe('bilingual settings and source preservation', () => {
     const recalled = retrieveMemories('lu', [message(query)], [memory])
     expect(recalled[0].text).toBe(fact)
     expect(recalled[0].originalText).toBe(fact)
-    const context = buildContext('lu', [message(query)], [memory], undefined, undefined, 'en')
+    const context = buildContext('lu', [message(query)], [memory], undefined, undefined, undefined, 'en')
     expect(context[0].content).toContain(fact)
     expect(context[0].content).toContain('English')
     expect(context.at(-1)?.content).toBe(query)

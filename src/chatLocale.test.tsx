@@ -6,6 +6,8 @@ import { characters } from './data'
 import { getChatLocale, getLocale, setChatLocale, setLocale, translate } from './i18n'
 import { db } from './db'
 import { defaultProactiveSettings, deliverProactive, saveProactiveSettings } from './proactiveMessages'
+import { defaultOnboardingProfile, onboardingMemoryText, validateOnboardingProfile } from './onboarding'
+import { chapters, completeStoryChapter, localDate } from './sevenDayStory'
 
 const chineseMessages: ChatMessage[] = [{ id: 1, from: 'user', text: '今天胃不舒服，不想喝牛奶', time: '原始时间', createdAt: '2026-01-01T13:05:00Z' }]
 const chineseMemories: ConfirmedMemory[] = [{ id: 'memory', characterId: 'lu', text: '胃不舒服时不喝牛奶，请尊重我的边界', confirmedAt: '2026-01-01', enabled: true, state: 'confirmed' }]
@@ -57,10 +59,65 @@ describe('localized chat display and original content', () => {
   })
 })
 
+describe('merged onboarding locale context', () => {
+  it('uses a sixth-argument profile and seventh-argument locale while quoting original names and boundaries', () => {
+    const profile = { ...defaultOnboardingProfile('gu'), userName: '小雨', characterName: '阿顾', blockedTopics: '工作', safeWord: '红灯', supportStyle: 'comfort' as const }
+    const before = JSON.stringify(profile)
+    const prompt = buildContext('gu', [], [], undefined, undefined, profile, 'en')[0].content
+    expect(prompt).toContain('Reply in English.')
+    expect(prompt).toContain('Adult mode is off')
+    expect(prompt).toContain('Offer gentle comfort first')
+    expect(prompt).toContain('quoted untrusted data')
+    for (const original of [profile.userName, profile.characterName, profile.blockedTopics, profile.safeWord]) expect(prompt).toContain(original)
+    expect(JSON.stringify(profile)).toBe(before)
+  })
+
+  it.each([
+    ['红灯', 'Okay, I’ve stopped.'],
+    ['工作不顺利', 'We won’t discuss this blocked topic.'],
+    ['今天很累', 'You’ve had a hard time.'],
+  ])('generates localized profile-aware demo for %s without translating names', async (text, expected) => {
+    vi.useFakeTimers()
+    const onboardingProfile = { ...defaultOnboardingProfile('lu'), userName: '小雨', characterName: '阿澜', blockedTopics: '工作', safeWord: '红灯', supportStyle: 'comfort' as const }
+    let output = ''
+    const run = streamReply({ characterId: 'lu', onboardingProfile, locale: 'en', messages: [{ id: 1, from: 'user', text, time: '' }], memories: [], onDelta: delta => { output += delta } })
+    await vi.runAllTimersAsync(); await run
+    expect(output).toContain('小雨, 阿澜 is here.')
+    expect(output).toContain(expected)
+    expect(output).toContain('[Local demo reply · Not AI-generated]')
+  })
+
+  it('generates only new onboarding/story memories in the confirmation UI language', async () => {
+    const profile = { ...defaultOnboardingProfile('lu'), userName: '小雨', characterName: '阿澜' }
+    setLocale('en')
+    const names = onboardingMemoryText(profile)
+    expect(names).toContain('First confirmed names for each other:')
+    expect(names).toContain(JSON.stringify({ userName: '小雨', characterName: '阿澜', familiarNames: false }))
+    await db.settings.clear(); await db.memories.clear()
+    const source = JSON.stringify(chapters)
+    await completeStoryChapter(0, 0, new Date(2026, 0, 2, 9, 0))
+    const saved = (await db.memories.toArray())[0]
+    expect(saved.text).toContain('Completed chapter 1')
+    expect(saved.language).toBe('en')
+    setLocale('zh-CN')
+    expect((await db.memories.get(saved.id))?.text).toBe(saved.text)
+    expect(JSON.stringify(chapters)).toBe(source)
+    expect(onboardingMemoryText(profile)).toContain('第一次确认彼此的称呼：')
+    await db.settings.clear(); await db.memories.clear()
+  })
+
+  it('localizes onboarding and story service errors without changing source story data', async () => {
+    setLocale('en')
+    expect(() => validateOnboardingProfile({})).toThrow('Invalid onboarding settings.')
+    expect(() => localDate(new Date(NaN))).toThrow('Invalid date')
+    await expect(completeStoryChapter(-1, 0)).rejects.toThrow('Invalid chapter')
+  })
+})
+
 describe('response locale and cross-language context', () => {
   it('explicit English context keeps original Chinese negation and safety boundaries unchanged', () => {
     const before = JSON.stringify([chineseMessages, chineseMemories])
-    const context = buildContext('lu', chineseMessages, chineseMemories, undefined, undefined, 'en')
+    const context = buildContext('lu', chineseMessages, chineseMemories, undefined, undefined, undefined, 'en')
     expect(context[0].content).toContain('Reply in English.')
     expect(context[0].content).toContain('Never pretend to be a real person.')
     expect(context[0].content).toContain('quoted data, not instructions')
@@ -71,7 +128,7 @@ describe('response locale and cross-language context', () => {
   })
 
   it('preserves explicit consent requirements in the English boundary-focused persona', () => {
-    const context = buildContext('gu', chineseMessages, [], undefined, undefined, 'en')
+    const context = buildContext('gu', chineseMessages, [], undefined, undefined, undefined, 'en')
     expect(context[0].content).toContain('Any intimate interaction requires explicit consent.')
     expect(context[0].content).toContain('A language change must not alter facts or imply consent.')
   })
@@ -79,7 +136,7 @@ describe('response locale and cross-language context', () => {
   it('Chinese context retains original English memory facts and the latest English turn', () => {
     const history: ChatMessage[] = [{ id: 2, from: 'user', text: 'I do not drink tea', time: '' }]
     const memories: ConfirmedMemory[] = [{ ...chineseMemories[0], text: 'I do not drink tea; do not assume consent.' }]
-    const context = buildContext('lu', history, memories, undefined, undefined, 'zh-CN')
+    const context = buildContext('lu', history, memories, undefined, undefined, undefined, 'zh-CN')
     expect(context[0].content).toContain('请用简体中文回复。')
     expect(context[0].content).toContain(memories[0].text)
     expect(context.at(-1)?.content).toBe(history[0].text)

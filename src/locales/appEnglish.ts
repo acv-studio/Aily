@@ -7,6 +7,7 @@ export const englishSingular: Record<string, string> = {
 
 export const appEnglish: Record<string, string> = {
   'Aily · 记得你的每一天': 'Aily · Remembering every day with you',
+  '请先完成首次引导': 'Complete the first-run setup first.',
   '界面语言 / Interface language': '界面语言 / Interface language',
   '聊天语言': 'Chat language', '跟随用户输入': 'Follow user input',
   '语言设置': 'Language settings', '切换语言不会改变聊天、回忆或角色关系。': 'Changing languages keeps your chats, memories and relationships intact.',
