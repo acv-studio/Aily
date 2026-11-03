@@ -2,11 +2,11 @@ import '@testing-library/jest-dom/vitest'
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
-import * as storage from './db'
+import { acceptSafetyConsent } from './privacy'
 import { db, loadLocalData, saveSetting } from './db'
 import { acceptSafetyConsent, hasSafetyConsent } from './privacy'
 
-beforeEach(async () => { localStorage.clear(); sessionStorage.clear(); await db.delete(); await db.open() })
+beforeEach(async () => { window.history.replaceState(null, '', '/'); localStorage.clear(); sessionStorage.clear(); await db.delete(); await db.open() })
 afterEach(() => { cleanup(); vi.restoreAllMocks() })
 
 async function acceptDisclosure(name = '确认并继续') {
@@ -20,6 +20,19 @@ async function acceptDisclosure(name = '确认并继续') {
 }
 
 describe('Aily core journey', () => {
+  it('handles same-document invitation navigation without bypassing consent and preselects the recommended role', async () => {
+    render(<App />)
+    await screen.findByRole('button', { name: '遇见 TA' })
+    act(() => { window.location.hash = '#invite=chen'; window.dispatchEvent(new HashChangeEvent('hashchange')) })
+    expect(await screen.findByRole('heading', { name: '陈奕恒' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '认识这位 AI 角色' }))
+    expect(screen.getByRole('button', { name: '遇见 TA' })).toBeDisabled()
+    expect(window.location.hash).toBe('')
+    await acceptDisclosure('遇见 TA')
+    expect(screen.getByRole('button', { name: /陈奕恒/ })).toHaveAttribute('aria-pressed', 'true')
+    expect((await loadLocalData()).settings.onboarded).not.toBe(true)
+  })
+
   it('keeps application tabs locked until journal persistence settles', async () => {
     await saveSetting('onboarded', true)
     await storage.saveMemory({ id: 'event', characterId: 'lu', category: 'relationship', text: '我们完成海边故事', confirmedAt: '2026-11-01T10:00:00Z' })

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useI18n } from './i18n'
 import type { ChatMessage, ConfirmedMemory } from './chatService'
 import { defaultMemoryPolicy, displaySummary, semanticScore, type ConversationSummary, type MemoryPolicy } from './longMemory'
@@ -35,6 +35,9 @@ export default function MemoryPanel({ memories, selected, onSave, onUpdate, onDe
   const [expiresAt, setExpiresAt] = useState('')
   const [sourceIds, setSourceIds] = useState<number[]>([])
   const policy = policies[role] || defaultMemoryPolicy
+  const [shareId, setShareId] = useState<string | null>(null)
+  const shareMemory = memories.find(memory => memory.id === shareId && memory.characterId === role && shareableMemory(memory, policy, conversations[role]))
+  useEffect(() => { if (shareId && !shareMemory) setShareId(null) }, [shareId, shareMemory])
   const [error, setError] = useState('')
   const [busy, setBusyState] = useState(false)
   const setBusy = (value: boolean) => { setBusyState(value); onBusyChange?.(value) }
@@ -60,6 +63,7 @@ export default function MemoryPanel({ memories, selected, onSave, onUpdate, onDe
         {memory.state === 'pending' && !!memory.conflictIds?.length && <p role="status">{t('与已有记忆冲突：{memories}。确认新信息会归档旧信息；暂不确认时不自动覆盖。', { memories: memories.filter(item => memory.conflictIds?.includes(item.id)).map(item => item.text).join(locale === 'en' ? '; ' : '；') })}</p>}
         {memory.expiresAt && <p>{t('情境到期：{date}', { date: new Date(memory.expiresAt).toLocaleDateString(locale) })}</p>}
         {memory.originalText && <details><summary>{t('查看保存原话')}</summary><p>{memory.originalText}</p></details>}
+        {shareableMemory(memory, policy, conversations[role]) && <div className="memory-actions"><button disabled={busy} onClick={() => setShareId(memory.id)}>{t('分享回忆卡')}</button></div>}
         {memory.sourceMessageId !== undefined && <div className="memory-actions"><button disabled={busy} onClick={() => setSourceIds([memory.sourceMessageId!])}>{t('查看来源')}</button></div>}
         {memory.state === 'pending' && onConfirm && <div className="memory-actions"><button disabled={busy || policy.disabledCategories.includes(memory.category || 'profile')} onClick={() => void run(() => onConfirm(memory.id))}>{t('确认记住')}</button><button disabled={busy} onClick={() => void run(() => onUpdate(memory.id, { state: 'rejected', enabled: false }))}>{t('不记住')}</button></div>}
         {memory.state !== 'pending' && <div className="memory-actions"><button disabled={busy} onClick={() => void run(() => onUpdate(memory.id, { pinned: !memory.pinned }))}>{t(memory.pinned ? '取消固定' : '永远别忘')}</button><button disabled={busy} onClick={() => void run(() => onUpdate(memory.id, { state: memory.state === 'archived' ? 'pending' : 'archived', enabled: false }))}>{t(memory.state === 'archived' ? '恢复归档' : '归档')}</button></div>}
