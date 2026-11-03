@@ -2,6 +2,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import App from './App'
 import { db } from './db'
+import { acceptSafetyConsent } from './privacy'
 import { streamReply } from './chatService'
 import { acceptSafetyConsent } from './privacy'
 vi.mock('./chatService', async () => ({ ...await vi.importActual('./chatService'), streamReply: vi.fn() }))

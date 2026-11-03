@@ -4,7 +4,7 @@ import assert from 'node:assert/strict'
 const phase = process.env.AILY_PHASE || 'after'
 const browser = await chromium.launch()
 try {
-  const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, colorScheme: 'dark', timezoneId: 'Asia/Shanghai' })
+  const page = await browser.newPage({ locale: 'zh-CN', viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, colorScheme: 'dark', timezoneId: 'Asia/Shanghai' })
   await page.goto(process.env.AILY_URL || 'http://127.0.0.1:4178/')
   await page.getByRole('button', { name: /遇见 TA/ }).waitFor()
   await mkdir('docs/evidence/onboarding', { recursive: true })

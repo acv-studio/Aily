@@ -2,7 +2,7 @@ import { chromium } from 'playwright'
 import assert from 'node:assert/strict'
 const browser = await chromium.launch()
 try {
-  const page = await browser.newPage({ viewport: { width: 390, height: 844 }, timezoneId: 'Asia/Shanghai' })
+  const page = await browser.newPage({ locale: 'zh-CN', viewport: { width: 390, height: 844 }, timezoneId: 'Asia/Shanghai' })
   const errors = []
   page.on('pageerror', error => errors.push(error.message))
   page.on('dialog', dialog => dialog.accept())
@@ -38,7 +38,7 @@ try {
   await page.getByRole('button', { name: '消息', exact: true }).click()
   await page.getByRole('button', { name: '去找他' }).click()
   await send('ocean')
-  await page.getByText(/你确认过「我喜欢看海」，我记得/).waitFor()
+  await page.getByText(/You confirmed “我喜欢看海”; I remember/).waitFor()
   await send('我不喜欢看海')
   await page.getByText(/\d+ 条待确认，请到回忆页查看/).waitFor()
   await page.getByRole('button', { name: '返回消息' }).click()

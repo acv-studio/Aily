@@ -1,3 +1,4 @@
+import { useI18n } from './i18n'
 import { useEffect, useRef, useState } from 'react'
 import { ArrowLeft, Search, Send, Square, Image as ImageIcon, Mic, Quote, X } from 'lucide-react'
 import type { Character } from './data'
@@ -26,6 +27,7 @@ export interface ChatPanelProps {
 }
 
 export default function ChatPanel(props: ChatPanelProps) {
+  const { t, locale } = useI18n()
   const { character, messages, draft, setDraft, replying } = props
   const [search, setSearch] = useState('')
   const [searchOpen, setSearchOpen] = useState(false)
@@ -104,7 +106,7 @@ export default function ChatPanel(props: ChatPanelProps) {
         try {
           const dataUrl = await readDataUrl(blob)
           if (!current()) return
-          setAttachment({ kind: 'audio', data: { dataUrl, mimeType: blob.type, name: '语音消息' } })
+          setAttachment({ kind: 'audio', data: { dataUrl, mimeType: blob.type, name: t('语音消息') } })
           setNotice('语音仅支持本机录制与回放，尚不支持模型听写或语音通话。')
         } catch { if (current()) setNotice('无法读取录音，请重试') }
       }
@@ -133,56 +135,56 @@ export default function ChatPanel(props: ChatPanelProps) {
   }
   return <main className="chat-screen">
     <header className="chat-header glass">
-      <button className="icon-button" aria-label="返回消息" disabled={replying} onClick={props.close}><ArrowLeft /></button>
-      <span className="avatar" style={{ '--accent': character.accent } as React.CSSProperties}>{character.avatar}</span>
-      <div><strong>{character.name}<small>AI 角色 · {props.demo ? '演示模式' : 'DeepSeek'}</small></strong><span>{replying ? '正在回复…' : props.temporary ? '临时会话 · 仅内存' : '聊天与记忆仅存本机'}</span></div>
-      <button className="icon-button" aria-label="搜索消息" onClick={() => setSearchOpen(!searchOpen)}><Search /></button>
+      <button className="icon-button" aria-label={t('返回消息')} disabled={replying} onClick={props.close}><ArrowLeft /></button>
+      <span className="avatar" style={{ '--accent': character.accent } as React.CSSProperties}>{t(character.avatar)}</span>
+      <div><strong>{t(character.name)}<small>{t('AI 角色')} · {props.demo ? t('演示模式') : 'DeepSeek'}</small></strong><span>{replying ? t('正在回复…') : props.temporary ? t('临时会话 · 仅内存') : t('聊天与记忆仅存本机')}</span></div>
+      <button className="icon-button" aria-label={t('搜索消息')} onClick={() => setSearchOpen(!searchOpen)}><Search /></button>
     </header>
-    {props.toggleTemporary && <div className="chat-notice"><span>{props.temporary ? '临时会话：不落盘、不提取或引用记忆；退出模式后清除。请求仍发送到所配置的模型服务。' : `自动提议记忆需你确认${props.pendingCount ? ` · ${props.pendingCount} 条待确认，请到回忆页查看` : ''}`}</span><button disabled={replying} onClick={() => { setMemory(undefined); setQuote(undefined); setSearch(''); setAttachment(undefined); props.toggleTemporary?.() }}>{props.temporary ? '结束临时会话' : '临时会话'}</button></div>}
-    {searchOpen && <div className="chat-search"><input aria-label="搜索聊天记录" placeholder="搜索当前角色的聊天记录" value={search} onChange={event => setSearch(event.target.value)} /><button onClick={() => { setSearch(''); setSearchOpen(false) }}>关闭</button></div>}
-    <section className="messages" aria-label="聊天记录" aria-live="polite">
-      {messages.length === 0 && <p className="chat-empty">从今天开始认识彼此。先说声你好吧。</p>}
-      {search && <p className="chat-empty">找到 {visible.length} 条消息</p>}
+    {props.toggleTemporary && <div className="chat-notice"><span>{props.temporary ? t('临时会话：不落盘、不提取或引用记忆；退出模式后清除。请求仍发送到所配置的模型服务。') : `${t('自动提议记忆需你确认')}${props.pendingCount ? t(' · {count} 条待确认，请到回忆页查看', { count: props.pendingCount }) : ''}`}</span><button disabled={replying} onClick={() => { setMemory(undefined); setQuote(undefined); setSearch(''); setAttachment(undefined); props.toggleTemporary?.() }}>{props.temporary ? t('结束临时会话') : t('临时会话')}</button></div>}
+    {searchOpen && <div className="chat-search"><input aria-label={t('搜索聊天记录')} placeholder={t('搜索当前角色的聊天记录')} value={search} onChange={event => setSearch(event.target.value)} /><button onClick={() => { setSearch(''); setSearchOpen(false) }}>{t('关闭')}</button></div>}
+    <section className="messages" aria-label={t('聊天记录')} aria-live="polite">
+      {messages.length === 0 && <p className="chat-empty">{t('从今天开始认识彼此。先说声你好吧。')}</p>}
+      {search && <p className="chat-empty">{t('找到 {count} 条消息', { count: visible.length })}</p>}
       {visible.map(message => <div key={message.id} className={`message-row ${message.from === 'user' ? 'mine' : ''}`}>
-        {message.from === 'character' && <span className="avatar" style={{ '--accent': character.accent } as React.CSSProperties}>{character.avatar}</span>}
+        {message.from === 'character' && <span className="avatar" style={{ '--accent': character.accent } as React.CSSProperties}>{t(character.avatar)}</span>}
         <div className="message-content">
-          {message.replyToId && <blockquote>{messages.find(item => item.id === message.replyToId)?.withdrawn ? '引用的消息已撤回' : messages.find(item => item.id === message.replyToId)?.text || '引用消息不可用'}</blockquote>}
+          {message.replyToId && <blockquote>{messages.find(item => item.id === message.replyToId)?.withdrawn ? t('引用的消息已撤回') : messages.find(item => item.id === message.replyToId)?.text || t('引用消息不可用')}</blockquote>}
           <div className={`bubble ${message.status === 'sending' ? 'streaming' : ''}`}>
-            {message.withdrawn ? <em>你撤回了一条消息</em> : <>
+            {message.withdrawn ? <em>{t('你撤回了一条消息')}</em> : <>
               {message.kind === 'image' && message.attachment && <img className="chat-image" src={message.attachment.dataUrl} alt={message.attachment.name} />}
-              {message.kind === 'audio' && (message.attachment ? <VoicePlayer src={message.attachment.dataUrl} onPlay={playAudio} /> : <em>语音附件不可用</em>)}
-              {message.text || (message.status === 'sending' ? '正在回复…' : '')}
+              {message.kind === 'audio' && (message.attachment ? <VoicePlayer src={message.attachment.dataUrl} onPlay={playAudio} /> : <em>{t('语音附件不可用')}</em>)}
+              {message.text || (message.status === 'sending' ? t('正在回复…') : '')}
             </>}
           </div>
-          <time>{message.createdAt ? new Date(message.createdAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }) : message.time}</time>
+          <time>{message.createdAt ? new Date(message.createdAt).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' }) : message.time}</time>
           {!message.withdrawn && message.status !== 'sending' && <div className="message-actions">
-            <button aria-label={`引用消息 ${message.id}`} onClick={() => setQuote(message.id)}><Quote size={12} />引用</button>
-            {message.text && !props.temporary && <button onClick={() => setMemory({ text: message.text, category: 'profile', sourceMessageId: message.id })}>记住这条</button>}
-            {message.from === 'user' && <button onClick={() => props.withdraw(message.id)}>撤回</button>}
+            <button aria-label={t('引用消息 {id}', { id: message.id })} onClick={() => setQuote(message.id)}><Quote size={12} />{t('引用')}</button>
+            {message.text && !props.temporary && <button onClick={() => setMemory({ text: message.text, category: 'profile', sourceMessageId: message.id })}>{t('记住这条')}</button>}
+            {message.from === 'user' && <button onClick={() => props.withdraw(message.id)}>{t('撤回')}</button>}
           </div>}
-          {message.status === 'failed' && message.from === 'user' && <button className="retry" onClick={() => props.send({ retryId: message.id })}>回复未完成 · 重试</button>}
+          {message.status === 'failed' && message.from === 'user' && <button className="retry" onClick={() => props.send({ retryId: message.id })}>{t('回复未完成 · 重试')}</button>}
         </div>
       </div>)}<div ref={bottom} />
     </section>
-    {props.error && <p className="chat-error" role="alert">{props.error}</p>}
-    {notice && <div className="chat-notice">{notice}<button aria-label="关闭提示" onClick={() => setNotice('')}><X size={14} /></button></div>}
-    {quoted && <div className="quoted-preview">引用：{quoted.withdrawn ? '已撤回' : quoted.text}<button onClick={() => setQuote(undefined)}>取消</button></div>}
+    {props.error && <p className="chat-error" role="alert">{t(props.error)}</p>}
+    {notice && <div className="chat-notice">{t(notice)}<button aria-label={t('关闭提示')} onClick={() => setNotice('')}><X size={14} /></button></div>}
+    {quoted && <div className="quoted-preview">{t('引用：')}{quoted.withdrawn ? t('已撤回') : quoted.text}<button onClick={() => setQuote(undefined)}>{t('取消')}</button></div>}
     {attachment && <div className={`quoted-preview ${attachment.kind === 'audio' ? 'voice-preview' : ''}`}>
-      <div>待发送：{attachment.data.name}{attachment.kind === 'audio' && <VoicePlayer src={attachment.data.dataUrl} preview onPlay={playAudio} />}</div>
-      <button onClick={() => setAttachment(undefined)}>移除</button>
+      <div>{t('待发送：')}{attachment.data.name}{attachment.kind === 'audio' && <VoicePlayer src={attachment.data.dataUrl} preview onPlay={playAudio} />}</div>
+      <button onClick={() => setAttachment(undefined)}>{t('移除')}</button>
     </div>}
-    <div className="quick-replies"><button onClick={props.openStory}>⌁ 共同故事</button><button onClick={props.openGame}>✊ 猜拳</button></div>
+    <div className="quick-replies"><button onClick={props.openStory}>{t('⌁ 共同故事')}</button><button onClick={props.openGame}>{t('✊ 猜拳')}</button></div>
     <footer className="composer glass">
-      <label className="attachment-button" aria-label="分享图片"><ImageIcon size={18} /><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" disabled={replying} onChange={event => { void chooseFile(event.target.files?.[0]); event.target.value = '' }} /></label>
-      <input aria-label="发消息" value={draft} onChange={event => setDraft(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && !event.nativeEvent.isComposing) { event.preventDefault(); void submit() } }} placeholder="发消息…" disabled={replying} />
-      <button aria-label={recording ? '结束录音' : '录制语音'} onClick={record} disabled={replying}>{recording ? <Square color="#ff7e8b" /> : <Mic />}</button>
-      {replying ? <button className="send" aria-label="停止回复" onClick={props.stop}><Square /></button> : <button className="send" aria-label="发送消息" disabled={!draft.trim() && !attachment} onClick={submit}><Send /></button>}
+      <label className="attachment-button" aria-label={t('分享图片')}><ImageIcon size={18} /><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" disabled={replying} onChange={event => { void chooseFile(event.target.files?.[0]); event.target.value = '' }} /></label>
+      <input aria-label={t('发消息')} value={draft} onChange={event => setDraft(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && !event.nativeEvent.isComposing) { event.preventDefault(); void submit() } }} placeholder={t('发消息…')} disabled={replying} />
+      <button aria-label={recording ? t('结束录音') : t('录制语音')} onClick={record} disabled={replying}>{recording ? <Square color="#ff7e8b" /> : <Mic />}</button>
+      {replying ? <button className="send" aria-label={t('停止回复')} onClick={props.stop}><Square /></button> : <button className="send" aria-label={t('发送消息')} disabled={!draft.trim() && !attachment} onClick={submit}><Send /></button>}
     </footer>
     {memory && <div className="memory-modal-overlay"><form className="memory-modal glass" onSubmit={async event => { event.preventDefault(); try { await props.saveMemory(memory); setMemory(undefined); setNotice('已确认保存，可在回忆页编辑或删除') } catch { setNotice('记忆未保存，请重试') } }}>
-      <h2>这件事，要记住吗？</h2><p>请确认内容和分类。未确认的内容不会作为长期记忆保存。</p>
-      <textarea aria-label="记忆内容" value={memory.text} maxLength={1000} required onChange={event => setMemory({ ...memory, text: event.target.value })} />
-      <label>记忆分类<select value={memory.category} onChange={event => setMemory({ ...memory, category: event.target.value as MemoryDraft['category'] })}><option value="profile">用户偏好</option><option value="relationship">共同经历</option><option value="context">近期情境</option><option value="emotion">情绪与支持偏好</option></select></label>
-      <div className="memory-actions"><button type="submit">确认记住</button><button type="button" onClick={() => setMemory(undefined)}>暂不保存</button></div>
+      <h2>{t('这件事，要记住吗？')}</h2><p>{t('请确认内容和分类。未确认的内容不会作为长期记忆保存。')}</p>
+      <textarea aria-label={t('记忆内容')} value={memory.text} maxLength={1000} required onChange={event => setMemory({ ...memory, text: event.target.value })} />
+      <label>{t('记忆分类')}<select value={memory.category} onChange={event => setMemory({ ...memory, category: event.target.value as MemoryDraft['category'] })}><option value="profile">{t('用户偏好')}</option><option value="relationship">{t('共同经历')}</option><option value="context">{t('近期情境')}</option><option value="emotion">{t('情绪与支持偏好')}</option></select></label>
+      <div className="memory-actions"><button type="submit">{t('确认记住')}</button><button type="button" onClick={() => setMemory(undefined)}>{t('暂不保存')}</button></div>
     </form></div>}
   </main>
 }

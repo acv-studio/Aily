@@ -8,6 +8,14 @@ import { acceptSafetyConsent } from './privacy'
 beforeEach(async () => { localStorage.clear(); sessionStorage.clear(); await db.delete(); await db.open() })
 afterEach(cleanup)
 
+async function acceptDisclosure() {
+  expect(await screen.findByRole('button', { name: '确认并继续' })).toBeDisabled()
+  fireEvent.click(screen.getByLabelText('我已年满 18 周岁'))
+  expect(screen.getByRole('button', { name: '确认并继续' })).toBeDisabled()
+  fireEvent.click(screen.getByLabelText('我理解 AI 身份与数据说明'))
+  fireEvent.click(screen.getByRole('button', { name: '确认并继续' }))
+}
+
 describe('Aily core journey', () => {
   it('requires new disclosure even when a previous profile is already onboarded', async () => {
     await saveSetting('onboarded', true)
@@ -26,7 +34,9 @@ describe('Aily core journey', () => {
     expect(await screen.findByText(/会生长/)).toBeInTheDocument()
     expect(screen.getByText(/本机优先保存，外部模型另有传输/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /遇见 TA/ })).toBeDisabled()
-    expect(screen.getByText(/记录保存在当前设备/)).toBeInTheDocument()
+    expect(screen.getByLabelText('我已年满 18 周岁')).not.toBeChecked()
+    expect(screen.getByLabelText('我理解 AI 身份与数据说明')).not.toBeChecked()
+    expect(screen.queryByRole('button', { name: /陈奕恒/ })).not.toBeInTheDocument()
   })
 
   it('lets previously onboarded users add preferences without restarting or switching characters', async () => {
@@ -47,10 +57,7 @@ describe('Aily core journey', () => {
 
   it('persists character choice in IndexedDB instead of a duplicate localStorage blob', async () => {
     render(<App />)
-    await screen.findByRole('button', { name: /遇见 TA/ })
-    fireEvent.click(screen.getByLabelText('我已年满 18 周岁'))
-    fireEvent.click(screen.getByLabelText('我理解 AI 身份与数据说明'))
-    fireEvent.click(screen.getByRole('button', { name: /遇见 TA/ }))
+    fireEvent.click(await screen.findByRole('button', { name: /遇见 TA/ }))
     fireEvent.click(screen.getByRole('button', { name: /陈奕恒/ }))
     fireEvent.click(screen.getByRole('button', { name: /开始我们的故事/ }))
     expect(screen.getByRole('heading', { name: '先听听我的自我介绍' })).toBeInTheDocument()
@@ -63,8 +70,11 @@ describe('Aily core journey', () => {
     fireEvent.click(screen.getByRole('button', { name: '继续' }))
     fireEvent.click(screen.getByRole('button', { name: '发送试聊' }))
     fireEvent.click(screen.getByRole('button', { name: '称呼没问题，继续' }))
+    expect(screen.getByText(/必要的聊天片段、相关记忆与互动偏好会直发 DeepSeek/)).toBeInTheDocument()
+    expect(screen.getByText(/API Key 只保留在本次浏览器会话，不包含在备份内/)).toBeInTheDocument()
     expect((await loadLocalData()).settings.onboarded).not.toBe(true)
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: '完成引导' })) })
+    await acceptDisclosure()
     await waitFor(() => expect(screen.getAllByText('陈奕恒')).toHaveLength(2))
     const data = await loadLocalData()
     expect(data.settings.onboardingProfile).toMatchObject({ userName: '小雨', characterName: '阿恒', adultEnabled: false })
