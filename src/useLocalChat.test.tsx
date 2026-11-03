@@ -1,6 +1,7 @@
 import { act, cleanup, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import useLocalChat from './useLocalChat'
+import Dexie from 'dexie'
 import { db, loadLocalData } from './db'
 import { streamReply } from './chatService'
 import { defaultOnboardingProfile } from './onboarding'
@@ -68,6 +69,25 @@ describe('onboarding hook integration', () => {
 })
 
 describe('durable chat orchestration', () => {
+  it('blocks deletion during an uncompleted policy write and rejects new writes after draining', async () => {
+    const hook = await setup()
+    let unblock!: () => void
+    const delayed = new Promise<void>(resolve => { unblock = resolve })
+    const original = db.settings.put.bind(db.settings)
+    const write = vi.spyOn(db.settings, 'put').mockImplementation((...args) => {
+      if (args[0].key === 'memoryPolicies') return Dexie.Promise.resolve(delayed).then(() => original(...args))
+      return original(...args)
+    })
+    let pending!: Promise<void>
+    act(() => { pending = hook.result.current.changePolicy('lu', { disabledCategories: ['profile'], extractionEnabled: false }) })
+    await expect(hook.result.current.prepareForDeletion()).rejects.toThrow('等待保存')
+    unblock()
+    await act(async () => { await pending; await hook.result.current.prepareForDeletion() })
+    write.mockRestore()
+    await expect(hook.result.current.saveConfirmed({ text: 'late write', category: 'context' })).rejects.toThrow('正在删除')
+    await expect(hook.result.current.changePolicy('lu', { disabledCategories: [], extractionEnabled: true })).rejects.toThrow('正在删除')
+  })
+
   it('saves the user turn before the API and preserves failure through reload', async () => {
     const hook = await setup()
     stream.mockImplementation(async () => {

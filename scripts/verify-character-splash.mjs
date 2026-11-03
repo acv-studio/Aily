@@ -12,6 +12,12 @@ try {
   page.on('pageerror', error => errors.push(error.message))
   await page.clock.install({ time: new Date('2026-11-03T19:00:00+08:00') })
   await page.goto(process.env.AILY_URL || 'http://127.0.0.1:4195/')
+  await page.getByRole('button', { name: /遇见 TA/ }).waitFor()
+  await page.screenshot({ path: `${evidence}/${before ? 'before' : 'after'}-welcome.png`, fullPage: true })
+  if (await page.getByRole('checkbox', { name: '我已年满 18 周岁' }).count()) {
+    await page.getByRole('checkbox', { name: '我已年满 18 周岁' }).check()
+    await page.getByRole('checkbox', { name: '我理解 AI 身份与数据说明' }).check()
+  }
   await page.getByRole('button', { name: /遇见 TA/ }).click()
   await page.getByRole('button', { name: /开始我们的故事/ }).click()
   // Current main has nine-step onboarding; retain compatibility with the original baseline.

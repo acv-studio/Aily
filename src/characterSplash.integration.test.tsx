@@ -5,15 +5,19 @@ import { db, loadLocalData, saveSetting } from './db'
 import { defaultSplashSettings, saveSplashSettings } from './characterPresence'
 import * as presence from './characterPresence'
 import { defaultOnboardingProfile } from './onboarding'
+import { acceptSafetyConsent } from './privacy'
 
 beforeEach(async () => { localStorage.clear(); sessionStorage.clear(); await db.delete(); await db.open(); vi.setSystemTime(new Date(2026, 10, 3, 19)); Element.prototype.scrollIntoView = vi.fn() })
 afterEach(() => { cleanup(); vi.useRealTimers(); vi.restoreAllMocks() })
-async function returning() { await saveSetting('onboarded', true); await saveSetting('selected', 'lu') }
+async function returning() { acceptSafetyConsent(); await saveSetting('onboarded', true); await saveSetting('selected', 'lu') }
 
 describe('character splash entry and settings', () => {
   it('skips first onboarding completion and preserves its role as primary on the next open', async () => {
     const app = render(<App />)
-    fireEvent.click(await screen.findByRole('button', { name: /遇见 TA/ }))
+    await screen.findByRole('button', { name: /遇见 TA/ })
+    fireEvent.click(screen.getByLabelText('我已年满 18 周岁'))
+    fireEvent.click(screen.getByLabelText('我理解 AI 身份与数据说明'))
+    fireEvent.click(screen.getByRole('button', { name: /遇见 TA/ }))
     fireEvent.click(screen.getByRole('button', { name: /陈奕恒/ }))
     fireEvent.click(screen.getByRole('button', { name: /开始我们的故事/ }))
     for (let step = 0; step < 5; step++) fireEvent.click(screen.getByRole('button', { name: '继续' }))

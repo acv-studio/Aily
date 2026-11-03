@@ -2,11 +2,13 @@ import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import Onboarding, { OnboardingEditor } from './OnboardingFlow'
 import { defaultOnboardingProfile } from './onboarding'
-afterEach(cleanup)
+afterEach(() => { cleanup(); localStorage.clear() })
 const proceed = () => fireEvent.click(screen.getByRole('button', { name: '继续' }))
 function start() {
   const finish = vi.fn().mockResolvedValue(undefined)
   render(<Onboarding selected="lu" setSelected={vi.fn()} finish={finish} apiKey="" setApiKey={vi.fn()}/> )
+  fireEvent.click(screen.getByLabelText('我已年满 18 周岁'))
+  fireEvent.click(screen.getByLabelText('我理解 AI 身份与数据说明'))
   fireEvent.click(screen.getByRole('button', { name: /遇见 TA/ }))
   fireEvent.click(screen.getByRole('button', { name: /开始我们的故事/ }))
   proceed()
