@@ -2,12 +2,16 @@ import { chromium } from 'playwright'
 import assert from 'node:assert/strict'
 const browser = await chromium.launch()
 try {
-  const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1 })
+  const page = await browser.newPage({ locale: 'zh-CN', viewport: { width: 390, height: 844 }, deviceScaleFactor: 1 })
   const errors = []
   page.on('pageerror', error => errors.push(error.message))
   await page.goto(process.env.AILY_URL || 'http://127.0.0.1:4173/')
-  await page.getByRole('button', { name: /遇见 TA/ }).click()
-  await page.getByRole('button', { name: /开始我们的故事/ }).click()
+  await page.evaluate(async () => {
+    const { saveSetting } = await import('/src/db.ts')
+    await saveSetting('onboarded', true); await saveSetting('selected', 'lu')
+    localStorage.setItem('aily-safety-consent-v1', 'adult-ai-privacy-accepted')
+  })
+  await page.reload()
   await page.getByRole('button', { name: '去找他' }).click()
   await page.getByRole('textbox', { name: '发消息' }).fill('我喜欢清淡的晚饭')
   await page.getByRole('button', { name: '发送消息', exact: true }).click()

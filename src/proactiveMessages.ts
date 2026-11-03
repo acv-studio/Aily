@@ -1,3 +1,4 @@
+import { t, translate, resolveChatLocale } from './i18n'
 import type { ChatMessage } from './chatService'
 import type { CharacterId } from './data'
 import { db, loadMemoryPolicy } from './db'
@@ -36,7 +37,7 @@ const limits = { low: { cap: 1, hours: 24 }, normal: { cap: 2, hours: 6 }, high:
 const hour = 60 * 60 * 1000
 const conditions: ProactiveWeatherCondition[] = ['sunny', 'cloudy', 'rainy', 'snowy', 'hot', 'cold']
 const emptyState = (): SchedulerState => ({ lastStage: null, lastDeliveredAt: null, dailyCounts: {}, events: [] })
-function check(value: unknown): asserts value { if (!value) throw new Error('无效的主动消息设置或调度状态') }
+function check(value: unknown): asserts value { if (!value) throw new Error(t('无效的主动消息设置或调度状态')) }
 function record(value: unknown): value is Record<string, unknown> { return value !== null && typeof value === 'object' && !Array.isArray(value) }
 function fields(value: Record<string, unknown>, names: string[]) {
   check(Object.keys(value).length === names.length && names.every(name => Object.hasOwn(value, name)))
@@ -150,21 +151,25 @@ export async function deliverProactive(characterId: CharacterId, now: Date): Pro
     if (quiet(settings, now) || (state.dailyCounts[day] ?? 0) >= limit.cap
       || (state.lastDeliveredAt !== null && now.getTime() - state.lastDeliveredAt < limit.hours * hour)) return undefined
     const persona = personas[characterId]
+    const latestUser = messages.filter(message => message.characterId === characterId && message.from === 'user' && !message.withdrawn && !message.attachment && (!message.kind || message.kind === 'text') && message.text.trim())
+      .sort((a, b) => b.id - a.id)[0]?.text || ''
+    const locale = resolveChatLocale(latestUser)
+    const localized = (key: string) => translate(key, {}, locale)
     const candidates: { event: string; text: string; stage?: string }[] = []
     if (settings.triggers.weather && settings.weather) {
       const age = now.getTime() - Date.parse(settings.weather.observedAt)
-      if (age >= 0 && age <= 6 * hour) candidates.push({ event: `weather:${settings.weather.condition}:${settings.weather.observedAt}`, text: persona.weather + weatherText[settings.weather.condition] })
+      if (age >= 0 && age <= 6 * hour) candidates.push({ event: `weather:${settings.weather.condition}:${settings.weather.observedAt}`, text: localized(persona.weather) + localized(weatherText[settings.weather.condition]) })
     }
-    if (settings.triggers.relationship && state.lastStage !== stage) candidates.push({ event: `relationship:${state.lastStage}:${stage}`, text: persona.relationship, stage })
+    if (settings.triggers.relationship && state.lastStage !== stage) candidates.push({ event: `relationship:${state.lastStage}:${stage}`, text: localized(persona.relationship), stage })
     const hours = now.getHours()
     const window = hours >= 8 && hours < 11 ? 'morning' : hours >= 18 && hours < 22 ? 'evening' : undefined
-    if (settings.triggers.time && window) candidates.push({ event: `time:${day}:${window}`, text: persona[window] })
+    if (settings.triggers.time && window) candidates.push({ event: `time:${day}:${window}`, text: localized(persona[window]) })
     const candidate = candidates.find(item => !state.events.includes(item.event))
     if (!candidate) return undefined
     const max = messages.reduce((highest, message) => Math.max(highest, message.id), 0)
     const id = Math.max(max, Date.now(), now.getTime()) + 1
     check(Number.isSafeInteger(id))
-    const message: ChatMessage = { id, from: 'character', text: `【本机主动消息演示】${candidate.text}`, time: `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`, createdAt: now.toISOString(), status: 'sent', kind: 'text' }
+    const message: ChatMessage = { id, from: 'character', text: `${localized('【本机主动消息演示】')}${candidate.text}`, time: `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`, createdAt: now.toISOString(), status: 'sent', kind: 'text' }
     await db.messages.add({ ...message, characterId })
     state.events.push(candidate.event)
     state.dailyCounts[day] = (state.dailyCounts[day] ?? 0) + 1

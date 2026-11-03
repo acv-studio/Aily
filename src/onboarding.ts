@@ -1,3 +1,4 @@
+import { t } from './i18n'
 import { characters, type CharacterId } from './data'
 
 export type OnboardingProfile = {
@@ -40,7 +41,7 @@ export function adultAuthorizationAllowed(profile: OnboardingProfile | null | un
 
 /** Strict validation for user-confirmed saves and optional backup fields. */
 export function validateOnboardingProfile(value: unknown): OnboardingProfile {
-  const fail = () => { throw new Error('引导设置无效：请检查称呼、偏好、通知时段及独立成年与同意确认') }
+  const fail = () => { throw new Error(t('引导设置无效：请检查称呼、偏好、通知时段及独立成年与同意确认')) }
   if (!record(value) || !isRole(value.characterId)) return fail()
   const allowed = Object.keys(defaultOnboardingProfile(value.characterId))
   if (Object.keys(value).some(key => !allowed.includes(key)) || allowed.some(key => key !== 'exclusiveNames' && !Object.hasOwn(value, key))) return fail()
@@ -90,5 +91,5 @@ export function withoutAdultAuthorization(profile: OnboardingProfile): Onboardin
 
 export const onboardingMemoryId = (id: CharacterId) => `onboarding:relationship:${id}`
 export function onboardingMemoryText(profile: OnboardingProfile): string {
-  return `第一次确认彼此的称呼：${JSON.stringify({ userName: profile.userName, characterName: profile.characterName, familiarNames: profile.familiarNames })}。称呼之后可随时修改，不代表关系降级。`
+  return t('第一次确认彼此的称呼：{names}。称呼之后可随时修改，不代表关系降级。', { names: JSON.stringify({ userName: profile.userName, characterName: profile.characterName, familiarNames: profile.familiarNames }) })
 }

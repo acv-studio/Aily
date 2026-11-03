@@ -6,7 +6,7 @@ const dir = 'docs/evidence/sharing'
 await mkdir(dir, { recursive: true })
 const browser = await chromium.launch()
 try {
-  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, colorScheme: 'dark', timezoneId: 'Asia/Shanghai', reducedMotion: 'reduce', permissions: ['clipboard-read', 'clipboard-write'] })
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, colorScheme: 'dark', timezoneId: 'Asia/Shanghai', locale: 'zh-CN', reducedMotion: 'reduce', permissions: ['clipboard-read', 'clipboard-write'] })
   const page = await context.newPage(); const errors = []
   page.on('pageerror', error => errors.push(error.message))
   const base = process.env.AILY_URL || 'http://127.0.0.1:4327/'
@@ -49,7 +49,7 @@ try {
     await page.getByRole('button', { name: '复制邀请链接' }).click()
     assert.equal(await page.evaluate(() => navigator.clipboard.readText()), `${base}#invite=lu`)
     await page.screenshot({ path: `${dir}/after-invite.png`, fullPage: true })
-    const recipient = await browser.newPage({ viewport: { width: 390, height: 844 }, colorScheme: 'dark' })
+    const recipient = await browser.newPage({ viewport: { width: 390, height: 844 }, colorScheme: 'dark', locale: 'zh-CN' })
     await recipient.goto(`${base}#invite=chen`)
     await recipient.getByRole('heading', { name: '陈奕恒', exact: true }).waitFor()
     await recipient.screenshot({ path: `${dir}/after-landing.png`, fullPage: true })
@@ -60,6 +60,12 @@ try {
     await recipient.getByRole('button', { name: '遇见 TA' }).click()
     assert.equal(await recipient.getByRole('button', { name: /陈奕恒/ }).getAttribute('aria-pressed'), 'true')
     await recipient.close()
+    await page.evaluate(async () => { const { setLocale } = await import('/src/i18n.tsx'); setLocale('en') })
+    await page.getByRole('heading', { name: 'Invite friends to meet Aily' }).waitFor()
+    await page.screenshot({ path: `${dir}/after-invite-en.png`, fullPage: true })
+    await page.evaluate(() => { window.location.hash = '#invite=gu' })
+    await page.getByRole('heading', { name: 'Gu Chenze', exact: true }).waitFor()
+    await page.getByRole('button', { name: 'Choose a companion yourself' }).click()
     await page.setViewportSize({ width: 320, height: 740 })
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true)
   }
