@@ -21,6 +21,8 @@ try {
   await page.goto(process.env.BASE_URL || 'http://127.0.0.1:4197')
   await page.evaluate(async () => {
     const { db, persistChatChanges, saveSetting } = await import('/src/db.ts')
+    const { acceptSafetyConsent } = await import('/src/privacy.ts')
+    acceptSafetyConsent() // Adult/AI disclosure fixture in this isolated test only.
     await db.messages.clear()
     await saveSetting('onboarded', true)
     await saveSetting('selected', 'lu')

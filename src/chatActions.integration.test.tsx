@@ -3,8 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import ChatPanel from './ChatPanel'
 import { characters } from './data'
 import useLocalChat from './useLocalChat'
-import { streamReply, type ChatMessage } from './chatService'
-import { db, loadLocalData, loadRoleConversation, saveConversation } from './db'
+import { buildContext, streamReply, type ChatMessage } from './chatService'
+import { db, loadLocalData, loadRoleConversation, loadSummaries, saveConversation } from './db'
 import { defaultMemoryPolicy } from './longMemory'
 
 vi.mock('./chatService', async () => ({ ...await vi.importActual('./chatService'), streamReply: vi.fn() }))
@@ -63,6 +63,37 @@ describe('chat withdrawal integration', () => {
     expect(restored.result.current.chatMessages).toEqual([expected, reply])
   })
 
+  it('removes no-memory withdrawn assistant echoes from relevant summaries and external context', async () => {
+    const neutral = { ...source, text: 'coffee receipt 7421' }
+    const reply = { ...echo, text: 'coffee receipt private-summary-marker 7421' }
+    const query = { ...source, id: 3, text: 'coffee receipt?' }
+    await saveConversation('lu', [neutral, reply])
+    const hook = await setup()
+    expect(hook.result.current.memories).toEqual([])
+    const before = await loadSummaries('lu')
+    expect(before).toHaveLength(4)
+    // Prove this query really retrieves the summary; unrelated markers miss this leak.
+    expect(buildContext('lu', [query], [], before, defaultMemoryPolicy)[0].content).toContain('private-summary-marker')
+    await act(() => hook.result.current.withdraw(neutral.id))
+    expect(await loadSummaries('lu')).toEqual([])
+    expect(hook.result.current.summaries.filter(summary => summary.characterId === 'lu')).toEqual([])
+    await act(() => hook.result.current.reload())
+    await act(() => hook.result.current.changePolicy('lu', defaultMemoryPolicy))
+    expect(await loadSummaries('lu')).toEqual([])
+    const actualService = await vi.importActual<typeof import('./chatService')>('./chatService')
+    stream.mockImplementation(actualService.streamReply)
+    const fetchMock = vi.fn().mockResolvedValue(new Response('data: {"choices":[{"delta":{"content":"external reply"}}]}\n\ndata: [DONE]\n\n', { headers: { 'Content-Type': 'text/event-stream' } }))
+    vi.stubGlobal('fetch', fetchMock)
+    act(() => hook.result.current.setApiKey('test-key'))
+    await send(hook, query.text)
+    expect(fetchMock).toHaveBeenCalledOnce()
+    const context = JSON.stringify(JSON.parse(fetchMock.mock.calls[0][1].body as string).messages)
+    expect(context).not.toContain('private-summary-marker')
+    expect(context).not.toContain('7421')
+    expect(context).toContain(query.text)
+    expect(hook.result.current.chatMessages.some(message => message.text === reply.text)).toBe(true)
+  })
+
   it('rejects a stale remember-this draft after withdrawal without recreating enabled memory', async () => {
     await saveConversation('lu', [source, echo])
     const hook = await setup()
@@ -75,6 +106,25 @@ describe('chat withdrawal integration', () => {
     await act(() => hook.result.current.reload())
     await act(() => hook.result.current.changePolicy('lu', defaultMemoryPolicy))
     expect(hook.result.current.memories.filter(memory => memory.enabled !== false && memory.state === 'confirmed')).toEqual([])
+  })
+
+  it('rejects a stale memory draft in another hook after authoritative source withdrawal', async () => {
+    await saveConversation('lu', [source, echo])
+    const first = await setup()
+    const stale = await setup()
+    const draft = { text: source.text, category: 'profile' as const, sourceMessageId: source.id }
+    await act(() => first.result.current.withdraw(source.id))
+    // The second hook deliberately has not reloaded: its transcript still contains the original.
+    expect(stale.result.current.chatMessages[0]).toEqual(source)
+    expect((await loadRoleConversation('lu'))[0]).toMatchObject({ withdrawn: true, text: '' })
+    const before = await loadLocalData()
+    await act(async () => { await expect(stale.result.current.saveConfirmed(draft)).rejects.toThrow() })
+    expect(await loadLocalData()).toEqual(before)
+    expect((await db.memories.toArray()).filter(memory => memory.enabled !== false && memory.state === 'confirmed')).toEqual([])
+    await act(() => stale.result.current.reload())
+    await act(() => stale.result.current.changePolicy('lu', defaultMemoryPolicy))
+    expect(stale.result.current.chatMessages[0]).toMatchObject({ withdrawn: true, text: '' })
+    expect(stale.result.current.memories).toEqual([])
   })
 
   it('redacts local attachment bytes together with withdrawn text on disk and after reload', async () => {
