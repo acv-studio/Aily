@@ -137,6 +137,7 @@ describe('bounded local context and confirmed memory', () => {
       { id: 204, from: 'character', text: 'sending-secret', time: '', status: 'sending' },
     )
     const context = buildContext('lu', history, [])
+    expect(context.filter(item => item.role === 'system')).toHaveLength(1)
     expect(context.slice(1).reduce((sum, item) => sum + item.content.length, 0)).toBeLessThanOrEqual(6000)
     expect(context.length).toBeLessThanOrEqual(13)
     expect(context[0].content.length).toBeLessThan(1500 + SAFETY_SYSTEM_BOUNDARIES.length)
