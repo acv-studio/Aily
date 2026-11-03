@@ -22,6 +22,7 @@ import { defaultOnboardingProfile } from './onboarding'
 type Tab = 'home' | 'moments' | 'memories' | 'store' | 'profile'
 
 export default function App() {
+  useI18n()
   const [phase, setPhase] = useState<'loading' | 'active' | 'deleting' | 'deleted' | 'error'>('loading')
   const [error, setError] = useState('')
   const release = useRef<(() => Promise<void>) | null>(null)
@@ -36,10 +37,11 @@ export default function App() {
     catch (failure) { setError(failure instanceof Error ? failure.message : '删除未完成，部分资料可能已删除。请重试。'); setPhase('error') }
   }
   if (phase === 'active') return <AilyApp onDelete={deleteProfile} />
-  return <main className="app-shell loading-screen"><h1>{phase === 'deleted' ? '本机使用资料已删除' : phase === 'error' ? '操作未完成' : phase === 'deleting' ? '正在删除本机资料…' : '正在保护本机数据…'}</h1>{phase === 'error' && <><p role="alert">{error}</p><p>删除失败时可能已有部分资料被清除；尚未确认全部完成。</p><button onClick={() => void deleteProfile()}>重试删除</button></>}{(phase === 'deleted' || phase === 'error') && <button onClick={() => window.location.reload()}>{phase === 'deleted' ? '重新开始' : '重新打开应用'}</button>}</main>
+  return <main className="app-shell loading-screen"><h1>{phase === 'deleted' ? t('本机使用资料已删除') : phase === 'error' ? t('操作未完成') : phase === 'deleting' ? t('正在删除本机资料…') : t('正在保护本机数据…')}</h1>{phase === 'error' && <><p role="alert">{t(error)}</p><p>{t('删除失败时可能已有部分资料被清除；尚未确认全部完成。')}</p><button onClick={() => void deleteProfile()}>{t('重试删除')}</button></>}{(phase === 'deleted' || phase === 'error') && <button onClick={() => window.location.reload()}>{phase === 'deleted' ? t('重新开始') : t('重新打开应用')}</button>}</main>
 }
 
 function AilyApp({ onDelete }: { onDelete: () => Promise<void> }) {
+  useI18n()
   const chat = useLocalChat()
   const { onboarded, selected, conversations, draft, setDraft, replying, error: chatError } = chat
   const [tab, setTab] = useState<Tab>('home')
@@ -52,7 +54,7 @@ function AilyApp({ onDelete }: { onDelete: () => Promise<void> }) {
   const [consented, setConsented] = useState(hasSafetyConsent)
   const deleteProfile = async () => { await chat.prepareForDeletion(); await onDelete() }
   const [preferencesOpen, setPreferencesOpen] = useState(false)
-  const userName = chat.onboardingProfile?.userName && chat.onboardingProfile.userName !== '你' ? chat.onboardingProfile.userName : '我'
+  const userName = chat.onboardingProfile?.userName && chat.onboardingProfile.userName !== '你' ? chat.onboardingProfile.userName : t('我')
   const primaryName = characters.find(role => role.id === (chat.onboardingProfile?.characterId || selected))!.name
   const character = characters.find(item => item.id === selected) || characters[0]
   const messages = conversations[selected]
@@ -60,7 +62,7 @@ function AilyApp({ onDelete }: { onDelete: () => Promise<void> }) {
   const finishOnboarding = chat.finishOnboarding
   const saveGameMemory = (text: string) => { void chat.saveConfirmed({ text, category: 'relationship' }).catch(() => alert('回忆保存失败，请重试')) }
   if (!chat.ready) return <main className="app-shell loading-screen"><p>{chat.loadError || '正在读取本机聊天与记忆…'}</p>{chat.loadError && <button onClick={chat.reload}>重试读取</button>}</main>
-  if (onboarded && !consented && !hasSafetyConsent()) return <main className="onboarding"><SafetyConsent returning onAccepted={() => { acceptSafetyConsent(); setConsented(true) }} /></main>
+  if (onboarded && !consented && !hasSafetyConsent()) return <main className="onboarding"><SafetyConsent returning={onboarded} onAccepted={() => { acceptSafetyConsent(); setConsented(true) }} /></main>
   if (!onboarded) return <Onboarding selected={selected} setSelected={setSelected} finish={finishOnboarding} apiKey={chat.apiKey} setApiKey={chat.setApiKey} />
   if (privacyOpen) return <main className="app-shell"><SafetyPrivacyPanel close={() => setPrivacyOpen(false)} onDelete={deleteProfile} /></main>
   if (chatOpen) return <><ChatPanel character={character} messages={chat.chatMessages} temporary={chat.temporary} toggleTemporary={chat.toggleTemporary} pendingCount={chat.memories.filter(memory => memory.characterId === selected && memory.state === 'pending').length} draft={draft} setDraft={setDraft} send={chat.send} close={() => { if (!replying) setChatOpen(false) }} saveMemory={chat.saveConfirmed} withdraw={chat.withdraw} stop={chat.stop} replying={replying} error={chatError} demo={!chat.apiKey} openGame={() => setGameOpen(true)} openStory={() => setStoryOpen(true)} />{gameOpen && <RockPaperScissors characterName={character.name} onComplete={saveGameMemory} onClose={() => setGameOpen(false)} />}{storyOpen && (selected === 'lu' ? <SevenDayStory temporary={chat.temporary} onSaved={() => { void db.memories.toArray().then(chat.setMemories).catch(() => alert('故事已保存，回忆列表暂未刷新；重新打开应用可读取')) }} onClose={() => setStoryOpen(false)} /> : <InteractiveStory characterName={character.name} onComplete={saveGameMemory} onClose={() => setStoryOpen(false)} />)}</>
@@ -89,7 +91,7 @@ function AilyApp({ onDelete }: { onDelete: () => Promise<void> }) {
 
 function HomeScreen({selected,select,openChat,lastMessage}:{selected:CharacterId;select:(id:CharacterId)=>void;openChat:()=>void;lastMessage:string}) {
  const current=characters.find(c=>c.id===selected)!
- return <section className="screen home-screen"><article className="presence-card" style={{'--accent':current.accent} as React.CSSProperties}><div className="presence-art"><div className="moon"/><div className="portrait"><span>{current.avatar}</span></div><span className="online-dot"/></div><div className="presence-copy"><div><span className="status"><i/>{current.status}</span><h2>{current.name}</h2><p>“{current.quote}”</p></div><button className="talk-button" onClick={openChat}><MessageCircle size={20}/> 去找他</button></div></article><div className="section-title"><h3>最近消息</h3><button>全部</button></div><button className="conversation glass" onClick={openChat}><Avatar character={current}/><div><strong>{current.name}<small>AI</small></strong><p>{lastMessage}</p></div></button><div className="section-title"><h3>其他角色</h3><span>随时可以认识</span></div><div className="mini-characters">{characters.filter(c=>c.id!==selected).map(c=><button key={c.id} className="mini-card glass" onClick={()=>select(c.id)}><Avatar character={c}/><div><strong>{c.name}</strong><span>{c.status}</span></div><ChevronRight/></button>)}</div></section>
+ return <section className="screen home-screen"><article className="presence-card" style={{'--accent':current.accent} as React.CSSProperties}><div className="presence-art"><div className="moon"/><div className="portrait"><span>{t(current.avatar)}</span></div><span className="online-dot"/></div><div className="presence-copy"><div><span className="status"><i/>{t(current.status)}</span><h2>{t(current.name)}</h2><p>“{t(current.quote)}”</p></div><button className="talk-button" onClick={openChat}><MessageCircle size={20}/>{t("去找他")}</button></div></article><div className="section-title"><h3>{t("最近消息")}</h3><button>{t("全部")}</button></div><button className="conversation glass" onClick={openChat}><Avatar character={current}/><div><strong>{t(current.name)}<small>AI</small></strong><p>{lastMessage}</p></div></button><div className="section-title"><h3>{t("其他角色")}</h3><span>{t("随时可以认识")}</span></div><div className="mini-characters">{characters.filter(c=>c.id!==selected).map(c=><button key={c.id} className="mini-card glass" onClick={()=>select(c.id)}><Avatar character={c}/><div><strong>{t(c.name)}</strong><span>{t(c.status)}</span></div><ChevronRight/></button>)}</div></section>
 }
 
 function ProfileScreen({userName,primaryName,apiKey,endpoint,model,setApiKey,setEndpoint,setModel,onImported,onCleared,beforeDataChange}:{userName:string;primaryName:string;beforeDataChange:()=>Promise<void>;apiKey:string;endpoint:string;model:string;setApiKey:(value:string)=>void;setEndpoint:(value:string)=>void;setModel:(value:string)=>void;onImported:(data:Awaited<ReturnType<typeof loadLocalData>>)=>void;onCleared:()=>void}){const [showApi,setShowApi]=useState(false);const [visible,setVisible]=useState(false);const [testing,setTesting]=useState(false);const [result,setResult]=useState('');const test=async()=>{setTesting(true);setResult('');try{await testDeepSeekConnection({apiKey,endpoint,model});setResult('连接成功，可以开始聊天')}catch(error){setResult(error instanceof Error?error.message:'连接失败')}finally{setTesting(false)}};return <section className="screen profile">
