@@ -68,7 +68,7 @@ export default function ChatPanel(props: ChatPanelProps) {
   const quoted = messages.find(message => message.id === quote && !message.withdrawn && message.status !== 'sending')
   useEffect(() => { if (quote !== undefined && !quoted) setQuote(undefined) }, [quote, quoted])
   const toggleSearch = () => { if (searchOpen) setSearch(''); setSearchOpen(!searchOpen) }
-  const quoteText = (message?: ChatMessage) => !message ? '引用消息不可用' : message.withdrawn ? '引用的消息已撤回' : message.text || (message.kind === 'image' ? '[图片]' : message.kind === 'audio' ? '[语音]' : '引用消息不可用')
+  const quoteText = (message?: ChatMessage) => !message ? t('引用消息不可用') : message.withdrawn ? t('引用的消息已撤回') : message.text || (message.kind === 'image' ? t('[图片]') : message.kind === 'audio' ? t('[语音]') : t('引用消息不可用'))
   const chooseFile = async (file?: File) => {
     if (!file) return
     if (!['image/png', 'image/jpeg', 'image/webp', 'image/gif'].includes(file.type) || file.size > 3 * 1024 * 1024) { setNotice('请选择 3MB 以内的 PNG、JPEG、WebP 或 GIF 图片'); return }
@@ -139,16 +139,16 @@ export default function ChatPanel(props: ChatPanelProps) {
   }
   return <main className="chat-screen">
     <header className="chat-header glass">
-      <button className="icon-button" aria-label="返回消息" disabled={replying} onClick={props.close}><ArrowLeft /></button>
-      <span className="avatar" style={{ '--accent': character.accent } as React.CSSProperties}>{character.avatar}</span>
-      <div><strong>{character.name}<small>AI 角色 · {props.demo ? '演示模式' : 'DeepSeek'}</small></strong><span>{replying ? '正在回复…' : props.temporary ? '临时会话 · 仅内存' : '聊天与记忆仅存本机'}</span></div>
-      <button className="icon-button" aria-label="搜索消息" onClick={toggleSearch}><Search /></button>
+      <button className="icon-button" aria-label={t('返回消息')} disabled={replying} onClick={props.close}><ArrowLeft /></button>
+      <span className="avatar" style={{ '--accent': character.accent } as React.CSSProperties}>{t(character.avatar)}</span>
+      <div><strong>{t(character.name)}<small>{t('AI 角色')} · {props.demo ? t('演示模式') : 'DeepSeek'}</small></strong><span>{replying ? t('正在回复…') : props.temporary ? t('临时会话 · 仅内存') : t('聊天与记忆仅存本机')}</span></div>
+      <button className="icon-button" aria-label={t('搜索消息')} onClick={toggleSearch}><Search /></button>
     </header>
-    {props.toggleTemporary && <div className="chat-notice"><span>{props.temporary ? '临时会话：不落盘、不提取或引用记忆；退出模式后清除。请求仍发送到所配置的模型服务。' : `自动提议记忆需你确认${props.pendingCount ? ` · ${props.pendingCount} 条待确认，请到回忆页查看` : ''}`}</span><button disabled={replying} onClick={() => { setMemory(undefined); setQuote(undefined); setSearch(''); setAttachment(undefined); props.toggleTemporary?.() }}>{props.temporary ? '结束临时会话' : '临时会话'}</button></div>}
-    {searchOpen && <div className="chat-search"><input aria-label="搜索聊天记录" placeholder="搜索当前角色的聊天记录" value={search} onChange={event => setSearch(event.target.value)} /><button onClick={() => { setSearch(''); setSearchOpen(false) }}>关闭</button></div>}
-    <section className="messages" aria-label="聊天记录" aria-live="polite">
-      {messages.length === 0 && <p className="chat-empty">从今天开始认识彼此。先说声你好吧。</p>}
-      {query && <p className="chat-empty">找到 {visible.length} 条消息</p>}
+    {props.toggleTemporary && <div className="chat-notice"><span>{props.temporary ? t('临时会话：不落盘、不提取或引用记忆；退出模式后清除。请求仍发送到所配置的模型服务。') : `${t('自动提议记忆需你确认')}${props.pendingCount ? t(' · {count} 条待确认，请到回忆页查看', { count: props.pendingCount }) : ''}`}</span><button disabled={replying} onClick={() => { setMemory(undefined); setQuote(undefined); setSearch(''); setAttachment(undefined); props.toggleTemporary?.() }}>{props.temporary ? t('结束临时会话') : t('临时会话')}</button></div>}
+    {searchOpen && <div className="chat-search"><input aria-label={t('搜索聊天记录')} placeholder={t('搜索当前角色的聊天记录')} value={search} onChange={event => setSearch(event.target.value)} /><button onClick={() => { setSearch(''); setSearchOpen(false) }}>{t('关闭')}</button></div>}
+    <section className="messages" aria-label={t('聊天记录')} aria-live="polite">
+      {messages.length === 0 && <p className="chat-empty">{t('从今天开始认识彼此。先说声你好吧。')}</p>}
+      {query && <p className="chat-empty">{t('找到 {count} 条消息', { count: visible.length })}</p>}
       {visible.map(message => <div key={message.id} className={`message-row ${message.from === 'user' ? 'mine' : ''}`}>
         {message.from === 'character' && <span className="avatar" style={{ '--accent': character.accent } as React.CSSProperties}>{t(character.avatar)}</span>}
         <div className="message-content">
@@ -162,17 +162,17 @@ export default function ChatPanel(props: ChatPanelProps) {
           </div>
           <time>{message.createdAt ? new Date(message.createdAt).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' }) : message.time}</time>
           {!message.withdrawn && message.status !== 'sending' && <div className="message-actions">
-            <button aria-label={`引用消息 ${message.id}`} onClick={() => setQuote(message.id)}><Quote size={12} />引用</button>
-            {message.text && !props.temporary && <button onClick={() => setMemory({ text: message.text, category: 'profile', sourceMessageId: message.id })}>记住这条</button>}
-            {message.from === 'user' && <button disabled={replying} onClick={() => props.withdraw(message.id)}>撤回</button>}
+            <button aria-label={t('引用消息 {id}', { id: message.id })} onClick={() => setQuote(message.id)}><Quote size={12} />{t('引用')}</button>
+            {message.text && !props.temporary && <button onClick={() => setMemory({ text: message.text, category: 'profile', sourceMessageId: message.id })}>{t('记住这条')}</button>}
+            {message.from === 'user' && <button disabled={replying} onClick={() => props.withdraw(message.id)}>{t('撤回')}</button>}
           </div>}
-          {!message.withdrawn && message.status === 'failed' && message.from === 'user' && <button disabled={replying} className="retry" onClick={() => props.send({ retryId: message.id })}>回复未完成 · 重试</button>}
+          {!message.withdrawn && message.status === 'failed' && message.from === 'user' && <button disabled={replying} className="retry" onClick={() => props.send({ retryId: message.id })}>{t('回复未完成 · 重试')}</button>}
         </div>
       </div>)}<div ref={bottom} />
     </section>
-    {props.error && <p className="chat-error" role="alert">{props.error}</p>}
-    {notice && <div className="chat-notice">{notice}<button aria-label="关闭提示" onClick={() => setNotice('')}><X size={14} /></button></div>}
-    {quoted && <div className="quoted-preview">引用：{quoteText(quoted)}<button onClick={() => setQuote(undefined)}>取消</button></div>}
+    {props.error && <p className="chat-error" role="alert">{t(props.error)}</p>}
+    {notice && <div className="chat-notice">{t(notice)}<button aria-label={t('关闭提示')} onClick={() => setNotice('')}><X size={14} /></button></div>}
+    {quoted && <div className="quoted-preview">{t('引用：')}{quoteText(quoted)}<button onClick={() => setQuote(undefined)}>{t('取消')}</button></div>}
     {attachment && <div className={`quoted-preview ${attachment.kind === 'audio' ? 'voice-preview' : ''}`}>
       <div>{t('待发送：')}{attachment.data.name}{attachment.kind === 'audio' && <VoicePlayer src={attachment.data.dataUrl} preview onPlay={playAudio} />}</div>
       <button onClick={() => setAttachment(undefined)}>{t('移除')}</button>
