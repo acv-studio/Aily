@@ -39,4 +39,13 @@
 .demo-ledger li strong { display: block; overflow-wrap: anywhere; }
 .demo-ledger li time { display: block; color: #b3bacd; font-size: 10px; margin-top: 5px; }
 .demo-ledger li > span { color: #b1efdd; white-space: nowrap; }
+.story-gift-card { padding: 14px; border-radius: 16px; margin-top: 10px; }
+.story-gift-card h3 { font-size: 15px; margin: 0; }
+.story-gift-card p { color: #c4c9db; font-size: 12px; }
+.story-gift-card button, .story-gift-choices button { min-height: 44px; background: #34324b; border: 1px solid #74639b; border-radius: 12px; padding: 12px; font-size: 13px; text-align: left; }
+.story-gift-scene { padding: 18px; border-radius: 18px; font-size: 14px; line-height: 1.8; }
+.story-gift-choices { display: grid; gap: 10px; margin: 16px 0; }
+.story-gift-choices button[aria-pressed="true"] { border-color: #c0a6ff; background: #3a2e50; }
+.story-gift-panel .primary { margin-top: 16px; }
+.story-gift-panel h2:focus-visible { outline: 2px solid #8ee7c4; outline-offset: 3px; }
 @media (prefers-reduced-motion: reduce) { .gift-store * { scroll-behavior: auto; } }

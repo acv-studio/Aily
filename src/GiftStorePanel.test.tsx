@@ -1,10 +1,16 @@
 import '@testing-library/jest-dom/vitest'
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import GiftStorePanel from './GiftStorePanel'
-import { demoDb, loadDemoWallet } from './giftDemo'
+import { setLocale } from './i18n'
+import { demoDb, loadDemoWallet, loadDemoStoryEvents, rechargeDemo } from './giftDemo'
 
-beforeEach(async () => { await demoDb.delete(); await demoDb.open() })
+beforeEach(async () => {
+  setLocale('zh-CN')
+  vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+  HTMLElement.prototype.scrollIntoView = vi.fn()
+  await demoDb.delete(); await demoDb.open()
+})
 afterEach(() => { cleanup(); vi.restoreAllMocks() })
 const openStore = async () => {
   render(<GiftStorePanel selected="chen" />)
@@ -54,6 +60,63 @@ describe('gift store demo journey', () => {
       fireEvent.change(screen.getByRole('spinbutton', { name: '礼物数量' }), { target: { value } })
       expect(screen.getByRole('button', { name: '赠送礼物（演示）' })).toBeDisabled()
     }
+  })
+  it('unlocks, previews without saving, completes and replays a character-scoped event', async () => {
+    await rechargeDemo('demo-1000')
+    render(<GiftStorePanel selected="chen" />)
+    await waitFor(() => expect(screen.getByTestId('demo-balance')).toHaveTextContent('1,000'))
+    fireEvent.click(screen.getByRole('button', { name: /演唱会票/ }))
+    expect(screen.getByRole('spinbutton', { name: '礼物数量' })).toHaveValue(1)
+    expect(screen.getByRole('spinbutton', { name: '礼物数量' })).toBeDisabled()
+    fireEvent.click(screen.getByRole('button', { name: '赠送礼物（演示）' }))
+    fireEvent.click(screen.getByRole('button', { name: '确认赠送（演示）' }))
+    const enter = await screen.findByRole('button', { name: /^进入《/ })
+    expect(screen.getByRole('button', { name: '此角色已解锁，无需重复赠送' })).toBeDisabled()
+    fireEvent.click(enter)
+    const choices = screen.getByLabelText('事件选择').querySelectorAll('button')
+    fireEvent.click(choices[0])
+    expect((await loadDemoStoryEvents())[0].choiceId).toBeUndefined()
+    fireEvent.click(screen.getByRole('button', { name: '返回商城' }))
+    fireEvent.click(screen.getByRole('button', { name: /^进入《/ }))
+    expect(screen.getByRole('button', { name: '确认保存事件选择' })).toBeDisabled()
+    fireEvent.click(screen.getByLabelText('事件选择').querySelectorAll('button')[1])
+    const failure = vi.spyOn(demoDb.storyEvents, 'put').mockRejectedValueOnce(new Error('事件写入失败'))
+    fireEvent.click(screen.getByRole('button', { name: '确认保存事件选择' }))
+    await screen.findByRole('alert')
+    expect((await loadDemoStoryEvents())[0].choiceId).toBeUndefined()
+    expect(screen.getByRole('button', { name: '确认保存事件选择' })).toBeEnabled()
+    failure.mockRestore()
+    fireEvent.click(screen.getByRole('button', { name: '确认保存事件选择' }))
+    await screen.findByText(/事件已完成/)
+    expect((await loadDemoStoryEvents())[0].choiceId).toBe('listen')
+    fireEvent.click(screen.getByRole('button', { name: '返回商城' }))
+    expect(screen.getByRole('button', { name: /^回看《/ })).toHaveFocus()
+    fireEvent.click(screen.getByRole('button', { name: /^回看《/ }))
+    expect(screen.queryByLabelText('事件选择')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '返回商城' }))
+    fireEvent.change(screen.getByRole('combobox', { name: '礼物接收角色' }), { target: { value: 'lu' } })
+    expect(screen.queryByRole('button', { name: /^进入《|^回看《/ })).not.toBeInTheDocument()
+    expect((await loadDemoWallet()).balance).toBe(900)
+    expect((await loadDemoWallet()).transactions).toHaveLength(2)
+  })
+  it('localizes new gift interactions live without changing saved event IDs or choice', async () => {
+    await rechargeDemo('demo-1000')
+    setLocale('en')
+    render(<GiftStorePanel selected="chen" />)
+    await waitFor(() => expect(screen.getByTestId('demo-balance')).toHaveTextContent('1,000'))
+    fireEvent.click(screen.getByRole('button', { name: /Concert ticket/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'Send gift (demo)' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm gift (demo)' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Enter “A concert together”' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Listen quietly to the song' }))
+    act(() => setLocale('zh-CN'))
+    expect(screen.getByRole('button', { name: '安静听完这首歌' })).toHaveAttribute('aria-pressed', 'true')
+    fireEvent.click(screen.getByRole('button', { name: '确认保存事件选择' }))
+    await screen.findByText(/事件已完成/)
+    act(() => setLocale('en'))
+    expect(screen.getByText(/Event complete/)).toBeInTheDocument()
+    expect((await loadDemoStoryEvents())[0]).toMatchObject({ characterId: 'chen', eventId: 'concert', choiceId: 'listen' })
+    expect(screen.getByRole('region', { name: 'Story gift interaction' }).textContent).not.toMatch(/[\u3400-\u9fff]/u)
   })
   it('shows a storage error and recovers on explicit retry', async () => {
     const read = vi.spyOn(demoDb.wallet, 'get').mockRejectedValueOnce(new Error('unavailable'))

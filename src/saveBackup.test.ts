@@ -37,7 +37,10 @@ afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); vi.unstubAllGlobals(
 describe('encrypted backup browser download', () => {
   it('downloads the same JSON and date-based filename without native calls', async () => {
     let anchor: HTMLAnchorElement | undefined
-    click.mockImplementation(function (this: HTMLAnchorElement) { anchor = this })
+    click.mockImplementation(function (this: HTMLAnchorElement) {
+      anchor = this
+      expect(this).toBeInTheDocument()
+    })
     await expect(saveEncryptedBackup(encrypted)).resolves.toBe('downloaded')
     expect(createUrl).toHaveBeenCalledOnce()
     const blob = createUrl.mock.calls[0][0] as Blob
@@ -45,17 +48,30 @@ describe('encrypted backup browser download', () => {
     expect(blob.size).toBe(new TextEncoder().encode(encrypted).length)
     expect(anchor?.href).toBe('blob:encrypted-backup')
     expect(anchor?.download).toBe(filename)
-    expect(revokeUrl).toHaveBeenCalledWith('blob:encrypted-backup')
+    expect(anchor).not.toBeInTheDocument()
+    expect(revokeUrl).not.toHaveBeenCalled()
+    vi.advanceTimersByTime(999)
+    expect(revokeUrl).not.toHaveBeenCalled()
+    vi.advanceTimersByTime(1)
+    expect(revokeUrl).toHaveBeenCalledExactlyOnceWith('blob:encrypted-backup')
     expect(Filesystem.writeFile).not.toHaveBeenCalled()
     expect(Share.canShare).not.toHaveBeenCalled()
     expect(Share.share).not.toHaveBeenCalled()
   })
 
-  it('revokes its object URL and propagates download failures', async () => {
+  it('removes the anchor, delays URL cleanup and propagates download failures', async () => {
     const failure = new Error('download failed')
-    click.mockImplementation(() => { throw failure })
+    let anchor: HTMLAnchorElement | undefined
+    click.mockImplementation(function (this: HTMLAnchorElement) {
+      anchor = this
+      expect(this).toBeInTheDocument()
+      throw failure
+    })
     await expect(saveEncryptedBackup(encrypted)).rejects.toBe(failure)
-    expect(revokeUrl).toHaveBeenCalledWith('blob:encrypted-backup')
+    expect(anchor).not.toBeInTheDocument()
+    expect(revokeUrl).not.toHaveBeenCalled()
+    vi.advanceTimersByTime(1000)
+    expect(revokeUrl).toHaveBeenCalledExactlyOnceWith('blob:encrypted-backup')
   })
 })
 

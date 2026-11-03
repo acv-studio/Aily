@@ -3,6 +3,7 @@ import './DataTransferPanel.css'
 import { Download, Upload } from 'lucide-react'
 import { clearAllData, exportData, importData } from './db'
 import { decryptBackup, encryptBackup } from './cryptoBackup'
+import { saveEncryptedBackup } from './saveBackup'
 
 type Props = {
   beforeDataChange: () => Promise<void>
@@ -24,13 +25,14 @@ export default function DataTransferPanel({ beforeDataChange, onImported, onClea
   const previousConfirmation = useRef<typeof confirmation>(null)
   useEffect(() => {
     if (confirmation) confirmGroup.current?.focus()
-    else if (previousConfirmation.current) {
+    else if (previousConfirmation.current && !busy) {
       const trigger = previousConfirmation.current === 'import' ? importButton.current : clearButton.current
       if (trigger?.disabled) input.current?.focus()
       else trigger?.focus()
     }
-    previousConfirmation.current = confirmation
-  }, [confirmation])
+    // Keep the prior trigger while busy: disabled fieldsets cannot receive focus.
+    if (confirmation || !busy) previousConfirmation.current = confirmation
+  }, [confirmation, busy])
   const resetFile = () => { setFile(null); if (input.current) input.current.value = '' }
   const run = async (operation: NonNullable<typeof busy>, work: () => Promise<void>) => {
     if (running.current) return
@@ -43,13 +45,10 @@ export default function DataTransferPanel({ beforeDataChange, onImported, onClea
     if (password.length < 6) throw new Error('请设置至少 6 位的备份密码')
     await beforeDataChange()
     const encrypted = await encryptBackup(await exportData(), password)
-    const url = URL.createObjectURL(new Blob([encrypted], { type: 'application/json' }))
-    const anchor = document.createElement('a')
-    anchor.href = url; anchor.download = `aily-backup-${new Date().toISOString().slice(0, 10)}.json`
-    document.body.append(anchor); anchor.click(); anchor.remove()
-    // Give the browser time to consume the download before releasing its object URL.
-    setTimeout(() => URL.revokeObjectURL(url), 1000)
-    setNotice({ text: '已发起加密备份下载，请妥善保存文件和密码。' })
+    const saved = await saveEncryptedBackup(encrypted)
+    setNotice({ text: saved === 'cancelled' ? '已取消备份导出' : saved === 'shared'
+      ? '加密备份已交给系统分享，请确认已保存；API Key 不包含在文件中'
+      : '已发起加密备份下载，请妥善保存文件和密码。' })
   })
   const restore = () => run('import', async () => {
     if (!file) throw new Error('请先选择备份文件')

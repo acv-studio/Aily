@@ -9,14 +9,17 @@ export async function saveEncryptedBackup(encryptedJson: string): Promise<Backup
   const filename = `aily-backup-${new Date().toISOString().slice(0, 10)}.json`
   if (!Capacitor.isNativePlatform()) {
     const url = URL.createObjectURL(new Blob([encryptedJson], { type: 'application/json' }))
+    const anchor = document.createElement('a')
     try {
-      const anchor = document.createElement('a')
       anchor.href = url
       anchor.download = filename
+      document.body.append(anchor)
       anchor.click()
       return 'downloaded'
     } finally {
-      URL.revokeObjectURL(url)
+      anchor.remove()
+      // Give the browser time to consume the download before releasing its object URL.
+      setTimeout(() => URL.revokeObjectURL(url), 1000)
     }
   }
 

@@ -1,0 +1,81 @@
+import { chromium } from 'playwright'
+import { mkdir } from 'node:fs/promises'
+import assert from 'node:assert/strict'
+const phase = process.env.AILY_PHASE || 'after'
+const browser = await chromium.launch()
+const errors = []
+try {
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, timezoneId: 'Asia/Shanghai', colorScheme: 'dark' })
+  page.on('pageerror', error => errors.push(error.message))
+  await page.goto(process.env.BASE_URL || 'http://127.0.0.1:4317/')
+  await page.evaluate(async () => {
+    const { clearAllData, saveSetting, saveMemory, saveConversation } = await import('/src/db.ts')
+    const { acceptSafetyConsent } = await import('/src/privacy.ts')
+    acceptSafetyConsent()
+    await clearAllData()
+    await saveSetting('onboarded', true)
+    await saveSetting('selected', 'lu')
+    const canvas = document.createElement('canvas'); canvas.width = 640; canvas.height = 300
+    const ctx = canvas.getContext('2d'); const sky = ctx.createLinearGradient(0, 0, 0, 300)
+    sky.addColorStop(0, '#65508e'); sky.addColorStop(.65, '#e4a4ae'); sky.addColorStop(1, '#547c91')
+    ctx.fillStyle = sky; ctx.fillRect(0, 0, 640, 300); ctx.fillStyle = '#f8deb0'; ctx.beginPath(); ctx.arc(470, 90, 24, 0, Math.PI * 2); ctx.fill()
+    const image = { name: '示例风景（合成测试图片）.png', mimeType: 'image/png', dataUrl: canvas.toDataURL('image/png') }
+    await saveConversation('lu', [{ id: 1, from: 'user', text: '我们一起完成海边明信片故事', kind: 'image', attachment: image, time: '18:00', createdAt: '2026-10-30T10:00:00Z', status: 'sent' }])
+    await saveMemory({ id: 'evidence-sea', characterId: 'lu', text: '我们一起完成海边明信片故事', category: 'relationship', confirmedAt: '2026-10-30T10:00:00Z', sourceMessageId: 1 })
+    await saveMemory({ id: 'evidence-dinner', characterId: 'lu', text: '第一次一起做晚饭，选择了热汤和清淡小菜', category: 'relationship', confirmedAt: '2026-10-28T10:00:00Z' })
+    await saveMemory({ id: 'evidence-other', characterId: 'chen', text: '另一位角色的秘密事件', category: 'relationship', confirmedAt: '2026-10-28T10:00:00Z' })
+  })
+  await page.reload()
+  await page.getByRole('button', { name: '回忆', exact: true }).click()
+  await page.getByRole('heading', { name: '我们一起完成海边明信片故事', exact: true }).waitFor()
+  await mkdir('docs/evidence/relationship-memories', { recursive: true })
+  await page.screenshot({ path: `docs/evidence/relationship-memories/${phase}-memories.png` })
+  if (phase === 'after') {
+    await page.getByRole('button', { name: '回忆卡', exact: true }).click()
+    await page.getByRole('img', { name: /回忆照片/ }).waitFor()
+    assert.equal(await page.getByText('另一位角色的秘密事件').count(), 0)
+    await page.evaluate(() => window.scrollTo(0, document.querySelector('.memory-view-switch').getBoundingClientRect().top + window.scrollY - 20))
+    await page.screenshot({ path: 'docs/evidence/relationship-memories/after-cards.png' })
+    await page.getByRole('button', { name: '时间轴', exact: true }).click()
+    assert.deepEqual(await page.locator('.recollection-timeline h3').allTextContents(), ['第一次一起做晚饭，选择了热汤和清淡小菜', '我们一起完成海边明信片故事'])
+    await page.screenshot({ path: 'docs/evidence/relationship-memories/after-timeline.png' })
+    await page.getByRole('button', { name: '周记月记', exact: true }).click()
+    await page.screenshot({ path: 'docs/evidence/relationship-memories/after-journals.png' })
+    await page.getByRole('button', { name: '预览并确认' }).click()
+    await page.getByRole('button', { name: '取消', exact: true }).click()
+    assert.equal(await page.evaluate(async () => (await import('/src/db.ts')).db.memories.count()), 3)
+    await page.getByRole('button', { name: '预览并确认' }).click()
+    await page.getByRole('button', { name: '确认保存周记' }).click()
+    await page.getByRole('heading', { name: '已确认保存' }).waitFor()
+    await page.reload()
+    await page.getByRole('button', { name: '回忆', exact: true }).click()
+    await page.getByRole('button', { name: '周记月记', exact: true }).click()
+    await page.getByRole('button', { name: '已保存这份摘录' }).waitFor()
+    await page.getByRole('button', { name: '月记', exact: true }).click()
+    await page.getByRole('button', { name: '预览并确认' }).click()
+    await page.getByRole('button', { name: '确认保存月记' }).click()
+    await page.getByRole('button', { name: '已保存这份摘录' }).waitFor()
+    assert.equal(await page.evaluate(async () => (await import('/src/db.ts')).db.memories.count()), 5)
+    const backup = await page.evaluate(async () => (await import('/src/db.ts')).exportData())
+    await page.evaluate(async backup => { const { importData } = await import('/src/db.ts'); await importData(backup) }, backup)
+    await page.reload()
+    await page.getByRole('button', { name: '回忆', exact: true }).click()
+    await page.getByRole('button', { name: '周记月记', exact: true }).click()
+    await page.getByRole('button', { name: '已保存这份摘录' }).waitFor()
+    // Removing the original event must remove both the card and automatic draft source.
+    await page.evaluate(async () => (await import('/src/db.ts')).db.memories.delete('evidence-sea'))
+    await page.reload()
+    await page.getByRole('button', { name: '回忆', exact: true }).click()
+    await page.getByRole('button', { name: '回忆卡', exact: true }).click()
+    assert.equal(await page.getByRole('img', { name: /回忆照片/ }).count(), 0)
+    await page.getByRole('button', { name: '周记月记', exact: true }).click()
+    assert.equal(await page.getByText('原事件变动不会改写已保存快照。', { exact: false }).count(), 1)
+    await page.getByRole('button', { name: '回忆卡', exact: true }).click()
+    for (const width of [320, 768]) {
+      await page.setViewportSize({ width, height: 844 })
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true)
+    }
+  }
+  assert.deepEqual(errors, [])
+  console.log(`${phase}: real application capture and relationship-memory checks passed`)
+} finally { await browser.close() }

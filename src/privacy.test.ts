@@ -1,7 +1,7 @@
 import { beforeEach, afterEach, expect, it, vi } from 'vitest'
 import { deleteLocalProfile, consentKey, acceptSafetyConsent, hasSafetyConsent } from './privacy'
 import { db, initializeLocalData, saveConversation, saveSetting } from './db'
-import { demoDb, rechargeDemo } from './giftDemo'
+import { completeDemoStoryEvent, demoDb, rechargeDemo, sendDemoGift } from './giftDemo'
 
 beforeEach(async () => {
   localStorage.clear(); sessionStorage.clear()
@@ -13,15 +13,21 @@ it('removes both databases and only Aily preferences, without resurrecting legac
   await saveConversation('lu', [{ id: 1, from: 'user', text: 'private', time: 'now' }])
   await saveSetting('onboarded', true)
   await rechargeDemo('demo-100')
+  await sendDemoGift('concert-ticket', 'lu', 1)
+  await completeDemoStoryEvent('lu', 'concert', 'listen')
+  expect(await demoDb.storyEvents.count()).toBe(1)
   acceptSafetyConsent(); expect(hasSafetyConsent()).toBe(true)
   localStorage.setItem('aily-demo-state', '{}'); localStorage.setItem('aily-api-model', 'custom')
   localStorage.setItem('unrelated', 'keep'); sessionStorage.setItem('aily-api-key', 'secret')
+  localStorage.setItem('aily.locale', 'en'); localStorage.setItem('aily.chatLocale', 'zh-CN')
   await deleteLocalProfile()
   expect(await db.messages.count()).toBe(0); expect(await db.memories.count()).toBe(0)
   expect(await db.summaries.count()).toBe(0); expect(await demoDb.wallet.count()).toBe(0)
   expect(await demoDb.transactions.count()).toBe(0)
+  expect(await demoDb.storyEvents.count()).toBe(0)
   expect(localStorage.getItem(consentKey)).toBeNull(); expect(sessionStorage.getItem('aily-api-key')).toBeNull()
   expect(localStorage.getItem('unrelated')).toBe('keep')
+  expect(localStorage.getItem('aily.locale')).toBeNull(); expect(localStorage.getItem('aily.chatLocale')).toBeNull()
   expect((await initializeLocalData()).settings.onboarded).toBeUndefined()
 })
 it('refuses deletion while another tab holds its lease, without touching data', async () => {

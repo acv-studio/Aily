@@ -38,6 +38,22 @@ afterEach(() => {
 
 const voiceMessage = (id: number) => ({ id, from: 'user' as const, text: '', time: '', kind: 'audio' as const, attachment: { dataUrl: `data:audio/webm;base64,${id}`, mimeType: 'audio/webm', name: '语音消息' } })
 
+describe('reply mode selection', () => {
+  it('shows three labelled options and preserves draft and transcript when selecting', async () => {
+    const setReplyMode = vi.fn(async () => {})
+    panel({ replyMode: 'deep', setReplyMode, draft: '未发送文字' })
+    expect(screen.getByRole('button', { name: '深入聊天' })).toHaveAttribute('aria-pressed', 'true')
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: '剧情模式' })) })
+    expect(setReplyMode).toHaveBeenCalledWith('story')
+    expect(screen.getByLabelText('发消息')).toHaveValue('未发送文字')
+    expect(screen.getByText('仅影响下一次回复')).toBeInTheDocument()
+  })
+  it.each([{ replying: true }, { modeSaving: true }])('disables selection while busy %j', busy => {
+    panel({ setReplyMode: vi.fn(async () => {}), ...busy })
+    for (const name of ['简短陪伴', '深入聊天', '剧情模式']) expect(screen.getByRole('button', { name })).toBeDisabled()
+  })
+})
+
 describe('chat voice playback', () => {
   it('pauses the previous message when another starts and stops withdrawn playback', () => {
     const pause = vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => {})

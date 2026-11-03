@@ -2,13 +2,18 @@ import { chromium } from 'playwright'
 import assert from 'node:assert/strict'
 const browser = await chromium.launch()
 try {
-  const page = await browser.newPage({ viewport: { width: 390, height: 844 }, timezoneId: 'Asia/Shanghai' })
+  const page = await browser.newPage({ locale: 'zh-CN', viewport: { width: 390, height: 844 }, timezoneId: 'Asia/Shanghai' })
   const errors = []
   page.on('pageerror', error => errors.push(error.message))
   page.on('dialog', dialog => dialog.accept())
   await page.goto(process.env.AILY_URL || 'http://127.0.0.1:4175/')
-  await page.getByRole('button', { name: /遇见 TA/ }).click()
-  await page.getByRole('button', { name: /开始我们的故事/ }).click()
+  // Memory-only scenario; onboarding has its own nine-step verification.
+  await page.evaluate(async () => {
+    const { saveSetting } = await import('/src/db.ts')
+    await saveSetting('onboarded', true); await saveSetting('selected', 'lu')
+    localStorage.setItem('aily-safety-consent-v1', 'adult-ai-privacy-accepted')
+  })
+  await page.reload()
   await page.getByRole('button', { name: '去找他' }).click()
   const send = async text => {
     await page.getByRole('textbox', { name: '发消息' }).fill(text)
@@ -30,7 +35,7 @@ try {
   await page.getByRole('button', { name: '消息', exact: true }).click()
   await page.getByRole('button', { name: '去找他' }).click()
   await send('ocean')
-  await page.getByText(/你确认过「我喜欢看海」，我记得/).waitFor()
+  await page.getByText(/You confirmed “我喜欢看海”; I remember/).waitFor()
   await send('我不喜欢看海')
   await page.getByText(/1 条待确认，请到回忆页查看/).waitFor()
   await page.getByRole('button', { name: '返回消息' }).click()
