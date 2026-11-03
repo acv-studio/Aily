@@ -3,6 +3,7 @@ import { characters, type CharacterId } from './data'
 import { streamReply, type ChatMessage, type ConfirmedMemory } from './chatService'
 import { clearCharacterMemories, deleteMemory, initializeLocalData, loadRoleConversation, persistChatChanges, saveMemory, saveSetting, updateMemory } from './db'
 import type { MemoryDraft } from './ChatPanel'
+import { deliverProactive } from './proactiveMessages'
 import { archiveExpiredMemories, confirmProposal, db, forgottenSourceIds, loadMemoryPolicy, loadSummaries, saveMemoryPolicy, saveProposals, saveSummaries } from './db'
 import { categoriesFor, conflictMemoryIds, defaultMemoryPolicy, extractCandidates, isSensitive, summarizeConversation, type ConversationSummary, type MemoryPolicy } from './longMemory'
 
@@ -11,7 +12,7 @@ function readPreference(storage: 'localStorage' | 'sessionStorage', key: string,
 }
 const empty = (): Record<CharacterId, ChatMessage[]> => ({ lu: [], chen: [], gu: [] })
 let lastId = Date.now()
-const nextId = () => { lastId = Math.max(lastId + 1, Date.now()); return lastId }
+const nextId = (knownMaximum = 0) => { lastId = Math.max(lastId + 1, knownMaximum + 1, Date.now()); return lastId }
 export default function useLocalChat() {
   const [ready, setReady] = useState(false)
   const [onboarded, setOnboarded] = useState(false)
@@ -114,6 +115,31 @@ export default function useLocalChat() {
     if (temporaryRef.current) { temporaryConversationsRef.current = { ...temporaryConversationsRef.current, [role]: records }; if (mounted.current) setTemporaryConversations(temporaryConversationsRef.current); return }
     conversationsRef.current = { ...conversationsRef.current, [role]: records }; if (mounted.current) setConversations(conversationsRef.current)
   }
+  useEffect(() => {
+    if (!ready || !onboarded) return
+    let disposed = false
+    let running = false
+    const tick = async () => {
+      if (running || disposed || document.visibilityState !== 'visible' || active.current || temporaryRef.current || mutationCount.current) return
+      running = true
+      try {
+        for (const role of characters) {
+          if (disposed || active.current || temporaryRef.current || mutationCount.current) break
+          await deliverProactive(role.id, new Date())
+          const records = await loadRoleConversation(role.id)
+          // Do not replace an in-flight reply or temporary view after an async read.
+          if (!disposed && !active.current && !temporaryRef.current && !mutationCount.current && JSON.stringify(records) !== JSON.stringify(conversationsRef.current[role.id])) apply(role.id, records)
+        }
+      } catch { if (!disposed) setError('主动消息检查失败，未能确认保存；下次打开页面会重试。') }
+      finally { running = false }
+    }
+    void tick()
+    const timer = window.setInterval(() => void tick(), 30_000)
+    const wake = () => { void tick() }
+    document.addEventListener('visibilitychange', wake)
+    window.addEventListener('aily-proactive-settings', wake)
+    return () => { disposed = true; window.clearInterval(timer); document.removeEventListener('visibilitychange', wake); window.removeEventListener('aily-proactive-settings', wake) }
+  }, [ready, onboarded])
   const send = async (options: { retryId?: number; replyToId?: number; attachment?: ChatMessage['attachment']; kind?: ChatMessage['kind'] } = {}) => {
     if (!ready || active.current || mutationCount.current) return
     const role = selectedRef.current
@@ -127,7 +153,7 @@ export default function useLocalChat() {
     const target = options.retryId === undefined ? undefined : original.find(message => message.id === options.retryId && message.from === 'user' && !message.withdrawn)
     if (options.retryId !== undefined && !target) return
     if (!target && !draft.trim() && !options.attachment) return
-    const user: ChatMessage = target ? { ...target, status: 'sent' } : { id: nextId(), from: 'user', text: draft.trim(), time: new Date().toLocaleTimeString('zh-CN'), createdAt: new Date().toISOString(), status: 'sent', replyToId: options.replyToId, kind: options.kind || 'text', attachment: options.attachment }
+    const user: ChatMessage = target ? { ...target, status: 'sent' } : { id: nextId(original.reduce((maximum, message) => Math.max(maximum, message.id), 0)), from: 'user', text: draft.trim(), time: new Date().toLocaleTimeString('zh-CN'), createdAt: new Date().toISOString(), status: 'sent', replyToId: options.replyToId, kind: options.kind || 'text', attachment: options.attachment }
     // Retrying operates on exactly the original user turn; it never duplicates that turn.
     let records = target ? original.map(message => message.id === target.id ? user : message) : [...original, user]
     const controller = new AbortController(); active.current = controller; setReplying(true); setError('')
