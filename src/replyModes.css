@@ -1,0 +1,7 @@
+.reply-mode-picker{padding:10px 13px 8px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.025);flex-shrink:0}
+.reply-mode-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.reply-mode-options button{min-height:44px;border-radius:12px;padding:8px 4px;border:1px solid var(--line);background:rgba(255,255,255,.06);color:#c4cada;font-size:12px}
+.reply-mode-options button[aria-pressed=true]{background:rgba(168,137,255,.2);border-color:#a889ff;color:#efe7ff}
+.reply-mode-options button:disabled{opacity:.55;cursor:default}
+.reply-mode-picker p{margin:8px 0 0;font-size:11px;line-height:1.5;color:#c4cada}
+.reply-mode-picker p span{display:block;color:#9da3b4;font-size:10px}
