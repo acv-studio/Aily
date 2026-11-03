@@ -73,7 +73,7 @@ export default function ChatPanel(props: ChatPanelProps) {
   const quoted = messages.find(message => message.id === quote && !message.withdrawn && message.status !== 'sending')
   useEffect(() => { if (quote !== undefined && !quoted) setQuote(undefined) }, [quote, quoted])
   const toggleSearch = () => { if (searchOpen) setSearch(''); setSearchOpen(!searchOpen) }
-  const quoteText = (message?: ChatMessage) => !message ? '引用消息不可用' : message.withdrawn ? '引用的消息已撤回' : message.text || (message.kind === 'image' ? '[图片]' : message.kind === 'audio' ? '[语音]' : '引用消息不可用')
+  const quoteText = (message?: ChatMessage) => !message ? t('引用消息不可用') : message.withdrawn ? t('引用的消息已撤回') : message.text || (message.kind === 'image' ? t('[图片]') : message.kind === 'audio' ? t('[语音]') : t('引用消息不可用'))
   const chooseFile = async (file?: File) => {
     if (!file) return
     if (!['image/png', 'image/jpeg', 'image/webp', 'image/gif'].includes(file.type) || file.size > 3 * 1024 * 1024) { setNotice('请选择 3MB 以内的 PNG、JPEG、WebP 或 GIF 图片'); return }
