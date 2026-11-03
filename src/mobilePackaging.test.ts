@@ -24,6 +24,7 @@ describe('mobile packaging safety contract', () => {
     const xml = new DOMParser().parseFromString(read('android/app/src/main/AndroidManifest.xml'), 'text/xml')
     const app = xml.querySelector('application')!
     expect(app.getAttribute('android:allowBackup')).toBe('false')
+    expect(app.getAttribute('android:fullBackupContent')).toBe('false')
     expect(app.getAttribute('android:usesCleartextTraffic')).toBe('false')
     expect(app.getAttribute('android:dataExtractionRules')).toBe('@xml/data_extraction_rules')
     const permissions = [...xml.querySelectorAll('uses-permission')].map(node => node.getAttribute('android:name'))
