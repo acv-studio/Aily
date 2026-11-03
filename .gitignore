@@ -3,3 +3,18 @@ dist/
 *.tsbuildinfo
 .DS_Store
 coverage/
+.mobile-tools/
+.mobile-build/
+# Native build outputs, local SDK paths, and signing material
+android/.gradle/
+android/.kotlin/
+android/local.properties
+android/**/build/
+*.jks
+*.keystore
+android/keystore.properties
+ios/App/DerivedData/
+*.ipa
+*.xcarchive
+*.p12
+*.mobileprovision

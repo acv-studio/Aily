@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Aily</string>
+    <string name="title_activity_main">Aily</string>
+    <string name="package_name">com.aily.app</string>
+    <string name="custom_url_scheme">com.aily.app</string>
+</resources>
