@@ -10,6 +10,48 @@ function setup() {
   return { onSave, onUpdate }
 }
 describe('confirmed memory controls', () => {
+  it('switches between shared-event views and retains memory management', () => {
+    render(<MemoryPanel memories={[{ ...memories[0], category: 'relationship', text: '我们完成共同故事' }]} selected="lu" onSave={vi.fn()} onUpdate={vi.fn()} onDelete={vi.fn()} onClear={vi.fn()} />)
+    fireEvent.click(screen.getByRole('button', { name: '回忆卡' }))
+    expect(screen.getByText('回忆插画 · 非实拍照片')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '时间轴' }))
+    expect(screen.getByRole('list')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '周记月记' }))
+    expect(screen.getByRole('button', { name: '预览并确认' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '管理、编辑或删除记忆' }))
+    expect(screen.getByRole('button', { name: '编辑' })).toBeInTheDocument()
+  })
+  it('prevents journal view and role remounts while a save is pending', async () => {
+    let finish!: () => void
+    const onSave = vi.fn(() => new Promise<void>(resolve => { finish = resolve }))
+    render(<MemoryPanel memories={[{ ...memories[0], category: 'relationship', text: '我们完成共同故事' }]} selected="lu" onSave={onSave} onUpdate={vi.fn()} onDelete={vi.fn()} onClear={vi.fn()} />)
+    fireEvent.click(screen.getByRole('button', { name: '周记月记' }))
+    fireEvent.click(screen.getByRole('button', { name: '预览并确认' }))
+    fireEvent.click(screen.getByRole('button', { name: '确认保存周记' }))
+    expect(screen.getByRole('button', { name: '时间轴' })).toBeDisabled()
+    expect(screen.getByLabelText('记忆角色')).toBeDisabled()
+    expect(screen.getByRole('button', { name: '管理、编辑或删除记忆' })).toBeDisabled()
+    fireEvent.click(screen.getByRole('button', { name: '时间轴' }))
+    expect(onSave).toHaveBeenCalledTimes(1)
+    finish()
+    await waitFor(() => expect(screen.getByRole('button', { name: '时间轴' })).toBeEnabled())
+    expect(screen.getByRole('button', { name: '已保存这份摘录' })).toBeDisabled()
+  })
+  it('does not start a journal save while a policy write owns the navigation lock', async () => {
+    let finish!: () => void
+    const onPolicy = vi.fn(() => new Promise<void>(resolve => { finish = resolve }))
+    const onSave = vi.fn().mockResolvedValue(undefined)
+    render(<MemoryPanel memories={[{ ...memories[0], category: 'relationship', text: '我们完成共同故事' }]} selected="lu" onSave={onSave} onPolicy={onPolicy} onUpdate={vi.fn()} onDelete={vi.fn()} onClear={vi.fn()} />)
+    fireEvent.click(screen.getByRole('button', { name: '周记月记' }))
+    fireEvent.click(screen.getByRole('button', { name: '预览并确认' }))
+    fireEvent.click(screen.getByText('记忆与敏感信息控制'))
+    fireEvent.click(screen.getByLabelText('允许用户偏好记忆'))
+    expect(screen.getByRole('button', { name: '确认保存周记' })).toBeDisabled()
+    fireEvent.click(screen.getByRole('button', { name: '确认保存周记' }))
+    expect(onSave).not.toHaveBeenCalled()
+    finish()
+    await waitFor(() => expect(screen.getByRole('button', { name: '确认保存周记' })).toBeEnabled())
+  })
   it('filters by character and searches local facts', () => {
     setup(); expect(screen.getByText('不吃辣')).toBeInTheDocument(); expect(screen.queryByText('喜欢篮球')).toBeNull()
     fireEvent.change(screen.getByLabelText('记忆角色'), { target: { value: 'chen' } })

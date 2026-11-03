@@ -1,11 +1,12 @@
 import '@testing-library/jest-dom/vitest'
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
+import * as storage from './db'
 import { db, loadLocalData, saveSetting } from './db'
 
 beforeEach(async () => { localStorage.clear(); sessionStorage.clear(); await db.delete(); await db.open() })
-afterEach(cleanup)
+afterEach(() => { cleanup(); vi.restoreAllMocks() })
 
 async function confirmSafetyConsent() {
   expect(await screen.findByRole('button', { name: '确认并继续' })).toBeDisabled()
@@ -15,6 +16,27 @@ async function confirmSafetyConsent() {
 }
 
 describe('Aily core journey', () => {
+  it('keeps application tabs locked until journal persistence settles', async () => {
+    await saveSetting('onboarded', true)
+    await storage.saveMemory({ id: 'event', characterId: 'lu', category: 'relationship', text: '我们完成海边故事', confirmedAt: '2026-11-01T10:00:00Z' })
+    render(<App />)
+    await confirmSafetyConsent()
+    fireEvent.click(await screen.findByRole('button', { name: '回忆' }))
+    fireEvent.click(screen.getByRole('button', { name: '周记月记' }))
+    fireEvent.click(screen.getByRole('button', { name: '预览并确认' }))
+    const original = storage.saveMemory
+    let finish!: () => void
+    const pending = new Promise<void>(resolve => { finish = resolve })
+    const save = vi.spyOn(storage, 'saveMemory').mockImplementationOnce(async memory => { await pending; return original(memory) })
+    fireEvent.click(screen.getByRole('button', { name: '确认保存周记' }))
+    expect(screen.getByRole('button', { name: '消息' })).toBeDisabled()
+    fireEvent.click(screen.getByRole('button', { name: '消息' }))
+    expect(screen.getByRole('button', { name: '确认保存周记' })).toBeInTheDocument()
+    await act(async () => { finish(); await pending })
+    await waitFor(() => expect(screen.getByRole('button', { name: '消息' })).toBeEnabled())
+    expect(save).toHaveBeenCalledTimes(1)
+    expect((await loadLocalData()).memories).toHaveLength(2)
+  })
   it('requires new disclosure even when a previous profile is already onboarded', async () => {
     await saveSetting('onboarded', true)
     render(<App />)
