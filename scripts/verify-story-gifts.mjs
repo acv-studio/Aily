@@ -43,7 +43,8 @@ try {
   await page.getByRole('button', { name: '+1,000 演示币 · 不扣款', exact: true }).click()
   await page.getByRole('button', { name: '确认模拟充值', exact: true }).click()
   await page.getByTestId('demo-balance').filter({ hasText: /^1,000$/ }).waitFor()
-  await page.getByRole('heading', { name: '给 TA 一份小心意' }).scrollIntoViewIfNeeded()
+  await page.getByRole('heading', { name: '给 TA 一份小心意' }).evaluate(element => window.scrollBy(0, element.getBoundingClientRect().top - 100))
+  await page.waitForFunction(() => Math.abs(document.querySelector('#gift-heading').getBoundingClientRect().top - 100) < 2, null, { timeout: 5000 })
   await page.screenshot({ path: `${evidence}/${before ? 'before' : 'after'}-store.png` })
   if (!before) {
     await page.getByRole('button', { name: /演唱会票/ }).click()
