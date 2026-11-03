@@ -1,0 +1,21 @@
+.feed-controls { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; border-radius: 20px; padding: 14px; margin-bottom: 16px; }
+.feed-controls label { display: grid; gap: 6px; flex: 1; font-size: 12px; color: #c2c5d4; }
+.feed-controls select { width: 100%; min-width: 0; border: 1px solid var(--line); border-radius: 10px; padding: 9px; background: #1e2133; color: #f7f4f2; font: inherit; }
+.feed-controls > button { display: flex; align-items: center; gap: 6px; border-radius: 12px; padding: 10px 12px; background: #a990ef; color: #171822; font-size: 12px; }
+.feed-controls p { flex-basis: 100%; margin: 0; font-size: 11px; color: #aab0c0; line-height: 1.6; }
+.feed button:disabled { opacity: .5; cursor: default; }
+.feed select:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+.feed-error { padding: 12px; margin-bottom: 12px; border-radius: 12px; background: #492833; color: #ffd0d5; font-size: 12px; line-height: 1.6; }
+.feed-error button { margin-left: 8px; padding: 6px 10px; border-radius: 8px; background: #6b3c4c; }
+.moment .hide-moment { background: none; color: #aab0c0; font-size: 11px; padding: 10px 4px; }
+.moment .moment-source { display: block; margin: 8px 0 0; padding: 0; border: 0; color: #aab0c0; font-size: 10px; }
+.moment-visual.reading { background: linear-gradient(130deg, #655875, #283244 70%); }
+.moment > p, .moment-comment { overflow-wrap: anywhere; white-space: pre-wrap; }
+.moment .moment-comment { font-size: 12px; line-height: 1.6; }
+.moment .moment-comment small { display: block; margin: 0; padding: 0; border: 0; font-size: 10px; color: #aab0c0; }
+.moment .moment-comment button { font-size: 11px; }
+.moment-comment-actions { display: flex; gap: 8px; margin-top: 8px; }
+.feed .comment-box input { font-size: 12px; }
+.feed .comment-box button { font-size: 11px; padding: 8px; }
+.feed .moment footer button { min-height: 32px; font-size: 12px; }
+.feed .feed-hero span { display: block; margin-top: 6px; font-size: 11px; color: #aab0c0; }

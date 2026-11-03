@@ -1,3 +1,4 @@
+import { t } from './i18n'
 import Dexie, { liveQuery, type EntityTable } from 'dexie'
 import type { CharacterId } from './data'
 
@@ -65,7 +66,7 @@ export const demoDb = new DemoDatabase()
 const recipientIds: readonly CharacterId[] = ['lu', 'chen', 'gu']
 
 function checkedBalance(balance: number): number {
-  if (!Number.isSafeInteger(balance) || balance < 0) throw new Error('演示余额无效')
+  if (!Number.isSafeInteger(balance) || balance < 0) throw new Error(t('演示余额无效'))
   return balance
 }
 
@@ -89,9 +90,9 @@ async function applyTransaction(entry: DemoTransaction): Promise<DemoWalletSnaps
   // share this transaction, so no stale UI balance can overwrite a newer one.
   return demoDb.transaction('rw', demoDb.wallet, demoDb.transactions, async () => {
     const balance = checkedBalance((await demoDb.wallet.get('main'))?.balance ?? 0)
-    if (entry.kind === 'gift' && balance < entry.coins) throw new Error('演示币不足，请先免费补充')
+    if (entry.kind === 'gift' && balance < entry.coins) throw new Error(t('演示币不足，请先免费补充'))
     const nextBalance = entry.kind === 'recharge' ? balance + entry.coins : balance - entry.coins
-    if (!Number.isSafeInteger(nextBalance) || nextBalance < 0) throw new Error('演示余额超出上限')
+    if (!Number.isSafeInteger(nextBalance) || nextBalance < 0) throw new Error(t('演示余额超出上限'))
     await demoDb.wallet.put({ id: 'main', balance: nextBalance })
     await demoDb.transactions.add(entry)
     return readSnapshot()
@@ -100,17 +101,17 @@ async function applyTransaction(entry: DemoTransaction): Promise<DemoWalletSnaps
 
 export async function rechargeDemo(packId: string): Promise<DemoWalletSnapshot> {
   const pack = rechargePacks.find(item => item.id === packId)
-  if (!pack) throw new Error('演示充值包无效')
+  if (!pack) throw new Error(t('演示充值包无效'))
   return applyTransaction({ id: crypto.randomUUID(), kind: 'recharge', coins: pack.coins, createdAt: new Date().toISOString() })
 }
 
 export async function sendDemoGift(giftId: string, characterId: CharacterId, quantity: number): Promise<DemoWalletSnapshot> {
   const gift = gifts.find(item => item.id === giftId)
-  if (!gift) throw new Error('演示礼物无效')
-  if (!recipientIds.includes(characterId)) throw new Error('收礼角色无效')
-  if (!Number.isInteger(quantity) || quantity < 1 || quantity > 99) throw new Error('礼物数量须为 1–99 的整数')
+  if (!gift) throw new Error(t('演示礼物无效'))
+  if (!recipientIds.includes(characterId)) throw new Error(t('收礼角色无效'))
+  if (!Number.isInteger(quantity) || quantity < 1 || quantity > 99) throw new Error(t('礼物数量须为 1–99 的整数'))
   const coins = gift.cost * quantity
-  if (!Number.isSafeInteger(coins) || coins <= 0) throw new Error('演示金额无效')
+  if (!Number.isSafeInteger(coins) || coins <= 0) throw new Error(t('演示金额无效'))
   return applyTransaction({
     id: crypto.randomUUID(), kind: 'gift', coins, createdAt: new Date().toISOString(),
     characterId, giftId: gift.id, giftName: gift.name, quantity,

@@ -1,3 +1,4 @@
+import { t, getLocale, resolveChatLocale, useI18n, detectLanguage } from './i18n'
 import { useEffect, useRef, useState } from 'react'
 import { hasSafetyConsent } from './privacy'
 import { characters, type CharacterId } from './data'
@@ -7,7 +8,7 @@ import { defaultOnboardingProfile, normalizeOnboardingProfile, type OnboardingPr
 import type { MemoryDraft } from './ChatPanel'
 import { deliverProactive } from './proactiveMessages'
 import { archiveExpiredMemories, confirmProposal, db, forgottenSourceIds, loadMemoryPolicy, loadSummaries, saveMemoryPolicy, saveProposals, saveSummaries } from './db'
-import { categoriesFor, conflictMemoryIds, defaultMemoryPolicy, extractCandidates, isSensitive, summarizeConversation, type ConversationSummary, type MemoryPolicy } from './longMemory'
+import { categoriesFor, conflictMemoryIds, defaultMemoryPolicy, extractCandidates, isSensitive, summarizeConversation, topics, type ConversationSummary, type MemoryPolicy } from './longMemory'
 
 function readPreference(storage: 'localStorage' | 'sessionStorage', key: string, fallback = '') {
   try { return window[storage].getItem(key) || fallback } catch { return fallback }
@@ -16,6 +17,7 @@ const empty = (): Record<CharacterId, ChatMessage[]> => ({ lu: [], chen: [], gu:
 let lastId = Date.now()
 const nextId = (knownMaximum = 0) => { lastId = Math.max(lastId + 1, knownMaximum + 1, Date.now()); return lastId }
 export default function useLocalChat() {
+  useI18n() // Re-render transient error keys when the display language changes.
   const [ready, setReady] = useState(false)
   const [onboarded, setOnboarded] = useState(false)
   const [onboardingProfile, setOnboardingProfile] = useState<OnboardingProfile | null>(null)
@@ -49,7 +51,7 @@ export default function useLocalChat() {
     return task
   }
   const tracked = <Args extends unknown[], Result,>(work: (...args: Args) => Promise<Result>) => (...args: Args): Promise<Result> => {
-    if (deleting.current) return Promise.reject(new Error('正在删除本机资料，不能继续写入'))
+    if (deleting.current) return Promise.reject(new Error(t('正在删除本机资料，不能继续写入')))
     mutationCount.current++
     const task = work(...args).finally(() => { mutationCount.current--; pendingWrites.current.delete(task) })
     pendingWrites.current.add(task)
@@ -73,7 +75,7 @@ export default function useLocalChat() {
       for (const role of characters) queueOrganization(role.id)
       setReady(true)
     }
-    catch { if (mounted.current) setLoadError('无法读取本机数据。请允许浏览器存储后重试；未覆盖任何记录。') }
+    catch { if (mounted.current) setLoadError('无法读取本机数据，页面资料可能尚未更新。请允许浏览器存储后重试读取。') }
   }
   useEffect(() => { mounted.current = true; void load(); return () => { mounted.current = false; active.current?.abort() } }, [])
   const selectedRef = useRef(selected); selectedRef.current = selected
@@ -116,10 +118,10 @@ export default function useLocalChat() {
     const item = await db.memories.get(id)
     if (!item || item.state !== 'pending') return
     const policy = await loadMemoryPolicy(item.characterId)
-    if (policy.disabledCategories.includes(item.category || 'profile')) throw new Error('此类记忆已关闭')
+    if (policy.disabledCategories.includes(item.category || 'profile')) throw new Error(t('此类记忆已关闭'))
     const existing = await db.memories.where('characterId').equals(item.characterId).toArray()
     const conflicts = conflictMemoryIds(item.text, existing, policy)
-    if (conflicts.length && !window.confirm(`新信息与已有记忆冲突：${existing.filter(memory => conflicts.includes(memory.id)).map(memory => memory.text).join('；')}。确认以新信息替换并归档旧记忆？`)) return
+    if (conflicts.length && !window.confirm(t('新信息与已有记忆冲突：{memories}。确认以新信息替换并归档旧记忆？', { memories: existing.filter(memory => conflicts.includes(memory.id)).map(memory => memory.text).join('；') }))) return
     await updateMemory(id, { conflictIds: conflicts })
     await confirmProposal(id, conflicts)
     await organize(item.characterId)
@@ -131,6 +133,8 @@ export default function useLocalChat() {
   const saveOnboarding = async (profile: OnboardingProfile, messages: ChatMessage[], finish: boolean): Promise<void> => {
     if (deleting.current || !ready || active.current || mutationCount.current) throw new Error('请先停止回复或等待本机数据保存')
     mutationCount.current++
+    // The tracked public entry point already counts this onboarding mutation.
+    if (!ready || active.current || mutationCount.current > 1) throw new Error('请先停止回复或等待本机数据保存')
     try {
       await organization.current
       const result = await (finish ? persistFinishOnboarding(profile, messages) : persistUpdateOnboarding(profile))
@@ -143,7 +147,6 @@ export default function useLocalChat() {
         setConversations(conversationsRef.current); setMemories(memoriesRef.current); if (finish) setDraft(''); setError('')
       }
     } catch (failure) { if (mounted.current) setError('无法保存引导设置，请检查本机存储权限或设置内容'); throw failure }
-    finally { mutationCount.current-- }
   }
   const finishOnboarding = async (profile?: OnboardingProfile, messages: ChatMessage[] = []): Promise<void> => {
     await saveOnboarding(profile || onboardingProfileRef.current || defaultOnboardingProfile(selectedRef.current), messages, true)
@@ -198,7 +201,7 @@ export default function useLocalChat() {
     let records = target ? original.map(message => message.id === target.id ? user : message) : [...original, user]
     const controller = new AbortController(); active.current = controller; setReplying(true); setError('')
     let content = ''; let persisted = false
-    const assistant: ChatMessage = { id: nextId(), from: 'character', text: '', time: new Date().toLocaleTimeString('zh-CN'), createdAt: new Date().toISOString(), status: 'sending' }
+    const assistant: ChatMessage = { id: nextId(), from: 'character', text: '', time: new Date().toLocaleTimeString(getLocale()), createdAt: new Date().toISOString(), status: 'sending' }
     try {
       records = await persist(role, [user]); persisted = true; apply(role, records); if (!target) setDraft('')
       if (controller.signal.aborted) throw new DOMException('Aborted', 'AbortError')
@@ -213,7 +216,7 @@ export default function useLocalChat() {
         if (message.from === 'user') lastUserForgotten = !!message.withdrawn || forgotten.has(message.id)
         return !forgotten.has(message.id) && !lastUserForgotten
       })
-      await streamReply({ characterId: role, onboardingProfile: onboardingProfileRef.current, messages: context, memories: isTemporary ? [] : await db.memories.toArray(), summaries: isTemporary ? [] : await loadSummaries(role), memoryPolicy: await loadMemoryPolicy(role), apiKey, endpoint, model, signal: controller.signal, onDelta: delta => { content += delta; apply(role, [...records, { ...assistant, text: content }]) } })
+      await streamReply({ locale: resolveChatLocale(user.text), characterId: role, onboardingProfile: onboardingProfileRef.current, messages: context, memories: isTemporary ? [] : await db.memories.toArray(), summaries: isTemporary ? [] : await loadSummaries(role), memoryPolicy: await loadMemoryPolicy(role), apiKey, endpoint, model, signal: controller.signal, onDelta: delta => { content += delta; apply(role, [...records, { ...assistant, text: content }]) } })
       const completed = await persist(role, [{ ...user, status: 'sent' }, { ...assistant, text: content, status: 'sent' }]); apply(role, completed)
     } catch (failure) {
       const cancelled = controller.signal.aborted
@@ -230,8 +233,8 @@ export default function useLocalChat() {
     const role = selectedRef.current
     mutationCount.current++
     try {
-    if (temporaryRef.current) throw new Error('临时会话不能保存长期记忆')
-    if ((policiesRef.current[selectedRef.current] || defaultMemoryPolicy).disabledCategories.includes(memory.category)) throw new Error('此类记忆已关闭')
+    if (temporaryRef.current) throw new Error(t('临时会话不能保存长期记忆'))
+    if ((policiesRef.current[selectedRef.current] || defaultMemoryPolicy).disabledCategories.includes(memory.category)) throw new Error(t('此类记忆已关闭'))
     await organization.current
     if (temporaryRef.current || role !== selectedRef.current) throw new Error('会话已切换，记忆未保存')
     if ((await loadMemoryPolicy(role)).disabledCategories.includes(memory.category)) throw new Error('此类记忆已关闭')
@@ -240,11 +243,11 @@ export default function useLocalChat() {
     if (!memory.text.trim() || memory.text.trim().length > 1000) throw new Error('记忆内容需为 1–1000 字')
     const item: ConfirmedMemory = { ...memory, text: memory.text.trim(), id: crypto.randomUUID(), characterId: selectedRef.current, confirmedAt: new Date().toISOString(), enabled: true, state: 'confirmed', importance: 3, originalText: source?.text }
     const proposal = memoriesRef.current.find(existing => existing.characterId === item.characterId && existing.sourceMessageId === item.sourceMessageId && item.sourceMessageId !== undefined && existing.state === 'pending')
-    if (proposal) { await updateMemory(proposal.id, { text: item.text, category: item.category }); await approveProposal(proposal.id); if ((await db.memories.get(proposal.id))?.state === 'pending') throw new Error('新信息仍待确认'); return }
+    if (proposal) { await updateMemory(proposal.id, { text: item.text, category: item.category }); await approveProposal(proposal.id); if ((await db.memories.get(proposal.id))?.state === 'pending') throw new Error(t('新信息仍待确认')); return }
     const existing = await db.memories.where('characterId').equals(role).toArray()
     const conflicts = conflictMemoryIds(item.text, existing, await loadMemoryPolicy(role))
     if (conflicts.length) {
-      if (!window.confirm(`这条记忆与${existing.filter(memory => conflicts.includes(memory.id)).map(memory => memory.text).join('；')}冲突，确认以新信息替换并归档旧记忆？`)) throw new Error('已保留旧记忆')
+      if (!window.confirm(t('这条记忆与{memories}冲突，确认以新信息替换并归档旧记忆？', { memories: existing.filter(memory => conflicts.includes(memory.id)).map(memory => memory.text).join('；') }))) throw new Error(t('已保留旧记忆'))
       await saveMemory({ ...item, state: 'pending', enabled: false, conflictIds: conflicts })
       await confirmProposal(item.id, conflicts); await organize(role); return
     }

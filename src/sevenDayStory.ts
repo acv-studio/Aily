@@ -1,3 +1,4 @@
+import { t, detectLanguage } from './i18n'
 import { db, loadMemoryPolicy } from './db'
 import type { ConfirmedMemory } from './chatService'
 
@@ -66,11 +67,11 @@ export const chapters: StoryChapter[] = [
 ]
 
 const progressKey = '__sevenDayStory:lu'
-const invalidProgress = () => new Error('七日故事进度损坏，请保留数据后检查')
+const invalidProgress = () => new Error(t('七日故事进度损坏，请保留数据后检查'))
 
 /** A local calendar date, deliberately not a UTC ISO date or elapsed 24 hours. */
 export function localDate(date: Date): string {
-  if (!Number.isFinite(date.getTime()) || date.getFullYear() < 1 || date.getFullYear() > 9999) throw new Error('无效日期')
+  if (!Number.isFinite(date.getTime()) || date.getFullYear() < 1 || date.getFullYear() > 9999) throw new Error(t('无效日期'))
   return `${String(date.getFullYear()).padStart(4, '0')}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 }
 
@@ -102,8 +103,8 @@ export async function loadStoryProgress(): Promise<StoryProgress> {
 }
 
 function checkChapter(index: number, choice?: number) {
-  if (!Number.isInteger(index) || index < 0 || index >= chapters.length) throw new Error('无效章节')
-  if (arguments.length > 1 && choice !== 0 && choice !== 1) throw new Error('无效选择')
+  if (!Number.isInteger(index) || index < 0 || index >= chapters.length) throw new Error(t('无效章节'))
+  if (arguments.length > 1 && choice !== 0 && choice !== 1) throw new Error(t('无效选择'))
 }
 
 export function storyRecall(progress: StoryProgress): string {
@@ -142,17 +143,18 @@ export async function completeStoryChapter(index: number, choice: number, now = 
   return db.transaction('rw', db.settings, db.memories, async () => {
     const progress = await loadStoryProgress()
     if (index < progress.choices.length) return progress // Never recreate a deleted chapter memory.
-    if (index !== progress.choices.length) throw new Error('请先完成前面的章节')
+    if (index !== progress.choices.length) throw new Error(t('请先完成前面的章节'))
     const today = localDate(now)
     const lastDate = progress.completedDates.at(-1)
-    if (lastDate && today <= lastDate) throw new Error('下一章将在下一个本地日历日解锁')
-    if ((await loadMemoryPolicy('lu')).disabledCategories.includes('relationship')) throw new Error('此类记忆已关闭，请在记忆设置中启用关系记忆后重试')
+    if (lastDate && today <= lastDate) throw new Error(t('下一章将在下一个本地日历日解锁'))
+    if ((await loadMemoryPolicy('lu')).disabledCategories.includes('relationship')) throw new Error(t('此类记忆已关闭，请在记忆设置中启用关系记忆后重试'))
     const next = { choices: [...progress.choices, choice], completedDates: [...progress.completedDates, today] }
     await db.settings.put({ key: progressKey, value: next })
+    const text = t('与{name}完成《{story}》第{chapter}章「{title}」。用户选择：{choice}\n{ending}', { name: t('陆听澜'), story: t(storyTitle), chapter: index + 1, title: t(chapters[index].title), choice: t(chapters[index].choices[choice].line), ending: t(chapters[index].choices[choice].ending) })
     const memory: ConfirmedMemory = {
       id: `sevenDayStory:lu:${index + 1}:${crypto.randomUUID()}`, characterId: 'lu', category: 'relationship',
       state: 'confirmed', enabled: true, importance: 4, confirmedAt: now.toISOString(),
-      text: `与陆听澜完成《${storyTitle}》第${index + 1}章「${chapters[index].title}」。用户选择：${chapters[index].choices[choice].line}\n${chapters[index].choices[choice].ending}`,
+      text, language: detectLanguage(text),
     }
     // A reset starts fresh memories without overwriting imported or user-edited ones.
     await db.memories.put(memory)
