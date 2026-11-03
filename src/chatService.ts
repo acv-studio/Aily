@@ -136,14 +136,17 @@ export function retrieveMemories(characterId: CharacterId, messages: ChatMessage
 }
 
 function selectedExclusiveName(characterId: CharacterId, memories: ConfirmedMemory[], profile: OnboardingProfile | null, policy?: MemoryPolicy) {
-  return profile?.familiarNames === true && getRelationship(characterId, memories, policy).stage.threshold >= 9 ? profile.exclusiveNames?.[characterId] : undefined
+  return profile?.familiarNames === true && getRelationship(characterId, memories, policy).stage.threshold >= 9
+    ? profile.exclusiveNames?.[characterId] : undefined
 }
 
+// Preserve both merged call conventions: (locale, mode) and (mode, locale).
+// Omitted mode retains the onboarding length preference.
 export function buildContext(characterId: CharacterId, messages: ChatMessage[], memories: ConfirmedMemory[], summaries?: ConversationSummary[], policy?: MemoryPolicy, onboardingProfile?: OnboardingProfile | null, localeOrMode?: Locale | ReplyMode, modeOrLocale?: ReplyMode | Locale) {
-  // Preserve both merged caller orders: (locale, mode) and (mode, locale).
   const isLocale = (value: Locale | ReplyMode | undefined): value is Locale => value === 'en' || value === 'zh-CN'
-  const locale = isLocale(localeOrMode) ? localeOrMode : isLocale(modeOrLocale) ? modeOrLocale : getLocale()
-  const mode = modeOrLocale && !isLocale(modeOrLocale) ? normalizeReplyMode(modeOrLocale) : localeOrMode && !isLocale(localeOrMode) ? normalizeReplyMode(localeOrMode) : undefined
+  const locale = isLocale(modeOrLocale) ? modeOrLocale : isLocale(localeOrMode) ? localeOrMode : getLocale()
+  const mode = modeOrLocale && !isLocale(modeOrLocale) ? normalizeReplyMode(modeOrLocale)
+    : localeOrMode && !isLocale(localeOrMode) ? normalizeReplyMode(localeOrMode) : undefined
   const { history, excludedIds } = providerHistory(messages)
   const loaded = normalizeOnboardingProfile(onboardingProfile)
   const profile = loaded ? { ...loaded, characterId, characterName: loaded.characterId === characterId ? loaded.characterName : defaultOnboardingProfile(characterId).characterName } : defaultOnboardingProfile(characterId)

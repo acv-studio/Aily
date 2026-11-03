@@ -89,5 +89,6 @@ export default function MemoryPanel({ memories, selected, onSave, onUpdate, onDe
       {editing && <><label>{t('重要度')}<select aria-label={t('重要度')} value={importance} onChange={event => setImportance(Number(event.target.value))}>{[1, 2, 3, 4, 5].map(value => <option key={value} value={value}>{value}</option>)}</select></label><label>{t('情境到期（留空长期保留）')}<input aria-label={t('情境到期')} type="date" value={expiresAt} onChange={event => setExpiresAt(event.target.value)} /></label></>}
       <div className="memory-actions"><button type="submit" disabled={busy}>{t('保存记忆')}</button><button type="button" onClick={() => { setEditing(null); setAdding(false) }}>{t('取消')}</button></div>{error && <p role="alert">{t(error)}</p>}
     </form></div>}
+    {shareMemory && <MemoryShareDialog memory={shareMemory} close={() => setShareId(null)} canExport={() => shareableMemory(shareMemory, policy, conversations[role])} />}
   </section>
 }

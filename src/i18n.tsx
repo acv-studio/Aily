@@ -8,6 +8,7 @@ import { privacyEnglish } from './locales/privacyEnglish'
 import { splashEnglish } from './locales/splashEnglish'
 import { albumEnglish } from './locales/albumEnglish'
 import { sharingEnglish } from './locales/sharingEnglish'
+import { storyGiftEnglish } from './locales/storyGiftEnglish'
 
 export type Locale = 'zh-CN' | 'en'
 export type ChatLocale = Locale | 'auto'

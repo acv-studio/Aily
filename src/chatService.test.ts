@@ -189,11 +189,13 @@ describe('reply mode context and demo', () => {
     const legacy = buildContext('lu', messages, memories, undefined, undefined, undefined, replyMode)
     const explicit = buildContext('lu', messages, memories, undefined, undefined, undefined, 'zh-CN', replyMode)
     expect(explicit).toEqual(legacy)
+    expect(buildContext('lu', messages, memories, undefined, undefined, undefined, replyMode, 'zh-CN')).toEqual(explicit)
     expect(explicit[0].content).toContain(REPLY_MODE_PROMPTS[replyMode])
   })
 
   it.each(REPLY_MODES)('combines explicit English response locale and %s mode without changing quoted facts', async replyMode => {
     const context = buildContext('lu', messages, memories, undefined, undefined, undefined, 'en', replyMode)
+    expect(buildContext('lu', messages, memories, undefined, undefined, undefined, replyMode, 'en')).toEqual(context)
     expect(context.filter(entry => entry.role === 'system')).toHaveLength(1)
     expect(context[0].content).toContain('Reply in English.')
     expect(context[0].content).toContain(translate(REPLY_MODE_PROMPTS[replyMode], {}, 'en'))
