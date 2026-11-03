@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
+import { t, useI18n } from './i18n'
+import LanguageSettings from './LanguageSettings'
 import { ArrowLeft, ChevronRight } from 'lucide-react'
 import { characters, type CharacterId } from './data'
 import type { ChatMessage } from './chatService'
