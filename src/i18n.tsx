@@ -6,11 +6,12 @@ import { onboardingEnglish } from './locales/onboardingEnglish'
 import { storyEnglish } from './locales/storyEnglish'
 import { privacyEnglish } from './locales/privacyEnglish'
 import { splashEnglish } from './locales/splashEnglish'
+import { sharingEnglish } from './locales/sharingEnglish'
 
 export type Locale = 'zh-CN' | 'en'
 export type ChatLocale = Locale | 'auto'
 export type TranslationParams = Record<string, string | number>
-export const english: Record<string, string> = { ...appEnglish, ...panelEnglish, ...chatEnglish, ...onboardingEnglish, ...storyEnglish, ...privacyEnglish, ...splashEnglish }
+export const english: Record<string, string> = { ...appEnglish, ...panelEnglish, ...chatEnglish, ...onboardingEnglish, ...storyEnglish, ...privacyEnglish, ...splashEnglish, ...sharingEnglish }
 const listeners = new Set<() => void>()
 const isLocale = (value: unknown): value is Locale => value === 'zh-CN' || value === 'en'
 function stored(key: string): string | null {

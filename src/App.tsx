@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { flushSync } from 'react-dom'
 import { t, useI18n } from './i18n'
 import LanguageSettings from './LanguageSettings'
+import { flushSync } from 'react-dom'
 import SafetyPrivacyPanel, { SafetyConsent } from './SafetyPrivacyPanel'
 import { acceptSafetyConsent, acquireUsageLease, deleteLocalProfile, hasSafetyConsent } from './privacy'
 import { Bell, BookHeart, ChevronRight, CircleUserRound, Home, MemoryStick, MessageCircle, ShieldCheck, ShoppingBag, Sparkles } from 'lucide-react'
@@ -24,6 +24,8 @@ import type { ChatMessage } from './chatService'
 import CharacterSplash from './CharacterSplash'
 import CharacterSplashSettings from './CharacterSplashSettings'
 import { defaultSplashSettings, getCharacterActivity, loadSplashSettings, saveSplashSettings, type SplashSettings } from './characterPresence'
+import { InviteLanding, InvitePanel } from './SharingPanel'
+import { invitedRole } from './sharing'
 
 type Tab = 'home' | 'moments' | 'memories' | 'store' | 'profile'
 
@@ -51,10 +53,19 @@ function AilyApp({ onDelete }: { onDelete: () => Promise<void> }) {
   const chat = useLocalChat()
   const { onboarded, selected, conversations, draft, setDraft, replying, error: chatError } = chat
   const [tab, setTab] = useState<Tab>('home')
+  const [memoryBusy, setMemoryBusy] = useState(false)
   const [chatOpen, setChatOpen] = useState(false)
   const [gameOpen, setGameOpen] = useState(false)
   const [storyOpen, setStoryOpen] = useState(false)
   const [proactiveOpen, setProactiveOpen] = useState(false)
+  const [inviteOpen, setInviteOpen] = useState(false)
+  const [invitation, setInvitation] = useState(() => invitedRole(window.location.hash))
+  useEffect(() => {
+    const changed = () => setInvitation(invitedRole(window.location.hash))
+    window.addEventListener('hashchange', changed)
+    return () => window.removeEventListener('hashchange', changed)
+  }, [])
+  const dismissInvitation = () => { window.history.replaceState(null, '', window.location.pathname + window.location.search); setInvitation(null) }
   const [privacyOpen, setPrivacyOpen] = useState(false)
   const [consented, setConsented] = useState(hasSafetyConsent)
   const deleteProfile = async () => { await chat.prepareForDeletion(); await onDelete() }
@@ -105,13 +116,13 @@ function AilyApp({ onDelete }: { onDelete: () => Promise<void> }) {
       hiddenAt.current = null
       setEntryTime(new Date())
       // Never replace active chat (including attachments/recording), settings or games.
-      if (away < 60_000 || tab !== 'home' || chatOpen || replying || splashOpen || !splashSettings.enabled) return
+      if (away < 60_000 || tab !== 'home' || memoryBusy || invitation || inviteOpen || chatOpen || replying || splashOpen || !splashSettings.enabled) return
       selectForEntry.current(splashSettings.primary); setSplashOpen(true)
     }
     document.addEventListener('visibilitychange', onVisibility)
     const clock = window.setInterval(() => { if (document.visibilityState === 'visible') setEntryTime(new Date()) }, 60_000)
     return () => { document.removeEventListener('visibilitychange', onVisibility); window.clearInterval(clock) }
-  }, [chat.ready, entryReady, onboarded, tab, chatOpen, replying, splashOpen, splashSettings])
+  }, [chat.ready, entryReady, onboarded, tab, chatOpen, replying, splashOpen, splashSettings, memoryBusy, invitation, inviteOpen])
   const reloadLocalState = async () => {
     await chat.reload()
     const data = await loadLocalData()
@@ -121,10 +132,12 @@ function AilyApp({ onDelete }: { onDelete: () => Promise<void> }) {
   const activity = getCharacterActivity(selected, entryTime, splashSettings.personalized)
   const saveGameMemory = (text: string) => { void chat.saveConfirmed({ text, category: 'relationship' }).catch(() => alert(t("回忆保存失败，请重试"))) }
   if (!chat.ready || !entryReady) return <main className="app-shell loading-screen"><p>{chat.loadError || t("正在读取本机聊天与记忆…")}</p>{chat.loadError && <button onClick={chat.reload}>{t("重试读取")}</button>}</main>
+  if (invitation) return <InviteLanding role={invitation} start={() => { setSelected(invitation); setSplashOpen(false); dismissInvitation() }} dismiss={dismissInvitation} />
   if (onboarded && !consented && !hasSafetyConsent()) return <main className="onboarding"><LanguageSettings compact /><SafetyConsent returning onAccepted={() => { acceptSafetyConsent(); setConsented(true); setEntryTime(new Date()) }} /></main>
+  if (inviteOpen) return <main className="app-shell"><InvitePanel role={selected} close={() => setInviteOpen(false)} /></main>
   if (privacyOpen) return <main className="app-shell"><SafetyPrivacyPanel close={() => setPrivacyOpen(false)} onDelete={deleteProfile} /></main>
   if (splashOpen) return <CharacterSplash character={character} activity={activity} staticScene={splashSettings.staticScene} onHome={() => { setSplashOpen(false); setTab('home') }} onChat={() => { setSplashOpen(false); setChatOpen(true) }} />
-  if (chatOpen) return <><ChatPanel character={character} messages={chat.chatMessages} temporary={chat.temporary} toggleTemporary={chat.toggleTemporary} pendingCount={chat.memories.filter(memory => memory.characterId === selected && memory.state === 'pending').length} draft={draft} setDraft={setDraft} send={chat.send} close={() => { if (!replying) setChatOpen(false) }} saveMemory={chat.saveConfirmed} withdraw={chat.withdraw} stop={chat.stop} replying={replying} error={chatError} demo={!chat.apiKey} openGame={() => setGameOpen(true)} openStory={() => setStoryOpen(true)} />{gameOpen && <RockPaperScissors characterName={t(character.name)} onComplete={saveGameMemory} onClose={() => setGameOpen(false)} />}{storyOpen && (selected === 'lu' ? <SevenDayStory temporary={chat.temporary} onSaved={() => { void db.memories.toArray().then(chat.setMemories).catch(() => alert(t('故事已保存，回忆列表暂未刷新；重新打开应用可读取'))) }} onClose={() => setStoryOpen(false)} /> : <InteractiveStory characterName={t(character.name)} onComplete={saveGameMemory} onClose={() => setStoryOpen(false)} />)}</>
+  if (chatOpen) return <><ChatPanel character={character} replyMode={chat.replyMode} setReplyMode={chat.setReplyMode} modeSaving={chat.modeSaving} messages={chat.chatMessages} temporary={chat.temporary} toggleTemporary={chat.toggleTemporary} pendingCount={chat.memories.filter(memory => memory.characterId === selected && memory.state === 'pending').length} draft={draft} setDraft={setDraft} send={chat.send} close={() => { if (!replying) setChatOpen(false) }} saveMemory={chat.saveConfirmed} withdraw={chat.withdraw} stop={chat.stop} replying={replying} error={chatError} demo={!chat.apiKey} openGame={() => setGameOpen(true)} openStory={() => setStoryOpen(true)} />{gameOpen && <RockPaperScissors characterName={t(character.name)} onComplete={saveGameMemory} onClose={() => setGameOpen(false)} />}{storyOpen && (selected === 'lu' ? <SevenDayStory temporary={chat.temporary} onSaved={() => { void db.memories.toArray().then(chat.setMemories).catch(() => alert(t('故事已保存，回忆列表暂未刷新；重新打开应用可读取'))) }} onClose={() => setStoryOpen(false)} /> : <InteractiveStory characterName={t(character.name)} onComplete={saveGameMemory} onClose={() => setStoryOpen(false)} />)}</>
   if (!onboarded) return <Onboarding selected={selected} setSelected={setSelected} finish={finishOnboarding} apiKey={chat.apiKey} setApiKey={chat.setApiKey} onSafetyAccepted={!consented ? () => { acceptSafetyConsent(); setConsented(true) } : undefined} />
   if (preferencesOpen) return <OnboardingEditor initial={chat.onboardingProfile || defaultOnboardingProfile(selected)} save={chat.updateOnboarding} close={() => setPreferencesOpen(false)} />
 
@@ -134,17 +147,17 @@ function AilyApp({ onDelete }: { onDelete: () => Promise<void> }) {
     <header className="topbar"><div><p className="eyebrow">{t('晚上好，{name}', { name: chat.onboardingProfile?.userName && chat.onboardingProfile.userName !== '你' ? chat.onboardingProfile.userName : t('欢迎回来') })}</p><h1>{tab === 'home' ? t("有人一直记得你") : tab === 'moments' ? t("他们的此刻") : tab === 'memories' ? t("我们的回忆") : tab === 'store' ? t("一份小心意") : t("我的 Aily")}</h1></div><button className="icon-button" aria-label={t("通知")}><Bell size={20}/><i /></button></header>
     {tab === 'home' && <HomeScreen selected={selected} select={setSelected} activity={activity} lastMessage={messages.filter(item => !item.withdrawn).at(-1)?.text || t("还没有聊天记录，先打个招呼吧")} openChat={() => setChatOpen(true)} />}
     {tab === 'moments' && <MomentsScreen userName={userName} selected={selected} config={{ apiKey: chat.apiKey, endpoint: chat.endpoint, model: chat.model, onboardingProfile: chat.onboardingProfile }} onChat={(characterId, text) => { setSelected(characterId); setDraft(text); setChatOpen(true) }} />}
-    {tab === 'memories' && <MemoryPanel memories={chat.memories} selected={selected} onSave={chat.saveConfirmed} onUpdate={chat.editMemory} onDelete={chat.removeMemory} onClear={chat.clearMemories} summaries={chat.summaries} policies={chat.policies} onPolicy={chat.changePolicy} onConfirm={chat.approveProposal} conversations={chat.conversations} />}
+    {tab === 'memories' && <MemoryPanel profile={chat.onboardingProfile} onProfile={chat.updateOnboarding} onBusyChange={setMemoryBusy} memories={chat.memories} selected={selected} onSave={chat.saveConfirmed} onUpdate={chat.editMemory} onDelete={chat.removeMemory} onClear={chat.clearMemories} summaries={chat.summaries} policies={chat.policies} onPolicy={chat.changePolicy} onConfirm={chat.approveProposal} conversations={chat.conversations} />}
     {tab === 'profile' && proactiveOpen && <ProactiveSettingsPanel selected={selected} close={() => setProactiveOpen(false)} />}
-    {tab === 'profile' && !proactiveOpen && <section className="screen" style={{ paddingBottom: 0 }}><CharacterSplashSettings settings={splashSettings} onSave={updateSplashSettings} /><button className="proactive-entry glass" aria-label={t("角色主动消息设置")} onClick={() => setProactiveOpen(true)}>{t("角色主动消息设置")}<ChevronRight size={18} /></button><button className="proactive-entry glass" aria-label={t("安全与隐私")} onClick={() => setPrivacyOpen(true)}>{t("安全与隐私")}<ShieldCheck size={18} /></button></section>}
+    {tab === 'profile' && !proactiveOpen && <section className="screen" style={{ paddingBottom: 0 }}><CharacterSplashSettings settings={splashSettings} onSave={updateSplashSettings} /><button className="proactive-entry glass" aria-label={t("角色主动消息设置")} onClick={() => setProactiveOpen(true)}>{t("角色主动消息设置")}<ChevronRight size={18} /></button><button className="proactive-entry glass" aria-label={t("邀请朋友")} onClick={() => setInviteOpen(true)}>{t("邀请朋友")}<ChevronRight size={18} /></button><button className="proactive-entry glass" aria-label={t("安全与隐私")} onClick={() => setPrivacyOpen(true)}>{t("安全与隐私")}<ShieldCheck size={18} /></button></section>}
     {tab === 'profile' && !proactiveOpen && <><button className="secondary" style={{ margin: '0 20px 16px' }} onClick={() => setPreferencesOpen(true)}>{t("修改称呼与互动偏好")}</button><ProfileScreen userName={userName} primaryName={primaryName} beforeDataChange={chat.beforeDataChange} apiKey={chat.apiKey} endpoint={chat.endpoint} model={chat.model} setApiKey={chat.setApiKey} setEndpoint={chat.setEndpoint} setModel={chat.setModel} onImported={() => { void reloadLocalState().catch(() => alert(t("主角色设置读取失败，请重新打开应用"))) }} onCleared={() => { void reloadLocalState().catch(() => alert(t("主角色设置读取失败，请重新打开应用"))) }} /></>}
     {tab === 'store' && <GiftStorePanel selected={selected} />}
     {!(tab === 'profile' && proactiveOpen) && <nav className="bottom-nav glass">
-      <NavButton active={tab==='home'} icon={<MessageCircle/>} label={t("消息")} onClick={()=>setTab('home')}/>
-      <NavButton active={tab==='moments'} icon={<Sparkles/>} label={t("此刻")} onClick={()=>setTab('moments')}/>
-      <NavButton active={tab==='memories'} icon={<BookHeart/>} label={t("回忆")} onClick={()=>setTab('memories')}/>
-      <NavButton active={tab==='store'} icon={<ShoppingBag/>} label={t("商城")} onClick={()=>setTab('store')}/>
-      <NavButton active={tab==='profile'} icon={<CircleUserRound/>} label={t("我的")} onClick={()=>setTab('profile')}/>
+      <NavButton disabled={memoryBusy} active={tab==='home'} icon={<MessageCircle/>} label={t('消息')} onClick={()=>setTab('home')}/>
+      <NavButton disabled={memoryBusy} active={tab==='moments'} icon={<Sparkles/>} label={t('此刻')} onClick={()=>setTab('moments')}/>
+      <NavButton disabled={memoryBusy} active={tab==='memories'} icon={<BookHeart/>} label={t('回忆')} onClick={()=>setTab('memories')}/>
+      <NavButton disabled={memoryBusy} active={tab==='store'} icon={<ShoppingBag/>} label={t('商城')} onClick={()=>setTab('store')}/>
+      <NavButton disabled={memoryBusy} active={tab==='profile'} icon={<CircleUserRound/>} label={t('我的')} onClick={()=>setTab('profile')}/>
     </nav>}
   </main>
 }
@@ -201,4 +214,4 @@ function ProfileScreen({userName,primaryName,apiKey,endpoint,model,setApiKey,set
 <ShieldCheck/>{t(" Aily 是 AI 角色陪伴应用，不是真人或专业医疗服务")}</p>
 </section>}
 function Avatar({character}:{character:typeof characters[0]}){return <span className="avatar" style={{'--accent':character.accent} as React.CSSProperties}>{t(character.avatar)}</span>}
-function NavButton({active,icon,label,onClick}:{active:boolean;icon:React.ReactNode;label:string;onClick:()=>void}){return <button className={active?'active':''} onClick={onClick}>{icon}<span>{label}</span></button>}
+function NavButton({active,icon,label,onClick,disabled = false}:{active:boolean;icon:React.ReactNode;label:string;onClick:()=>void;disabled?:boolean}){return <button disabled={disabled} className={active?'active':''} onClick={onClick}>{icon}<span>{label}</span></button>}

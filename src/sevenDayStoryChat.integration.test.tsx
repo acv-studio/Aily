@@ -1,14 +1,13 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import App from './App'
-import { db } from './db'
 import { acceptSafetyConsent } from './privacy'
+import { db } from './db'
 import { streamReply } from './chatService'
 vi.mock('./chatService', async () => ({ ...await vi.importActual('./chatService'), streamReply: vi.fn() }))
 beforeEach(async () => {
   localStorage.clear(); sessionStorage.clear(); await db.delete(); await db.open()
-  // Existing adult-consented user fixture; consent gating has separate coverage.
-  localStorage.setItem('aily-safety-consent-v1', 'adult-ai-privacy-accepted')
+  acceptSafetyConsent()
   await db.settings.bulkPut([{ key: 'onboarded', value: true }, { key: 'selected', value: 'lu' }])
   Element.prototype.scrollIntoView = vi.fn()
 })
@@ -22,6 +21,7 @@ it('refreshes story memories without interrupting an active streamed reply', asy
   })
   render(<App />)
   fireEvent.click(await screen.findByRole('button', { name: '与陆听澜继续聊天' }))
+  expect(screen.queryByRole('button', { name: '确认并继续' })).not.toBeInTheDocument()
   fireEvent.change(screen.getByRole('textbox', { name: '发消息' }), { target: { value: '你好' } })
   fireEvent.click(screen.getByRole('button', { name: '发送消息' }))
   await screen.findByText('继续生成的片段')
