@@ -18,7 +18,11 @@ describe('confirmed memory controls', () => {
     const source = { id: 42, from: 'user' as const, text: '一起散步', time: '' }
     const view = render(<MemoryPanel {...props} memories={[event]} conversations={{ lu: [source] }} />)
     fireEvent.click(screen.getByRole('button', { name: '分享回忆卡' }))
-    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    expect(screen.getAllByRole('dialog', { name: '分享回忆卡' })).toHaveLength(1)
+    fireEvent.click(screen.getByRole('button', { name: '关闭分享' }))
+    expect(screen.queryByRole('dialog')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: '分享回忆卡' }))
+    expect(screen.getAllByRole('dialog', { name: '分享回忆卡' })).toHaveLength(1)
     const firstProps = vi.mocked(MemoryShareDialog).mock.calls.at(-1)![0]
     expect(firstProps.canExport()).toBe(true)
     view.rerender(<MemoryPanel {...props} memories={[event]} conversations={{ lu: [{ ...source, withdrawn: true }] }} />)

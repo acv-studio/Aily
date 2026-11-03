@@ -29,8 +29,19 @@ try {
   await page.reload()
   await page.getByRole('button', { name: '回忆', exact: true }).click()
   await page.getByRole('button', { name: '分享回忆卡', exact: true }).click()
-  await page.getByRole('dialog', { name: '分享回忆卡' }).waitFor()
-  await page.getByRole('button', { name: '取消', exact: true }).click()
+  const shareDialog = page.getByRole('dialog', { name: '分享回忆卡' })
+  await shareDialog.waitFor()
+  assert.equal(await shareDialog.count(), 1)
+  if (process.env.CAPTURE_SHARING === '1') {
+    await mkdir('docs/evidence/startup-regression', { recursive: true })
+    await page.screenshot({ path: 'docs/evidence/startup-regression/after.png' })
+  }
+  await shareDialog.getByRole('button', { name: '取消', exact: true }).click()
+  assert.equal(await shareDialog.count(), 0)
+  await page.getByRole('button', { name: '分享回忆卡', exact: true }).click()
+  await shareDialog.waitFor()
+  assert.equal(await shareDialog.count(), 1)
+  await shareDialog.getByRole('button', { name: '取消', exact: true }).click()
   for (const tab of ['此刻', '商城', '我的', '消息']) {
     await page.getByRole('button', { name: tab, exact: true }).click()
   }
