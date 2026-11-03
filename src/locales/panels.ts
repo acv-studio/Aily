@@ -1,4 +1,7 @@
+import { storyGiftEnglish } from './storyGiftEnglish'
+
 export const panelEnglish: Record<string, string> = {
+  ...storyGiftEnglish,
   '关系阶段': 'Relationship stage',
   '与{name}的相处': 'Your relationship with {name}',
   '关系状态': 'Relationship status',
