@@ -26,9 +26,10 @@ export async function deleteLocalProfile(): Promise<void> {
     for (const key of ['aily-api-key']) sessionStorage.removeItem(key)
     for (const key of [consentKey, 'aily-api-endpoint', 'aily-api-model', 'aily-demo-state']) localStorage.removeItem(key)
     await clearAllData()
-    await demoDb.transaction('rw', demoDb.wallet, demoDb.transactions, async () => {
+    await demoDb.transaction('rw', demoDb.wallet, demoDb.transactions, demoDb.storyEvents, async () => {
       await demoDb.wallet.clear()
       await demoDb.transactions.clear()
+      await demoDb.storyEvents.clear()
     })
   })
 }
