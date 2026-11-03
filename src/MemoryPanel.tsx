@@ -3,9 +3,12 @@ import type { ChatMessage, ConfirmedMemory } from './chatService'
 import { defaultMemoryPolicy, semanticScore, type ConversationSummary, type MemoryPolicy } from './longMemory'
 import { characters, type CharacterId } from './data'
 import type { MemoryDraft } from './ChatPanel'
+import RelationshipPanel from './RelationshipPanel'
+import type { OnboardingProfile } from './onboarding'
 
 const categories = { profile: '用户偏好', relationship: '共同经历', context: '近期情境', emotion: '情绪与支持' }
-export default function MemoryPanel({ memories, selected, onSave, onUpdate, onDelete, onClear, summaries = [], policies = {}, onPolicy, onConfirm, conversations = {} }: {
+export default function MemoryPanel({ memories, selected, onSave, onUpdate, onDelete, onClear, summaries = [], policies = {}, onPolicy, onConfirm, conversations = {}, profile, onProfile }: {
+  profile?: OnboardingProfile | null; onProfile?: (profile: OnboardingProfile) => Promise<void>
   summaries?: ConversationSummary[]; policies?: Partial<Record<CharacterId, MemoryPolicy>>
   onPolicy?: (role: CharacterId, policy: MemoryPolicy) => Promise<void>
   onConfirm?: (id: string) => Promise<void>
@@ -34,6 +37,7 @@ export default function MemoryPanel({ memories, selected, onSave, onUpdate, onDe
   return <section className="screen memory-page">
     <div className="memory-intro glass"><h2>由你确认，才会被记住</h2><p>自动识别值得记住的话，先提议再确认；敏感内容必须由你决定。支持本地中英文主题语义匹配，未知表达降级文字检索。</p></div>
     <div className="memory-filters"><label>角色<select aria-label="记忆角色" value={role} onChange={event => setRole(event.target.value as CharacterId)}>{characters.map(character => <option key={character.id} value={character.id}>{character.name}</option>)}</select></label><label>分类<select aria-label="记忆分类筛选" value={category} onChange={event => setCategory(event.target.value)}><option value="all">全部分类</option>{Object.entries(categories).map(([key, value]) => <option key={key} value={key}>{value}</option>)}</select></label></div>
+    <RelationshipPanel key={role} role={role} memories={memories} policy={policy} profile={profile} onSave={onProfile} />
     {onPolicy && <details className="memory-card glass"><summary>记忆与敏感信息控制</summary><label><input type="checkbox" checked={policy.extractionEnabled} disabled={busy} onChange={event => void run(() => onPolicy(role, { ...policy, extractionEnabled: event.target.checked }))} />自动提议与摘要（关闭后仅保留原始聊天）</label>{Object.entries(categories).map(([key, value]) => <label key={key} style={{ display: 'block' }}><input type="checkbox" checked={!policy.disabledCategories.includes(key as MemoryDraft['category'])} disabled={busy} onChange={event => void run(() => onPolicy(role, { ...policy, disabledCategories: event.target.checked ? policy.disabledCategories.filter(item => item !== key) : [...policy.disabledCategories, key as MemoryDraft['category']] }))} />允许{value}记忆</label>)}<p>关闭某类会停止该类的提议、摘要及已有记忆引用；不删除原始聊天。健康、创伤、性和身份等敏感信息不会自动进入摘要。</p></details>}
     <input className="memory-search" aria-label="搜索记忆" placeholder="搜索这位角色的记忆" value={search} onChange={event => setSearch(event.target.value)} />
     <div className="memory-toolbar"><span>{visible.filter(item => item.state !== 'pending').length} 条记忆 · {visible.filter(item => item.state === 'pending').length} 条待确认</span><button onClick={() => { setAdding(true); setEditing(null); setText(''); setNewCategory('profile') }}>＋ 添加记忆</button></div>
