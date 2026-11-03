@@ -2,10 +2,10 @@
 
 真实应用浏览器截图，不是设计稿或合成基线。
 
-- **Before baseline:** `6be4ec8c8cd6e80e05fa800a0b470106cde5cc63` (captured healthy `main` before subsequent voice/privacy integrations).
+- **Before baseline:** `31ab14f2388315414c781410fc3cedce60d7294a` (current `main`, including nine-step onboarding, stories, voice, safety/privacy and profile data transfer).
 - **After:** this ticket branch `agent/character-dynamic-splash-aa3418d8dce7`; the PR description pins the exact reviewed commit.
 - **Matched scenario:** isolated fresh browser → complete all nine onboarding steps with 陆听澜 using default names and local trial chat → open 我的 → reload. Baseline reload enters home; changed reload shows the new splash. No seeded personal chat, credentials, API key, or private conversation content.
-- **Integration context:** subsequent main merges added voice playback and safety/privacy. The changed revision retains those features and integrates the age/AI/data consent into the nine-step welcome; the comparison also records that welcome and the privacy entry in profile. Baseline images remain real captures of the identified prior revision, not a reconstructed mockup.
+- **Integration context:** both revisions include the existing voice, safety/privacy and profile data-transfer features. The changed revision integrates the age/AI/data consent into the nine-step welcome before opening the splash or chat; welcome captures show that placement. Baseline images remain real captures of the identified main revision, not a reconstructed mockup.
 - **Matched environment:** Chromium, viewport 390×844, device scale 1, dark theme, reduced motion, timezone Asia/Shanghai, controlled browser time 2026-11-03 19:00. Profile captures are full-page and therefore have different image heights because settings add content.
 
 ## Before

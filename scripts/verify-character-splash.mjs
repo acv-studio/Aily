@@ -27,6 +27,12 @@ try {
     await page.getByRole('button', { name: '称呼没问题，继续' }).click()
     await page.getByRole('button', { name: '完成引导' }).click()
   }
+  await page.getByRole('button', { name: '我的', exact: true }).or(page.getByRole('button', { name: '确认并继续', exact: true })).waitFor()
+  if (await page.getByRole('button', { name: '确认并继续', exact: true }).isVisible()) {
+    await page.getByRole('checkbox', { name: '我已年满 18 周岁' }).check()
+    await page.getByRole('checkbox', { name: '我理解 AI 身份与数据说明' }).check()
+    await page.getByRole('button', { name: '确认并继续', exact: true }).click()
+  }
   await page.getByRole('button', { name: '我的', exact: true }).click()
   await page.getByText('我的 Aily', { exact: true }).waitFor()
   await page.screenshot({ path: `${evidence}/${before ? 'before' : 'after'}-profile.png`, fullPage: true })

@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 import { db, loadLocalData, saveSetting } from './db'
@@ -83,12 +83,16 @@ describe('character splash entry and settings', () => {
   it('refreshes an already-open scene to current time after returning from background', async () => {
     await returning(); render(<App />)
     await screen.findByRole('button', { name: '跳过，进入消息' })
+    // Flush the async startup commit before simulating browser lifecycle events.
+    await act(async () => {})
     expect(screen.getByText('正在练新菜')).toBeInTheDocument()
-    vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden')
-    fireEvent(document, new Event('visibilitychange'))
-    vi.setSystemTime(new Date(2026, 10, 4, 8))
-    vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible')
-    fireEvent(document, new Event('visibilitychange'))
+    await act(async () => {
+      vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden')
+      fireEvent(document, new Event('visibilitychange'))
+      vi.setSystemTime(new Date(2026, 10, 4, 8))
+      vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible')
+      fireEvent(document, new Event('visibilitychange'))
+    })
     expect(await screen.findByText('正在准备早餐')).toBeInTheDocument()
   })
   it('shows again after a minute away from home, but never replaces active chat', async () => {

@@ -120,8 +120,7 @@ describe('bounded local context and confirmed memory', () => {
     const context = buildContext('lu', history, [])
     expect(context.slice(1).reduce((sum, item) => sum + item.content.length, 0)).toBeLessThanOrEqual(6000)
     expect(context.length).toBeLessThanOrEqual(13)
-    // Mandatory fixed safety instructions are separate from the existing excerpt/profile budget.
-    expect(context[0].content.length - SAFETY_SYSTEM_BOUNDARIES.length).toBeLessThan(1500)
+    expect(context[0].content.length).toBeLessThan(1500)
     const serialized = JSON.stringify(context)
     for (const secret of ['withdrawn-secret', 'failed-secret', 'image-secret', 'audio-secret', 'sending-secret', 'old-0:']) expect(serialized).not.toContain(secret)
     expect(serialized).toContain('LOCAL')

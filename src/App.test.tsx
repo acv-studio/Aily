@@ -24,9 +24,12 @@ describe('Aily core journey', () => {
   it('introduces the memory-first value proposition after loading storage', async () => {
     render(<App />)
     expect(await screen.findByText(/会生长/)).toBeInTheDocument()
-    expect(screen.getByText(/本机优先保存，外部模型另有传输/)).toBeInTheDocument()
+    expect(screen.getByText(/第 1 \/ 9 步 · 初遇/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /遇见 TA/ })).toBeDisabled()
+    expect(screen.getByText(/本机优先保存，外部模型另有传输/)).toBeInTheDocument()
     expect(screen.getByText(/记录保存在当前设备/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /去找他/ })).not.toBeInTheDocument()
+    expect((await loadLocalData()).settings.onboarded).not.toBe(true)
   })
 
   it('lets previously onboarded users add preferences without restarting or switching characters', async () => {
@@ -63,6 +66,8 @@ describe('Aily core journey', () => {
     fireEvent.click(screen.getByRole('button', { name: '继续' }))
     fireEvent.click(screen.getByRole('button', { name: '发送试聊' }))
     fireEvent.click(screen.getByRole('button', { name: '称呼没问题，继续' }))
+    expect(screen.getByText(/必要的聊天片段、相关记忆与互动偏好会直发 DeepSeek/)).toBeInTheDocument()
+    expect(screen.getByText(/API Key 只保留在本次浏览器会话，不包含在备份内/)).toBeInTheDocument()
     expect((await loadLocalData()).settings.onboarded).not.toBe(true)
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: '完成引导' })) })
     await waitFor(() => expect(screen.getAllByText('陈奕恒')).toHaveLength(2))
