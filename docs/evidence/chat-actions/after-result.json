@@ -1,0 +1,12 @@
+{
+  "phase": "after",
+  "revision": "b23199761206b1541fe64c919c695b2b5302cde4",
+  "viewport": "390x844",
+  "theme": "dark",
+  "timezone": "Asia/Shanghai",
+  "syntheticData": true,
+  "hiddenSearchRows": 3,
+  "requests": 2,
+  "pageErrors": [],
+  "result": "Search, quote transport, withdraw, reload and role isolation passed"
+}

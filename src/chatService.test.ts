@@ -202,8 +202,7 @@ describe('bounded local context and confirmed memory', () => {
     const context = buildContext('lu', history, [])
     expect(context.slice(1).reduce((sum, item) => sum + item.content.length, 0)).toBeLessThanOrEqual(6000)
     expect(context.length).toBeLessThanOrEqual(13)
-    // Includes mandatory safety boundaries and bilingual response guidance in addition to bounded excerpts.
-    expect(context[0].content.length).toBeLessThan(2000)
+    expect(context[0].content.length).toBeLessThan(1500 + SAFETY_SYSTEM_BOUNDARIES.length)
     const serialized = JSON.stringify(context)
     for (const secret of ['withdrawn-secret', 'failed-secret', 'image-secret', 'audio-secret', 'sending-secret', 'old-0:']) expect(serialized).not.toContain(secret)
     expect(serialized).toContain('LOCAL')
@@ -332,6 +331,33 @@ describe('safety before network and before rendering', () => {
     const text = req.onDelta.mock.calls.flat().join('')
     expect(text).toContain('本地演示回复')
     expect(text).not.toContain('Only I understand you')
+  })
+})
+
+describe('quoted message context', () => {
+  it('includes an explicit older quote outside the recent context window', () => {
+    const history: ChatMessage[] = [messages[0], ...Array.from({ length: 20 }, (_, index) => ({ id: index + 3, from: 'character' as const, text: `中间消息 ${index}`, time: '' })), { id: 30, from: 'user', text: '按这条来', time: '', replyToId: 1 }]
+    const context = buildContext('lu', history, [], [])
+    expect(context.at(-1)?.content).toContain('引用消息')
+    expect(context.at(-1)?.content).toContain(JSON.stringify({ speaker: 'user', text: messages[0].text }))
+    expect(context.at(-1)?.content).toContain('按这条来')
+  })
+
+  it('never forwards withdrawn, missing, future, failed or attachment quotes', () => {
+    for (const target of [{ ...messages[0], withdrawn: true }, { ...messages[0], kind: 'audio' as const }, { ...messages[0], from: 'character' as const, status: 'failed' as const }, { ...messages[0], id: 99 }]) {
+      const context = buildContext('lu', [target, { id: 30, from: 'user', text: '按这条来', time: '', replyToId: 1 }], [], [])
+      expect(context.at(-1)?.content).toBe('按这条来')
+    }
+    expect(buildContext('lu', [{ id: 30, from: 'user', text: '按这条来', time: '', replyToId: 1 }, messages[0]], [], [])[1].content).toBe('按这条来')
+  })
+
+  it('bounds quote excerpts and the total transport budget without changing raw text', () => {
+    const history: ChatMessage[] = [{ ...messages[0], text: 'x'.repeat(10000) }, ...Array.from({ length: 20 }, (_, index) => ({ id: index + 3, from: 'user' as const, text: 'y'.repeat(500), time: '', replyToId: 1 }))]
+    const before = JSON.stringify(history)
+    const context = buildContext('lu', history, [], [])
+    expect(context.slice(1).reduce((sum, item) => sum + item.content.length, 0)).toBeLessThanOrEqual(6000)
+    expect(context.at(-1)?.content).not.toContain('x'.repeat(601))
+    expect(JSON.stringify(history)).toBe(before)
   })
 })
 

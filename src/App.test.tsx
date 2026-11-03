@@ -2,6 +2,7 @@ import '@testing-library/jest-dom/vitest'
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import App from './App'
+import { acceptSafetyConsent } from './privacy'
 import { db, loadLocalData, saveSetting } from './db'
 import { acceptSafetyConsent } from './privacy'
 
@@ -42,6 +43,7 @@ describe('Aily core journey', () => {
     acceptSafetyConsent()
     await saveSetting('onboarded', true)
     await saveSetting('selected', 'chen')
+    acceptSafetyConsent()
     render(<App />)
     expect(await screen.findByRole('button', { name: '确认并继续' })).toBeDisabled()
     fireEvent.click(screen.getByLabelText('我已年满 18 周岁'))
