@@ -1,0 +1,32 @@
+# 主角色动态屏保视觉验证
+
+真实应用浏览器截图，不是设计稿或合成基线。
+
+- **Before baseline:** `6fc3f97dc54ca9885bf767e43cd0ee754e3470f9` (`main` at ticket start).
+- **After:** this ticket branch `agent/character-dynamic-splash-aa3418d8dce7`; the PR description pins the exact reviewed commit.
+- **Matched scenario:** isolated fresh browser → complete first onboarding with 陆听澜 → open 我的 → reload. Baseline reload enters home; changed reload shows the new splash. No seeded personal chat, credentials, API key, or private conversation content.
+- **Matched environment:** Chromium, viewport 390×844, device scale 1, dark theme, reduced motion, timezone Asia/Shanghai, controlled browser time 2026-11-03 19:00. Profile captures are full-page and therefore have different image heights because settings add content.
+
+## Before
+
+- [Returning to app / home](./before-return.png)
+- [Profile](./before-profile.png)
+
+## After
+
+- [Returning to app / splash](./after-return.png)
+- [Home after skip, same state as baseline home](./after-home.png)
+- [Profile with primary/splash settings](./after-profile.png)
+- [320×740 static, non-personalized splash / 顾辰泽](./after-return-320.png)
+- [320×740 profile settings](./after-settings-320.png)
+
+## Reproduce
+
+```bash
+npm run dev -- --host 127.0.0.1 --port 4193 --strictPort
+node scripts/verify-character-splash.mjs
+# Only on the baseline revision, before implementing the change:
+node scripts/verify-character-splash.mjs --before
+```
+
+The script checks first completion skips splash, returning shows current local activity, direct character chat, primary/preferences persistence, fixed/static welcome, reduced-motion animation suppression, upward swipe, disabled splash, 15-second automatic entry, 320px no horizontal overflow, and zero browser page errors. Separate React integration tests cover privacy, background return without interrupting chat, refreshed scenes across overnight return, and conservative preference-read fallback.
