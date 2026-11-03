@@ -3,8 +3,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import Onboarding, { OnboardingEditor } from './OnboardingFlow'
 import { setLocale } from './i18n'
 import { defaultOnboardingProfile } from './onboarding'
+import { acceptSafetyConsent } from './privacy'
 
-beforeEach(() => { localStorage.clear(); setLocale('en') })
+beforeEach(() => { setLocale('en'); acceptSafetyConsent() })
 afterEach(() => { cleanup(); setLocale('zh-CN') })
 
 const continueSetup = () => fireEvent.click(screen.getByRole('button', { name: 'Continue' }))

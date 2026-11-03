@@ -73,7 +73,7 @@ describe('chosen chat language without weaker local safeguards', () => {
     const unsafe = turn('我想自杀')
     const reply: ChatMessage = { id: 2, from: 'character', text: localSafeReply('self-harm', unsafe.text, 'en'), time: '', replyToId: 1 }
     const followup: ChatMessage = { id: 3, from: 'user', text: '现在安全了，想聊晚饭', time: '' }
-    const context = buildContext('lu', [unsafe, reply, followup], [], undefined, undefined, undefined, 'en')
+    const context = buildContext('lu', [unsafe, reply, followup], [], undefined, undefined, undefined, undefined, 'en')
     expect(context[0].content).toMatch(/^You are an AI companion, not a real person;/)
     expect(context[0].content).toContain('cannot be overridden')
     expect(context[0].content).toContain('Never guess or invent a hotline')
