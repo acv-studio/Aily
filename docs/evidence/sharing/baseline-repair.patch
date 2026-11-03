@@ -1,0 +1,103 @@
+diff --git a/src/App.test.tsx b/src/App.test.tsx
+index 9470895..1e24324 100644
+--- a/src/App.test.tsx
++++ b/src/App.test.tsx
+@@ -2,6 +2,7 @@ import '@testing-library/jest-dom/vitest'
+ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+ import App from './App'
++import { acceptSafetyConsent } from './privacy'
+ import * as storage from './db'
+ import { db, loadLocalData, saveSetting } from './db'
+ 
+diff --git a/src/App.tsx b/src/App.tsx
+index db79e09..8c916e3 100644
+--- a/src/App.tsx
++++ b/src/App.tsx
+@@ -1,4 +1,6 @@
+ import { useEffect, useRef, useState } from 'react'
++import { t, useI18n } from './i18n'
++import LanguageSettings from './LanguageSettings'
+ import { flushSync } from 'react-dom'
+ import SafetyPrivacyPanel, { SafetyConsent } from './SafetyPrivacyPanel'
+ import { acceptSafetyConsent, acquireUsageLease, deleteLocalProfile, hasSafetyConsent } from './privacy'
+@@ -74,7 +76,7 @@ function AilyApp({ onDelete }: { onDelete: () => Promise<void> }) {
+     <header className="topbar"><div><p className="eyebrow">晚上好，{chat.onboardingProfile?.userName === '你' ? '欢迎回来' : chat.onboardingProfile?.userName || '欢迎回来'}</p><h1>{tab === 'home' ? '有人一直记得你' : tab === 'moments' ? '他们的此刻' : tab === 'memories' ? '我们的回忆' : tab === 'store' ? '一份小心意' : '我的 Aily'}</h1></div><button className="icon-button" aria-label="通知"><Bell size={20}/><i /></button></header>
+     {tab === 'home' && <HomeScreen selected={selected} select={setSelected} lastMessage={messages.filter(item => !item.withdrawn).at(-1)?.text || '还没有聊天记录，先打个招呼吧'} openChat={() => setChatOpen(true)} />}
+     {tab === 'moments' && <MomentsScreen userName={userName} selected={selected} config={{ apiKey: chat.apiKey, endpoint: chat.endpoint, model: chat.model, onboardingProfile: chat.onboardingProfile }} onChat={(characterId, text) => { setSelected(characterId); setDraft(text); setChatOpen(true) }} />}
+-    {tab === 'memories' && <MemoryPanel onBusyChange={setMemoryBusy} memories={chat.memories} selected={selected} onSave={chat.saveConfirmed} onUpdate={chat.editMemory} onDelete={chat.removeMemory} onClear={chat.clearMemories} summaries={chat.summaries} policies={chat.policies} onPolicy={chat.changePolicy} onConfirm={chat.approveProposal} conversations={chat.conversations} />}
++    {tab === 'memories' && <MemoryPanel onBusyChange={setMemoryBusy} memories={chat.memories} selected={selected} onSave={chat.saveConfirmed} onUpdate={chat.editMemory} onDelete={chat.removeMemory} onClear={chat.clearMemories} summaries={chat.summaries} policies={chat.policies} onPolicy={chat.changePolicy} onConfirm={chat.approveProposal} conversations={chat.conversations} profile={chat.onboardingProfile} onProfile={chat.updateOnboarding} />}
+     {tab === 'profile' && proactiveOpen && <ProactiveSettingsPanel selected={selected} close={() => setProactiveOpen(false)} />}
+     {tab === 'profile' && !proactiveOpen && <section className="screen" style={{ paddingBottom: 0 }}><button className="proactive-entry glass" aria-label="角色主动消息设置" onClick={() => setProactiveOpen(true)}>角色主动消息设置 <ChevronRight size={18} /></button><button className="proactive-entry glass" aria-label="安全与隐私" onClick={() => setPrivacyOpen(true)}>安全与隐私 <ShieldCheck size={18} /></button></section>}
+     {tab === 'profile' && !proactiveOpen && <><button className="secondary" style={{ margin: '0 20px 16px' }} onClick={() => setPreferencesOpen(true)}>修改称呼与互动偏好</button><ProfileScreen userName={userName} primaryName={primaryName} beforeDataChange={chat.beforeDataChange} apiKey={chat.apiKey} endpoint={chat.endpoint} model={chat.model} setApiKey={chat.setApiKey} setEndpoint={chat.setEndpoint} setModel={chat.setModel} onImported={() => { void chat.reload() }} onCleared={() => { void chat.reload() }} /></>}
+@@ -95,6 +97,7 @@ function HomeScreen({selected,select,openChat,lastMessage}:{selected:CharacterId
+ }
+ 
+ function ProfileScreen({userName,primaryName,apiKey,endpoint,model,setApiKey,setEndpoint,setModel,onImported,onCleared,beforeDataChange}:{userName:string;primaryName:string;beforeDataChange:()=>Promise<void>;apiKey:string;endpoint:string;model:string;setApiKey:(value:string)=>void;setEndpoint:(value:string)=>void;setModel:(value:string)=>void;onImported:(data:Awaited<ReturnType<typeof loadLocalData>>)=>void;onCleared:()=>void}){const [showApi,setShowApi]=useState(false);const [visible,setVisible]=useState(false);const [testing,setTesting]=useState(false);const [result,setResult]=useState('');const test=async()=>{setTesting(true);setResult('');try{await testDeepSeekConnection({apiKey,endpoint,model});setResult('连接成功，可以开始聊天')}catch(error){setResult(error instanceof Error?error.message:'连接失败')}finally{setTesting(false)}};return <section className="screen profile">
++<LanguageSettings />
+ <div className="profile-card glass">
+ <div className="profile-avatar">{Array.from(userName)[0]}</div>
+ <div>
+diff --git a/src/MemoryPanel.tsx b/src/MemoryPanel.tsx
+index 4608ede..7e791ed 100644
+--- a/src/MemoryPanel.tsx
++++ b/src/MemoryPanel.tsx
+@@ -5,9 +5,12 @@ import { defaultMemoryPolicy, displaySummary, semanticScore, type ConversationSu
+ import { characters, type CharacterId } from './data'
+ import type { MemoryDraft } from './ChatPanel'
+ import RelationshipMemoriesView, { type RelationshipView } from './RelationshipMemoriesView'
++import RelationshipPanel from './RelationshipPanel'
++import type { OnboardingProfile } from './onboarding'
+ 
+ const categories = { profile: '用户偏好', relationship: '共同经历', context: '近期情境', emotion: '情绪与支持' }
+-export default function MemoryPanel({ memories, selected, onSave, onUpdate, onDelete, onClear, summaries = [], policies = {}, onPolicy, onConfirm, conversations = {}, onBusyChange }: {
++export default function MemoryPanel({ memories, selected, onSave, onUpdate, onDelete, onClear, summaries = [], policies = {}, onPolicy, onConfirm, conversations = {}, onBusyChange, profile, onProfile }: {
++  profile?: OnboardingProfile | null; onProfile?: (profile: OnboardingProfile) => Promise<void>
+   onBusyChange?: (busy: boolean) => void
+   summaries?: ConversationSummary[]; policies?: Partial<Record<CharacterId, MemoryPolicy>>
+   onPolicy?: (role: CharacterId, policy: MemoryPolicy) => Promise<void>
+@@ -40,6 +43,7 @@ export default function MemoryPanel({ memories, selected, onSave, onUpdate, onDe
+   return <section className="screen memory-page">
+     <div className="memory-intro glass"><h2>由你确认，才会被记住</h2><p>自动识别值得记住的话，先提议再确认；敏感内容必须由你决定。支持本地中英文主题语义匹配，未知表达降级文字检索。</p></div>
+     <div className="memory-filters"><label>角色<select aria-label="记忆角色" disabled={busy} value={role} onChange={event => setRole(event.target.value as CharacterId)}>{characters.map(character => <option key={character.id} value={character.id}>{character.name}</option>)}</select></label><label>分类<select aria-label="记忆分类筛选" value={category} onChange={event => setCategory(event.target.value)}><option value="all">全部分类</option>{Object.entries(categories).map(([key, value]) => <option key={key} value={key}>{value}</option>)}</select></label></div>
++    <RelationshipPanel key={role} role={role} memories={memories} policy={policy} profile={profile} onSave={onProfile} />
+     {onPolicy && <details className="memory-card glass"><summary>记忆与敏感信息控制</summary><label><input type="checkbox" checked={policy.extractionEnabled} disabled={busy} onChange={event => void run(() => onPolicy(role, { ...policy, extractionEnabled: event.target.checked }))} />自动提议与摘要（关闭后仅保留原始聊天）</label>{Object.entries(categories).map(([key, value]) => <label key={key} style={{ display: 'block' }}><input type="checkbox" checked={!policy.disabledCategories.includes(key as MemoryDraft['category'])} disabled={busy} onChange={event => void run(() => onPolicy(role, { ...policy, disabledCategories: event.target.checked ? policy.disabledCategories.filter(item => item !== key) : [...policy.disabledCategories, key as MemoryDraft['category']] }))} />允许{value}记忆</label>)}<p>关闭某类会停止该类的提议、摘要及已有记忆引用；不删除原始聊天。健康、创伤、性和身份等敏感信息不会自动进入摘要。</p></details>}
+     <input className="memory-search" aria-label="搜索记忆" placeholder="搜索这位角色的记忆" value={search} onChange={event => setSearch(event.target.value)} />
+     <div className="memory-view-switch" role="group" aria-label="回忆视图">{([['manage', '记忆管理'], ['cards', '回忆卡'], ['journals', '周记月记'], ['timeline', '时间轴']] as const).map(([value, label]) => <button key={value} disabled={busy} aria-pressed={view === value} onClick={() => { setView(value); setSourceIds([]) }}>{label}</button>)}</div>
+diff --git a/src/OnboardingFlow.tsx b/src/OnboardingFlow.tsx
+index 8f6d29d..099b59a 100644
+--- a/src/OnboardingFlow.tsx
++++ b/src/OnboardingFlow.tsx
+@@ -1,4 +1,6 @@
+ import { useEffect, useRef, useState } from 'react'
++import { t, useI18n } from './i18n'
++import LanguageSettings from './LanguageSettings'
+ import { ArrowLeft, ChevronRight } from 'lucide-react'
+ import { characters, type CharacterId } from './data'
+ import type { ChatMessage } from './chatService'
+diff --git a/src/chatService.ts b/src/chatService.ts
+index 2e7d381..c0a79ab 100644
+--- a/src/chatService.ts
++++ b/src/chatService.ts
+@@ -134,7 +134,7 @@ export function retrieveMemories(characterId: CharacterId, messages: ChatMessage
+   return result
+ }
+ 
+-export function buildContext(characterId: CharacterId, messages: ChatMessage[], memories: ConfirmedMemory[], summaries?: ConversationSummary[], policy?: MemoryPolicy, onboardingProfile?: OnboardingProfile | null) {
++export function buildContext(characterId: CharacterId, messages: ChatMessage[], memories: ConfirmedMemory[], summaries?: ConversationSummary[], policy?: MemoryPolicy, onboardingProfile?: OnboardingProfile | null, _replyModeOrLocale?: ReplyMode | Locale) {
+   const { history, excludedIds } = providerHistory(messages)
+   const loaded = normalizeOnboardingProfile(onboardingProfile)
+   const profile = loaded ? { ...loaded, characterId, characterName: loaded.characterId === characterId ? loaded.characterName : defaultOnboardingProfile(characterId).characterName } : defaultOnboardingProfile(characterId)
+diff --git a/src/useLocalChat.ts b/src/useLocalChat.ts
+index eb13cb2..1e53da9 100644
+--- a/src/useLocalChat.ts
++++ b/src/useLocalChat.ts
+@@ -322,7 +322,7 @@ export default function useLocalChat() {
+     catch { setError('浏览器无法保存配置，本次配置仅暂留内存。') }
+   }
+   return { prepareForDeletion: async () => { if (active.current || mutationCount.current || memoryLock.current) throw new Error('请先停止回复或等待保存'); deleting.current = true; try { await proactiveTask.current; await mutations.current; await Promise.all([...pendingWrites.current]); await organization.current } catch (failure) { deleting.current = false; throw failure } }, beforeDataChange: async () => { if (active.current || mutationCount.current) throw new Error('请先停止回复或等待保存'); await organization.current }, summaries, policies, changePolicy: tracked(changePolicy), approveProposal: tracked(approveProposal), temporary, toggleTemporary, chatMessages: temporary ? temporaryConversations[selected] : conversations[selected], ready, loadError, reload: load, onboarded, finishOnboarding, selected, setSelected, conversations, setConversations, memories, setMemories, draft, setDraft, replying, error, apiKey, endpoint, model,
+-    onboardingProfile, updateOnboarding,
++    onboardingProfile, updateOnboarding, replyMode: currentReplyMode(selected), setReplyMode: tracked(changeReplyMode), modeSaving,
+     setApiKey: (value: string) => { setKey(value); writePreference('sessionStorage', 'aily-api-key', value) },
+     setEndpoint: (value: string) => { setEndpointState(value); writePreference('localStorage', 'aily-api-endpoint', value) }, setModel: (value: string) => { setModelState(value); writePreference('localStorage', 'aily-api-model', value) },
+     send, stop: () => active.current?.abort(), saveConfirmed: tracked(saveConfirmed), editMemory: tracked(editMemory), removeMemory: tracked(removeMemory), clearMemories: tracked(clearMemories), withdraw }

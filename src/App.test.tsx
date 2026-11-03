@@ -3,12 +3,13 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 import * as storage from './db'
+import { acceptSafetyConsent } from './privacy'
 import { db, loadLocalData, saveSetting } from './db'
 
-beforeEach(async () => { localStorage.clear(); sessionStorage.clear(); await db.delete(); await db.open() })
+beforeEach(async () => { window.history.replaceState(null, '', '/'); localStorage.clear(); sessionStorage.clear(); await db.delete(); await db.open() })
 afterEach(() => { cleanup(); vi.restoreAllMocks() })
 
-async function confirmSafetyConsent(name = '确认并继续') {
+async function acceptDisclosure(name = '确认并继续') {
   expect(await screen.findByRole('button', { name })).toBeDisabled()
   fireEvent.click(screen.getByLabelText('我已年满 18 周岁'))
   expect(screen.getByRole('button', { name })).toBeDisabled()
@@ -17,11 +18,24 @@ async function confirmSafetyConsent(name = '确认并继续') {
 }
 
 describe('Aily core journey', () => {
+  it('handles same-document invitation navigation without bypassing consent and preselects the recommended role', async () => {
+    render(<App />)
+    await screen.findByRole('button', { name: '遇见 TA' })
+    act(() => { window.location.hash = '#invite=chen'; window.dispatchEvent(new HashChangeEvent('hashchange')) })
+    expect(await screen.findByRole('heading', { name: '陈奕恒' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '认识这位 AI 角色' }))
+    expect(screen.getByRole('button', { name: '遇见 TA' })).toBeDisabled()
+    expect(window.location.hash).toBe('')
+    await acceptDisclosure('遇见 TA')
+    expect(screen.getByRole('button', { name: /陈奕恒/ })).toHaveAttribute('aria-pressed', 'true')
+    expect((await loadLocalData()).settings.onboarded).not.toBe(true)
+  })
+
   it('keeps application tabs locked until journal persistence settles', async () => {
     await saveSetting('onboarded', true)
     await storage.saveMemory({ id: 'event', characterId: 'lu', category: 'relationship', text: '我们完成海边故事', confirmedAt: '2026-11-01T10:00:00Z' })
     render(<App />)
-    await confirmSafetyConsent()
+    await acceptDisclosure()
     fireEvent.click(await screen.findByRole('button', { name: '回忆' }))
     fireEvent.click(screen.getByRole('button', { name: '周记月记' }))
     fireEvent.click(screen.getByRole('button', { name: '预览并确认' }))
@@ -66,7 +80,6 @@ describe('Aily core journey', () => {
     await saveSetting('selected', 'chen')
     acceptSafetyConsent()
     render(<App />)
-    await confirmSafetyConsent()
     fireEvent.click(await screen.findByRole('button', { name: '我的' }))
     expect(screen.queryByRole('button', { name: '确认并继续' })).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '修改称呼与互动偏好' }))
@@ -80,7 +93,7 @@ describe('Aily core journey', () => {
 
   it('persists character choice in IndexedDB instead of a duplicate localStorage blob', async () => {
     render(<App />)
-    await confirmSafetyConsent('遇见 TA')
+    await acceptDisclosure('遇见 TA')
     fireEvent.click(screen.getByRole('button', { name: /陈奕恒/ }))
     fireEvent.click(screen.getByRole('button', { name: /开始我们的故事/ }))
     expect(screen.getByRole('heading', { name: '先听听我的自我介绍' })).toBeInTheDocument()
