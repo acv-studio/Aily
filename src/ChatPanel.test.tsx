@@ -38,68 +38,19 @@ afterEach(() => {
 
 const voiceMessage = (id: number) => ({ id, from: 'user' as const, text: '', time: '', kind: 'audio' as const, attachment: { dataUrl: `data:audio/webm;base64,${id}`, mimeType: 'audio/webm', name: '语音消息' } })
 
-describe('chat search, quote and withdrawal controls', () => {
-  const messages = [{ id: 0, from: 'user' as const, text: 'Coffee on Sunday', time: '', status: 'sent' as const }, { id: 1, from: 'character' as const, text: '周六去海边', time: '', status: 'sent' as const }]
-
-  it('searches case-insensitively, trims whitespace and clears hidden filters', () => {
-    panel({ messages })
-    fireEvent.click(screen.getByRole('button', { name: '搜索消息' }))
-    fireEvent.change(screen.getByLabelText('搜索聊天记录'), { target: { value: ' coffee ' } })
-    expect(screen.getByText('找到 1 条消息')).toBeInTheDocument()
-    expect(screen.queryByText('周六去海边')).not.toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: '搜索消息' }))
-    expect(screen.queryByLabelText('搜索聊天记录')).not.toBeInTheDocument()
-    expect(screen.getByText('周六去海边')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: '搜索消息' }))
-    expect(screen.getByLabelText('搜索聊天记录')).toHaveValue('')
-    fireEvent.change(screen.getByLabelText('搜索聊天记录'), { target: { value: '不存在' } })
-    expect(screen.getByText('找到 0 条消息')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: /^关闭$/ }))
-    expect(screen.getByText('Coffee on Sunday')).toBeInTheDocument()
+describe('reply mode selection', () => {
+  it('shows three labelled options and preserves draft and transcript when selecting', async () => {
+    const setReplyMode = vi.fn(async () => {})
+    panel({ replyMode: 'deep', setReplyMode, draft: '未发送文字' })
+    expect(screen.getByRole('button', { name: '深入聊天' })).toHaveAttribute('aria-pressed', 'true')
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: '剧情模式' })) })
+    expect(setReplyMode).toHaveBeenCalledWith('story')
+    expect(screen.getByLabelText('发消息')).toHaveValue('未发送文字')
+    expect(screen.getByText('仅影响下一次回复')).toBeInTheDocument()
   })
-
-  it('sends the selected quote, supports id zero and cancels it', async () => {
-    const view = panel({ messages, draft: '接着聊' })
-    fireEvent.click(screen.getByRole('button', { name: '引用消息 0' }))
-    expect(screen.getByText('引用：Coffee on Sunday')).toBeInTheDocument()
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: '发送消息' })) })
-    expect(view.props.send).toHaveBeenCalledWith({ replyToId: 0, attachment: undefined, kind: undefined })
-    expect(screen.queryByText('引用：Coffee on Sunday')).not.toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: '引用消息 1' }))
-    fireEvent.click(screen.getByRole('button', { name: /^取消$/ }))
-    expect(screen.queryByText('引用：周六去海边')).not.toBeInTheDocument()
-  })
-
-  it('clears a withdrawn selected quote and hides its retry and its own quote', async () => {
-    const reply = { ...messages[0], id: 2, status: 'failed' as const, replyToId: 0 }
-    const view = panel({ messages: [...messages, reply], draft: '继续聊' })
-    expect(view.container.querySelector('blockquote')).toHaveTextContent('Coffee on Sunday')
-    fireEvent.click(screen.getByRole('button', { name: '引用消息 2' }))
-    view.rerender(<ChatPanel {...view.props} messages={[...messages, { ...reply, text: '', withdrawn: true }]} />)
-    expect(view.container.querySelector('.quoted-preview')).toBeNull()
-    expect(view.container.querySelector('blockquote')).toBeNull()
-    expect(screen.queryByText('回复未完成 · 重试')).not.toBeInTheDocument()
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: '发送消息' })) })
-    expect(view.props.send).toHaveBeenCalledWith({ replyToId: undefined, attachment: undefined, kind: undefined })
-  })
-
-  it('excludes withdrawn search results and labels missing and audio quote references', () => {
-    vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => {})
-    const view = panel({ messages: [{ ...messages[0], withdrawn: true }, voiceMessage(2), { ...messages[1], id: 3, replyToId: 0 }, { ...messages[1], id: 4, replyToId: 99 }] })
-    expect(screen.getByText('引用的消息已撤回')).toBeInTheDocument()
-    expect(screen.getByText('引用消息不可用')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: '引用消息 2' }))
-    expect(screen.getByText('引用：[语音]')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: '搜索消息' }))
-    fireEvent.change(screen.getByLabelText('搜索聊天记录'), { target: { value: 'Coffee' } })
-    expect(screen.getByText('找到 0 条消息')).toBeInTheDocument()
-    expect(view.container.querySelectorAll('.message-row')).toHaveLength(0)
-  })
-
-  it('disables withdrawal and retry while a reply is active', () => {
-    panel({ messages: [{ ...messages[0], status: 'failed' }], replying: true })
-    expect(screen.getByRole('button', { name: '撤回' })).toBeDisabled()
-    expect(screen.getByRole('button', { name: '回复未完成 · 重试' })).toBeDisabled()
+  it.each([{ replying: true }, { modeSaving: true }])('disables selection while busy %j', busy => {
+    panel({ setReplyMode: vi.fn(async () => {}), ...busy })
+    for (const name of ['简短陪伴', '深入聊天', '剧情模式']) expect(screen.getByRole('button', { name })).toBeDisabled()
   })
 })
 

@@ -6,6 +6,7 @@ import { streamReply, type ChatMessage, type ConfirmedMemory } from './chatServi
 import { clearCharacterMemories, deleteMemory, finishOnboarding as persistFinishOnboarding, updateOnboarding as persistUpdateOnboarding, initializeLocalData, loadRoleConversation, persistChatChanges, saveMemory, saveSetting, updateMemory } from './db'
 import { defaultOnboardingProfile, normalizeOnboardingProfile, type OnboardingProfile } from './onboarding'
 import type { MemoryDraft } from './ChatPanel'
+import { normalizeReplyMode, type ReplyMode } from './replyModes'
 import { deliverProactive } from './proactiveMessages'
 import { archiveExpiredMemories, confirmProposal, db, forgottenSourceIds, loadMemoryPolicy, loadSummaries, saveMemoryPolicy, saveProposals, saveSummaries } from './db'
 import { categoriesFor, conflictMemoryIds, defaultMemoryPolicy, extractCandidates, isSensitive, summarizeConversation, topics, type ConversationSummary, type MemoryPolicy } from './longMemory'
@@ -30,6 +31,30 @@ export default function useLocalChat() {
   const policiesRef = useRef(policies); policiesRef.current = policies
   const [temporary, setTemporary] = useState(false)
   const temporaryRef = useRef(false)
+  const [replyModes, setReplyModes] = useState<Partial<Record<CharacterId, ReplyMode>>>({})
+  const replyModesRef = useRef(replyModes); replyModesRef.current = replyModes
+  const [temporaryReplyModes, setTemporaryReplyModes] = useState<Partial<Record<CharacterId, ReplyMode>>>({})
+  const temporaryReplyModesRef = useRef(temporaryReplyModes); temporaryReplyModesRef.current = temporaryReplyModes
+  const [modeSaving, setModeSaving] = useState(false)
+  const currentReplyMode = (role: CharacterId): ReplyMode => (temporaryRef.current ? temporaryReplyModesRef.current[role] : undefined)
+    || replyModesRef.current[role] || (onboardingProfileRef.current?.chatLength === 'long' ? 'deep' : 'brief')
+  const changeReplyMode = async (mode: ReplyMode) => {
+    if (!ready || active.current || mutationCount.current > 1) throw new Error('请先停止回复或等待保存，再切换回复模式')
+    const role = selectedRef.current
+    const value = normalizeReplyMode(mode)
+    if (temporaryRef.current) {
+      temporaryReplyModesRef.current = { ...temporaryReplyModesRef.current, [role]: value }
+      setTemporaryReplyModes(temporaryReplyModesRef.current)
+      return
+    }
+    setModeSaving(true)
+    try {
+      await saveSetting(`__replyMode:${role}`, value)
+      replyModesRef.current = { ...replyModesRef.current, [role]: value }
+      if (mounted.current) { setReplyModes(replyModesRef.current); setError('') }
+    } catch (failure) { if (mounted.current) setError('回复模式未能保存，仍使用原模式；请重试。'); throw failure }
+    finally { if (mounted.current) setModeSaving(false) }
+  }
   const [temporaryConversations, setTemporaryConversations] = useState(empty)
   const temporaryConversationsRef = useRef(empty())
   const organization = useRef(Promise.resolve())
@@ -69,6 +94,12 @@ export default function useLocalChat() {
       memoriesRef.current = data.memories; setMemories(data.memories)
       const restoredPolicies = Object.fromEntries(await Promise.all(characters.map(async role => [role.id, await loadMemoryPolicy(role.id)])))
       policiesRef.current = restoredPolicies; setPolicies(restoredPolicies)
+      const restoredModes: Partial<Record<CharacterId, ReplyMode>> = {}
+      for (const role of characters) {
+        const setting = await db.settings.get(`__replyMode:${role.id}`)
+        if (setting) restoredModes[role.id] = normalizeReplyMode(setting.value)
+      }
+      replyModesRef.current = restoredModes; setReplyModes(restoredModes)
       setSummaries(data.summaries || [])
       onboardingProfileRef.current = normalizeOnboardingProfile(data.settings.onboardingProfile); setOnboardingProfile(onboardingProfileRef.current)
       setOnboarded(data.settings.onboarded === true); if (characters.some(character => character.id === data.settings.selected)) setSelectedState(data.settings.selected as CharacterId)
@@ -111,6 +142,7 @@ export default function useLocalChat() {
   const toggleTemporary = () => {
     if (deleting.current || active.current || mutationCount.current) { setError('请先停止回复或等待保存，再切换会话模式'); return }
     temporaryRef.current = !temporaryRef.current; setTemporary(temporaryRef.current)
+    temporaryReplyModesRef.current = {}; setTemporaryReplyModes({})
     temporaryConversationsRef.current = empty(); setTemporaryConversations(empty()); setDraft(''); setError('')
   }
   const approveProposal = async (id: string) => {
@@ -131,8 +163,9 @@ export default function useLocalChat() {
     selectedRef.current = id; setSelectedState(id); setDraft(''); setError(''); void observeWrite(saveSetting('selected', id)).catch(() => setError('角色选择未能保存，请重试'))
   }
   const saveOnboarding = async (profile: OnboardingProfile, messages: ChatMessage[], finish: boolean): Promise<void> => {
-    // The tracked public entry point already counts this onboarding mutation.
-    if (!ready || active.current || mutationCount.current > 1) throw new Error('请先停止回复或等待本机数据保存')
+    if (deleting.current) throw new Error('正在删除本机资料，不能继续写入')
+    if (!ready || active.current || mutationCount.current) throw new Error('请先停止回复或等待本机数据保存')
+    mutationCount.current++
     try {
       await organization.current
       const result = await (finish ? persistFinishOnboarding(profile, messages) : persistUpdateOnboarding(profile))
@@ -145,11 +178,12 @@ export default function useLocalChat() {
         setConversations(conversationsRef.current); setMemories(memoriesRef.current); if (finish) setDraft(''); setError('')
       }
     } catch (failure) { if (mounted.current) setError('无法保存引导设置，请检查本机存储权限或设置内容'); throw failure }
+    finally { mutationCount.current-- }
   }
   const finishOnboarding = async (profile?: OnboardingProfile, messages: ChatMessage[] = []): Promise<void> => {
-    await saveOnboarding(profile || onboardingProfileRef.current || defaultOnboardingProfile(selectedRef.current), messages, true)
+    await observeWrite(saveOnboarding(profile || onboardingProfileRef.current || defaultOnboardingProfile(selectedRef.current), messages, true))
   }
-  const updateOnboarding = async (profile: OnboardingProfile): Promise<void> => { await saveOnboarding(profile, [], false) }
+  const updateOnboarding = async (profile: OnboardingProfile): Promise<void> => { await observeWrite(saveOnboarding(profile, [], false)) }
   const apply = (role: CharacterId, records: ChatMessage[]) => {
     if (temporaryRef.current) { temporaryConversationsRef.current = { ...temporaryConversationsRef.current, [role]: records }; if (mounted.current) setTemporaryConversations(temporaryConversationsRef.current); return }
     conversationsRef.current = { ...conversationsRef.current, [role]: records }; if (mounted.current) setConversations(conversationsRef.current)
@@ -184,6 +218,7 @@ export default function useLocalChat() {
     if (deleting.current || !ready || active.current || mutationCount.current) return
     const role = selectedRef.current
     const isTemporary = temporaryRef.current
+    const replyMode = currentReplyMode(role)
     const original = (isTemporary ? temporaryConversationsRef : conversationsRef).current[role]
     const persist = async (id: CharacterId, changed: ChatMessage[]) => {
       if (!isTemporary) return persistChatChanges(id, changed)
@@ -214,7 +249,7 @@ export default function useLocalChat() {
         if (message.from === 'user') lastUserForgotten = !!message.withdrawn || forgotten.has(message.id)
         return !forgotten.has(message.id) && !lastUserForgotten
       })
-      await streamReply({ locale: resolveChatLocale(user.text), characterId: role, onboardingProfile: onboardingProfileRef.current, messages: context, memories: isTemporary ? [] : await db.memories.toArray(), summaries: isTemporary ? [] : await loadSummaries(role), memoryPolicy: await loadMemoryPolicy(role), apiKey, endpoint, model, signal: controller.signal, onDelta: delta => { content += delta; apply(role, [...records, { ...assistant, text: content }]) } })
+      await streamReply({ locale: resolveChatLocale(user.text), characterId: role, replyMode, onboardingProfile: onboardingProfileRef.current, messages: context, memories: isTemporary ? [] : await db.memories.toArray(), summaries: isTemporary ? [] : await loadSummaries(role), memoryPolicy: await loadMemoryPolicy(role), apiKey, endpoint, model, signal: controller.signal, onDelta: delta => { content += delta; apply(role, [...records, { ...assistant, text: content }]) } })
       const completed = await persist(role, [{ ...user, status: 'sent' }, { ...assistant, text: content, status: 'sent' }]); apply(role, completed)
     } catch (failure) {
       const cancelled = controller.signal.aborted
@@ -286,8 +321,10 @@ export default function useLocalChat() {
     try { if (value) window[storage].setItem(key, value); else window[storage].removeItem(key) }
     catch { setError('浏览器无法保存配置，本次配置仅暂留内存。') }
   }
-  return { prepareForDeletion: async () => { if (active.current || mutationCount.current || memoryLock.current) throw new Error('请先停止回复或等待保存'); deleting.current = true; try { await proactiveTask.current; await mutations.current; await Promise.all([...pendingWrites.current]); await organization.current } catch (failure) { deleting.current = false; throw failure } }, beforeDataChange: async () => { if (active.current || mutationCount.current) throw new Error('请先停止回复或等待保存'); await organization.current }, summaries, policies, changePolicy: tracked(changePolicy), approveProposal: tracked(approveProposal), temporary, toggleTemporary, chatMessages: temporary ? temporaryConversations[selected] : conversations[selected], ready, loadError, reload: load, onboarded, onboardingProfile, finishOnboarding: tracked(finishOnboarding), updateOnboarding: tracked(updateOnboarding), selected, setSelected, conversations, setConversations, memories, setMemories, draft, setDraft, replying, error, apiKey, endpoint, model,
+  return { prepareForDeletion: async () => { if (active.current || mutationCount.current || memoryLock.current) throw new Error('请先停止回复或等待保存'); deleting.current = true; try { await proactiveTask.current; await mutations.current; await Promise.all([...pendingWrites.current]); await organization.current } catch (failure) { deleting.current = false; throw failure } }, beforeDataChange: async () => { if (active.current || mutationCount.current) throw new Error('请先停止回复或等待保存'); await organization.current }, summaries, policies, changePolicy: tracked(changePolicy), approveProposal: tracked(approveProposal), temporary, toggleTemporary, chatMessages: temporary ? temporaryConversations[selected] : conversations[selected], ready, loadError, reload: load, onboarded, finishOnboarding, selected, setSelected, conversations, setConversations, memories, setMemories, draft, setDraft, replying, error, apiKey, endpoint, model,
+    onboardingProfile, updateOnboarding,
     setApiKey: (value: string) => { setKey(value); writePreference('sessionStorage', 'aily-api-key', value) },
     setEndpoint: (value: string) => { setEndpointState(value); writePreference('localStorage', 'aily-api-endpoint', value) }, setModel: (value: string) => { setModelState(value); writePreference('localStorage', 'aily-api-model', value) },
+    replyMode: currentReplyMode(selected), setReplyMode: tracked(changeReplyMode), modeSaving,
     send, stop: () => active.current?.abort(), saveConfirmed: tracked(saveConfirmed), editMemory: tracked(editMemory), removeMemory: tracked(removeMemory), clearMemories: tracked(clearMemories), withdraw }
 }

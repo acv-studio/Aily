@@ -6,10 +6,12 @@ import { characters, type CharacterId } from './data'
 import type { MemoryDraft } from './ChatPanel'
 import RelationshipPanel from './RelationshipPanel'
 import type { OnboardingProfile } from './onboarding'
+import RelationshipMemoriesView, { type RelationshipView } from './RelationshipMemoriesView'
 
 const categories = { profile: '用户偏好', relationship: '共同经历', context: '近期情境', emotion: '情绪与支持' }
-export default function MemoryPanel({ memories, selected, onSave, onUpdate, onDelete, onClear, summaries = [], policies = {}, onPolicy, onConfirm, conversations = {}, profile, onProfile }: {
+export default function MemoryPanel({ memories, selected, onSave, onUpdate, onDelete, onClear, summaries = [], policies = {}, onPolicy, onConfirm, conversations = {}, onBusyChange, profile, onProfile }: {
   profile?: OnboardingProfile | null; onProfile?: (profile: OnboardingProfile) => Promise<void>
+  onBusyChange?: (busy: boolean) => void
   summaries?: ConversationSummary[]; policies?: Partial<Record<CharacterId, MemoryPolicy>>
   onPolicy?: (role: CharacterId, policy: MemoryPolicy) => Promise<void>
   onConfirm?: (id: string) => Promise<void>
@@ -22,6 +24,7 @@ export default function MemoryPanel({ memories, selected, onSave, onUpdate, onDe
 }) {
   const { t, locale } = useI18n()
   const [role, setRole] = useState<CharacterId>(selected)
+  const [view, setView] = useState<RelationshipView | 'manage'>('manage')
   const [category, setCategory] = useState('all')
   const [search, setSearch] = useState('')
   const [editing, setEditing] = useState<ConfirmedMemory | null>(null)
@@ -33,15 +36,19 @@ export default function MemoryPanel({ memories, selected, onSave, onUpdate, onDe
   const [sourceIds, setSourceIds] = useState<number[]>([])
   const policy = policies[role] || defaultMemoryPolicy
   const [error, setError] = useState('')
-  const [busy, setBusy] = useState(false)
+  const [busy, setBusyState] = useState(false)
+  const setBusy = (value: boolean) => { setBusyState(value); onBusyChange?.(value) }
   const visible = memories.filter(memory => memory.characterId === role && (category === 'all' || (memory.category || 'profile') === category) && memory.state !== 'rejected' && (!search || memory.text.toLowerCase().includes(search.toLowerCase()) || semanticScore(search, memory.text) > 0)).sort((a, b) => (b.updatedAt || b.confirmedAt).localeCompare(a.updatedAt || a.confirmedAt))
   const run = async (task: () => Promise<void>) => { if (busy) return; setBusy(true); setError(''); try { await task() } catch { setError('本机存储操作失败，数据未更新，请重试') } finally { setBusy(false) } }
   return <section className="screen memory-page">
     <div className="memory-intro glass"><h2>{t('由你确认，才会被记住')}</h2><p>{t('自动识别值得记住的话，先提议再确认；敏感内容必须由你决定。支持本地中英文主题语义匹配，未知表达降级文字检索。')}</p></div>
-    <div className="memory-filters"><label>{t('角色')}<select aria-label={t('记忆角色')} value={role} onChange={event => setRole(event.target.value as CharacterId)}>{characters.map(character => <option key={character.id} value={character.id}>{t(character.name)}</option>)}</select></label><label>{t('分类')}<select aria-label={t('记忆分类筛选')} value={category} onChange={event => setCategory(event.target.value)}><option value="all">{t('全部分类')}</option>{Object.entries(categories).map(([key, value]) => <option key={key} value={key}>{t(value)}</option>)}</select></label></div>
+    <div className="memory-filters"><label>{t('角色')}<select aria-label={t('记忆角色')} disabled={busy} value={role} onChange={event => setRole(event.target.value as CharacterId)}>{characters.map(character => <option key={character.id} value={character.id}>{t(character.name)}</option>)}</select></label><label>{t('分类')}<select aria-label={t('记忆分类筛选')} value={category} onChange={event => setCategory(event.target.value)}><option value="all">{t('全部分类')}</option>{Object.entries(categories).map(([key, value]) => <option key={key} value={key}>{t(value)}</option>)}</select></label></div>
     <RelationshipPanel key={role} role={role} memories={memories} policy={policy} profile={profile} onSave={onProfile} />
     {onPolicy && <details className="memory-card glass"><summary>{t('记忆与敏感信息控制')}</summary><label><input type="checkbox" checked={policy.extractionEnabled} disabled={busy} onChange={event => void run(() => onPolicy(role, { ...policy, extractionEnabled: event.target.checked }))} />{t('自动提议与摘要（关闭后仅保留原始聊天）')}</label>{Object.entries(categories).map(([key, value]) => <label key={key} style={{ display: 'block' }}><input type="checkbox" checked={!policy.disabledCategories.includes(key as MemoryDraft['category'])} disabled={busy} onChange={event => void run(() => onPolicy(role, { ...policy, disabledCategories: event.target.checked ? policy.disabledCategories.filter(item => item !== key) : [...policy.disabledCategories, key as MemoryDraft['category']] }))} />{t('允许{category}记忆', { category: t(value) })}</label>)}<p>{t('关闭某类会停止该类的提议、摘要及已有记忆引用；不删除原始聊天。健康、创伤、性和身份等敏感信息不会自动进入摘要。')}</p></details>}
     <input className="memory-search" aria-label={t('搜索记忆')} placeholder={t('搜索这位角色的记忆')} value={search} onChange={event => setSearch(event.target.value)} />
+    <div className="memory-view-switch" role="group" aria-label="回忆视图">{([['manage', '记忆管理'], ['cards', '回忆卡'], ['journals', '周记月记'], ['timeline', '时间轴']] as const).map(([value, label]) => <button key={value} disabled={busy} aria-pressed={view === value} onClick={() => { setView(value); setSourceIds([]) }}>{label}</button>)}</div>
+    {view !== 'manage' && <RelationshipMemoriesView key={`${role}:${view}`} view={view} role={role} selected={selected} memories={memories} policy={policy} messages={conversations[role] || []} search={search} category={category} onSave={onSave} externalBusy={busy} onBusyChange={setBusy} onManage={() => setView('manage')} />}
+    {view === 'manage' && <>
     <div className="memory-toolbar"><span>{t('{count} 条记忆 · {pending} 条待确认', { count: visible.filter(item => item.state !== 'pending').length, pending: visible.filter(item => item.state === 'pending').length })}</span><button onClick={() => { setAdding(true); setEditing(null); setText(''); setNewCategory('profile') }}>{t('＋ 添加记忆')}</button></div>
     <p className="memory-help">{t('手动添加保存到当前主角色：{name}', { name: t(characters.find(character => character.id === selected)?.name || '') })}</p>
     {error && <p role="alert" className="chat-error">{t(error)}</p>}
@@ -63,6 +70,7 @@ export default function MemoryPanel({ memories, selected, onSave, onUpdate, onDe
     {!!sourceIds.length && <div className="memory-card glass"><h3>{t('原始聊天来源')}</h3>{sourceIds.map(id => <p key={id}>#{id} · {conversations[role]?.find(message => message.id === id && !message.withdrawn)?.text || t('原消息已撤回或不在本机')}</p>)}<button onClick={() => setSourceIds([])}>{t('关闭来源')}</button></div>}
     <p className="memory-help">{t('删除会清除记忆及摘要引用；旧导出备份不受控制，请自行删除旧备份。')}</p>
     <button className="clear-memories" disabled={busy} onClick={() => { if (confirm(t('仅清除{name}的全部长期记忆？聊天记录不受影响。', { name: t(characters.find(character => character.id === role)?.name || '') }))) void run(() => onClear(role)) }}>{t('清除该角色的全部记忆')}</button>
+    </>}
     {(editing || adding) && <div className="memory-modal-overlay"><form className="memory-modal glass" onSubmit={event => { event.preventDefault(); if (!text.trim()) return; void run(async () => { if (editing) await onUpdate(editing.id, { text: text.trim(), category: newCategory, ...(importance !== (editing.importance || 3) ? { importance } : {}), ...(expiresAt !== (editing.expiresAt?.slice(0, 10) || '') ? { expiresAt: expiresAt ? new Date(`${expiresAt}T23:59:59`).toISOString() : undefined } : {}) }); else await onSave({ text: text.trim(), category: newCategory }); setEditing(null); setAdding(false) }) }}>
       <h2>{t(editing ? '纠正长期记忆' : '添加确认记忆')}</h2><p>{t('修改后下次检索即使用新内容，不再引用旧结论。')}</p>
       <textarea aria-label={t('编辑记忆内容')} value={text} onChange={event => setText(event.target.value)} required maxLength={1000} />
