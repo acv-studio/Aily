@@ -31,11 +31,11 @@ describe('Aily core journey', () => {
   it('introduces the memory-first value proposition after loading storage', async () => {
     render(<App />)
     expect(await screen.findByText(/会生长/)).toBeInTheDocument()
-    expect(screen.getByText(/第 1 \/ 9 步 · 初遇/)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /遇见 TA/ })).toBeEnabled()
-    expect(screen.getByText(/AI 角色互动 · 记录保存在当前设备/)).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /去找他/ })).not.toBeInTheDocument()
-    expect((await loadLocalData()).settings.onboarded).not.toBe(true)
+    expect(screen.getByText(/本机优先保存，外部模型另有传输/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /遇见 TA/ })).toBeDisabled()
+    expect(screen.getByLabelText('我已年满 18 周岁')).not.toBeChecked()
+    expect(screen.getByLabelText('我理解 AI 身份与数据说明')).not.toBeChecked()
+    expect(screen.queryByRole('button', { name: /陈奕恒/ })).not.toBeInTheDocument()
   })
 
   it('lets previously onboarded users add preferences without restarting or switching characters', async () => {
@@ -43,7 +43,10 @@ describe('Aily core journey', () => {
     await saveSetting('onboarded', true)
     await saveSetting('selected', 'chen')
     render(<App />)
-    await acceptDisclosure()
+    expect(await screen.findByRole('button', { name: '确认并继续' })).toBeDisabled()
+    fireEvent.click(screen.getByLabelText('我已年满 18 周岁'))
+    fireEvent.click(screen.getByLabelText('我理解 AI 身份与数据说明'))
+    fireEvent.click(screen.getByRole('button', { name: '确认并继续' }))
     fireEvent.click(await screen.findByRole('button', { name: '我的' }))
     fireEvent.click(screen.getByRole('button', { name: '修改称呼与互动偏好' }))
     expect(screen.getByLabelText('你想怎么称呼 TA')).toHaveValue('陈奕恒')
