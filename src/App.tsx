@@ -5,12 +5,14 @@ import { acceptSafetyConsent, acquireUsageLease, deleteLocalProfile, hasSafetyCo
 import { Bell, BookHeart, ChevronRight, CircleUserRound, Home, MemoryStick, MessageCircle, ShieldCheck, ShoppingBag, Sparkles } from 'lucide-react'
 import { characters, type CharacterId } from './data'
 import MomentsScreen from './MomentsScreen'
+import { Bell, BookHeart, ChevronRight, CircleUserRound, Heart, Home, Image, MemoryStick, MessageCircle, MoreHorizontal, Plus, Send, ShieldCheck, ShoppingBag, Sparkles, Volume2 } from 'lucide-react'
+import { characters, moments, type CharacterId } from './data'
 import { testDeepSeekConnection } from './chatService'
-import { clearAllData, db, exportData, importData, loadLocalData } from './db'
+import { db, loadLocalData } from './db'
 import RockPaperScissors from './RockPaperScissors'
 import InteractiveStory from './InteractiveStory'
 import SevenDayStory from './SevenDayStoryPanel'
-import { decryptBackup, encryptBackup } from './cryptoBackup'
+import DataTransferPanel from './DataTransferPanel'
 import ChatPanel from './ChatPanel'
 import MemoryPanel from './MemoryPanel'
 import useLocalChat from './useLocalChat'
@@ -69,6 +71,7 @@ function AilyApp({ onDelete }: { onDelete: () => Promise<void> }) {
 
   return <main className="app-shell">
     <div className="ambient ambient-one" /><div className="ambient ambient-two" />
+    {chat.loadError && <div className="chat-error" role="alert">{chat.loadError}<button onClick={() => void chat.reload()}>重试读取</button></div>}
     <header className="topbar"><div><p className="eyebrow">晚上好，{chat.onboardingProfile?.userName === '你' ? '欢迎回来' : chat.onboardingProfile?.userName || '欢迎回来'}</p><h1>{tab === 'home' ? '有人一直记得你' : tab === 'moments' ? '他们的此刻' : tab === 'memories' ? '我们的回忆' : tab === 'store' ? '一份小心意' : '我的 Aily'}</h1></div><button className="icon-button" aria-label="通知"><Bell size={20}/><i /></button></header>
     {tab === 'home' && <HomeScreen selected={selected} select={setSelected} lastMessage={messages.filter(item => !item.withdrawn).at(-1)?.text || '还没有聊天记录，先打个招呼吧'} openChat={() => setChatOpen(true)} />}
     {tab === 'moments' && <MomentsScreen userName={userName} selected={selected} config={{ apiKey: chat.apiKey, endpoint: chat.endpoint, model: chat.model, onboardingProfile: chat.onboardingProfile }} onChat={(characterId, text) => { setSelected(characterId); setDraft(text); setChatOpen(true) }} />}
@@ -93,6 +96,8 @@ function HomeScreen({selected,select,openChat,lastMessage}:{selected:CharacterId
 }
 
 function ProfileScreen({userName,primaryName,apiKey,endpoint,model,setApiKey,setEndpoint,setModel,onImported,onCleared,beforeDataChange}:{userName:string;primaryName:string;beforeDataChange:()=>Promise<void>;apiKey:string;endpoint:string;model:string;setApiKey:(value:string)=>void;setEndpoint:(value:string)=>void;setModel:(value:string)=>void;onImported:(data:Awaited<ReturnType<typeof loadLocalData>>)=>void;onCleared:()=>void}){const [showApi,setShowApi]=useState(false);const [visible,setVisible]=useState(false);const [testing,setTesting]=useState(false);const [result,setResult]=useState('');const [backupPassword,setBackupPassword]=useState('');const test=async()=>{setTesting(true);setResult('');try{await testDeepSeekConnection({apiKey,endpoint,model});setResult('连接成功，可以开始聊天')}catch(error){setResult(error instanceof Error?error.message:'连接失败')}finally{setTesting(false)}};const download=async()=>{try{await beforeDataChange();const encrypted=await encryptBackup(await exportData(),backupPassword);const blob=new Blob([encrypted],{type:'application/json'});const url=URL.createObjectURL(blob);const anchor=document.createElement('a');anchor.href=url;anchor.download=`aily-backup-${new Date().toISOString().slice(0,10)}.json`;anchor.click();URL.revokeObjectURL(url);setResult('加密备份已导出，API Key 不包含在文件中')}catch(error){setResult(error instanceof Error?error.message:'导出失败')}};const upload=async(file?:File)=>{if(!file)return;if(!window.confirm('导入会替换本机全部聊天和记忆。确认已备份当前数据并继续？'))return;try{await beforeDataChange();const data=await importData(await decryptBackup(await file.text(),backupPassword));onImported(data);setResult('备份导入成功')}catch(error){setResult(error instanceof Error?error.message:'导入失败')}};const clear=async()=>{if(!window.confirm('确定清空本机全部聊天和记忆吗？此操作无法撤销。'))return;try{await beforeDataChange();await clearAllData();onCleared();setResult('本机聊天和记忆已清空')}catch(error){setResult(error instanceof Error?error.message:'清空失败')}};return <section className="screen profile">
+function MomentsScreen({userName,onChat}:{userName:string;onChat:(text:string)=>void}){const [liked,setLiked]=useState<number[]>([]);const [commenting,setCommenting]=useState<number|null>(null);const [draft,setDraft]=useState('');const [comments,setComments]=useState<Record<number,string[]>>({});const submit=(id:number)=>{if(!draft.trim())return;setComments(current=>({...current,[id]:[...(current[id]||[]),draft.trim()]}));setDraft('');setCommenting(null)};return <section className="screen feed"><div className="feed-hero"><p>这一刻，他们也在生活</p><span>所有内容均由 AI 角色生成</span></div>{moments.map((m,i)=><article className="moment glass" key={m.id}><header><span className={`simple-avatar a${i}`}>{m.avatar}</span><div><strong>{m.character}<small>AI</small></strong><time>{m.time}</time></div><MoreHorizontal/></header><p>{m.text}</p><div className={`moment-visual ${m.visual}`}><span>{m.visual==='dinner'?'今晚的晚饭':'18:32 的天空'}</span></div>{(comments[m.id]||[]).map((comment,index)=><div className="moment-comment" key={index}><strong>{userName}</strong> {comment}<p><strong>{m.character}</strong> {i===0?'给你留着，回来趁热吃。':'拍给你看的，勉强还行吧。'}</p><button onClick={()=>onChat(`回复你刚才的动态：“${m.text}”`)}>私聊回应</button></div>)}{commenting===m.id&&<div className="comment-box"><input aria-label="评论内容" value={draft} onChange={event=>setDraft(event.target.value)} placeholder="写下评论…"/><button onClick={()=>submit(m.id)}>发送</button></div>}<footer><button className={liked.includes(m.id)?'liked':''} onClick={()=>setLiked(current=>current.includes(m.id)?current.filter(id=>id!==m.id):[...current,m.id])}><Heart fill={liked.includes(m.id)?'currentColor':'none'}/> {m.likes+(liked.includes(m.id)?1:0)}</button><button onClick={()=>setCommenting(m.id)}><MessageCircle/> {m.comments+(comments[m.id]?.length||0)}</button><button onClick={()=>onChat(`我看到你的动态了：“${m.text}”`)}><Send/></button></footer></article>)}</section>}
+function ProfileScreen({userName,primaryName,apiKey,endpoint,model,setApiKey,setEndpoint,setModel,onImported,onCleared,beforeDataChange}:{userName:string;primaryName:string;beforeDataChange:()=>Promise<void>;apiKey:string;endpoint:string;model:string;setApiKey:(value:string)=>void;setEndpoint:(value:string)=>void;setModel:(value:string)=>void;onImported:(data:Awaited<ReturnType<typeof loadLocalData>>)=>void;onCleared:()=>void}){const [showApi,setShowApi]=useState(false);const [visible,setVisible]=useState(false);const [testing,setTesting]=useState(false);const [result,setResult]=useState('');const test=async()=>{setTesting(true);setResult('');try{await testDeepSeekConnection({apiKey,endpoint,model});setResult('连接成功，可以开始聊天')}catch(error){setResult(error instanceof Error?error.message:'连接失败')}finally{setTesting(false)}};return <section className="screen profile">
 <div className="profile-card glass">
 <div className="profile-avatar">{Array.from(userName)[0]}</div>
 <div>
@@ -134,16 +139,7 @@ function ProfileScreen({userName,primaryName,apiKey,endpoint,model,setApiKey,set
 <div className="api-actions">
 <button className="test-api" onClick={test} disabled={testing}>{testing?'正在测试…':'测试连接'}</button>
 <button onClick={()=>{setApiKey('');setResult('已删除本次会话中的 Key')}}>删除 Key</button>
-</div>{result&&<p className="api-result">{result}</p>}</div>}<div className="data-tools glass">
-<h3>本机数据</h3>
-<p>聊天和记忆保存在当前设备。换机前请导出备份。</p>
-<input className="backup-password" type="password" value={backupPassword} onChange={event=>setBackupPassword(event.target.value)} placeholder="设置或输入备份密码（至少 6 位）"/>
-<div>
-<button onClick={download}>导出备份</button>
-<label>导入备份<input type="file" accept="application/json" onChange={event=>upload(event.target.files?.[0])}/>
-</label>
-<button className="danger" onClick={clear}>清空全部</button>
-</div>{result&&<small>{result}</small>}</div>
+</div>{result&&<p className="api-result">{result}</p>}</div>}<DataTransferPanel beforeDataChange={beforeDataChange} onImported={onImported} onCleared={onCleared} />
 <p className="ai-note">
 <ShieldCheck/> Aily 是 AI 角色陪伴应用，不是真人或专业医疗服务</p>
 </section>}
