@@ -5,18 +5,31 @@ import App from './App'
 import { db, loadLocalData, saveSetting } from './db'
 import { acceptSafetyConsent } from './privacy'
 
-beforeEach(async () => { localStorage.clear(); sessionStorage.clear(); await db.delete(); await db.open() })
+beforeEach(async () => { window.history.replaceState(null, '', '/'); localStorage.clear(); sessionStorage.clear(); await db.delete(); await db.open() })
 afterEach(cleanup)
 
-async function acceptDisclosure() {
-  expect(await screen.findByRole('button', { name: '确认并继续' })).toBeDisabled()
+async function acceptDisclosure(name = '确认并继续') {
+  expect(await screen.findByRole('button', { name })).toBeDisabled()
   fireEvent.click(screen.getByLabelText('我已年满 18 周岁'))
-  expect(screen.getByRole('button', { name: '确认并继续' })).toBeDisabled()
+  expect(screen.getByRole('button', { name })).toBeDisabled()
   fireEvent.click(screen.getByLabelText('我理解 AI 身份与数据说明'))
-  fireEvent.click(screen.getByRole('button', { name: '确认并继续' }))
+  fireEvent.click(screen.getByRole('button', { name }))
 }
 
 describe('Aily core journey', () => {
+  it('handles same-document invitation navigation without bypassing consent and preselects the recommended role', async () => {
+    render(<App />)
+    await screen.findByRole('button', { name: '遇见 TA' })
+    act(() => { window.location.hash = '#invite=chen'; window.dispatchEvent(new HashChangeEvent('hashchange')) })
+    expect(await screen.findByRole('heading', { name: '陈奕恒' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '认识这位 AI 角色' }))
+    expect(screen.getByRole('button', { name: '遇见 TA' })).toBeDisabled()
+    expect(window.location.hash).toBe('')
+    await acceptDisclosure('遇见 TA')
+    expect(screen.getByRole('button', { name: /陈奕恒/ })).toHaveAttribute('aria-pressed', 'true')
+    expect((await loadLocalData()).settings.onboarded).not.toBe(true)
+  })
+
   it('requires new disclosure even when a previous profile is already onboarded', async () => {
     await saveSetting('onboarded', true)
     render(<App />)
@@ -32,8 +45,8 @@ describe('Aily core journey', () => {
     render(<App />)
     expect(await screen.findByText(/会生长/)).toBeInTheDocument()
     expect(screen.getByText(/第 1 \/ 9 步 · 初遇/)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /遇见 TA/ })).toBeEnabled()
-    expect(screen.getByText(/AI 角色互动 · 记录保存在当前设备/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /遇见 TA/ })).toBeDisabled()
+    expect(screen.getByText(/AI 角色互动.*记录保存在当前设备/)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /去找他/ })).not.toBeInTheDocument()
     expect((await loadLocalData()).settings.onboarded).not.toBe(true)
   })
@@ -43,7 +56,6 @@ describe('Aily core journey', () => {
     await saveSetting('onboarded', true)
     await saveSetting('selected', 'chen')
     render(<App />)
-    await acceptDisclosure()
     fireEvent.click(await screen.findByRole('button', { name: '我的' }))
     fireEvent.click(screen.getByRole('button', { name: '修改称呼与互动偏好' }))
     expect(screen.getByLabelText('你想怎么称呼 TA')).toHaveValue('陈奕恒')
@@ -56,7 +68,7 @@ describe('Aily core journey', () => {
 
   it('persists character choice in IndexedDB instead of a duplicate localStorage blob', async () => {
     render(<App />)
-    fireEvent.click(await screen.findByRole('button', { name: /遇见 TA/ }))
+    await acceptDisclosure('遇见 TA')
     fireEvent.click(screen.getByRole('button', { name: /陈奕恒/ }))
     fireEvent.click(screen.getByRole('button', { name: /开始我们的故事/ }))
     expect(screen.getByRole('heading', { name: '先听听我的自我介绍' })).toBeInTheDocument()
@@ -73,7 +85,6 @@ describe('Aily core journey', () => {
     expect(screen.getByText(/API Key 只保留在本次浏览器会话，不包含在备份内/)).toBeInTheDocument()
     expect((await loadLocalData()).settings.onboarded).not.toBe(true)
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: '完成引导' })) })
-    await acceptDisclosure()
     await waitFor(() => expect(screen.getAllByText('陈奕恒')).toHaveLength(2))
     const data = await loadLocalData()
     expect(data.settings.onboardingProfile).toMatchObject({ userName: '小雨', characterName: '阿恒', adultEnabled: false })

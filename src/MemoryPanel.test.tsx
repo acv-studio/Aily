@@ -1,6 +1,8 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import MemoryPanel from './MemoryPanel'
+import { MemoryShareDialog } from './SharingPanel'
+vi.mock('./SharingPanel', () => ({ MemoryShareDialog: vi.fn(({ close }: { close: () => void }) => <div role="dialog" aria-label="分享回忆卡"><button onClick={close}>关闭分享</button></div>) }))
 
 afterEach(cleanup)
 const memories = [{ id: 'm1', characterId: 'lu' as const, text: '不吃辣', category: 'profile' as const, confirmedAt: '2026-11-02T10:00:00Z', enabled: true }, { id: 'm2', characterId: 'chen' as const, text: '喜欢篮球', confirmedAt: '2026-11-02T10:00:00Z' }]
@@ -10,6 +12,28 @@ function setup() {
   return { onSave, onUpdate }
 }
 describe('confirmed memory controls', () => {
+  it('revokes sharing when the source is withdrawn, archived or removed and isolates role switches', () => {
+    const event = { ...memories[0], category: 'relationship' as const, text: '一起散步', sourceMessageId: 42 }
+    const props = { selected: 'lu' as const, onSave: vi.fn(), onUpdate: vi.fn(), onDelete: vi.fn(), onClear: vi.fn() }
+    const source = { id: 42, from: 'user' as const, text: '一起散步', time: '' }
+    const view = render(<MemoryPanel {...props} memories={[event]} conversations={{ lu: [source] }} />)
+    fireEvent.click(screen.getByRole('button', { name: '分享回忆卡' }))
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    const firstProps = vi.mocked(MemoryShareDialog).mock.calls.at(-1)![0]
+    expect(firstProps.canExport()).toBe(true)
+    view.rerender(<MemoryPanel {...props} memories={[event]} conversations={{ lu: [{ ...source, withdrawn: true }] }} />)
+    expect(screen.queryByRole('dialog')).toBeNull(); expect(screen.queryByRole('button', { name: '分享回忆卡' })).toBeNull()
+    view.rerender(<MemoryPanel {...props} memories={[{ ...event, state: 'archived' }]} conversations={{ lu: [source] }} />)
+    expect(screen.queryByRole('dialog')).toBeNull()
+    view.rerender(<MemoryPanel {...props} memories={[]} />)
+    expect(screen.queryByRole('dialog')).toBeNull()
+    view.rerender(<MemoryPanel {...props} memories={[event]} conversations={{ lu: [source] }} />)
+    fireEvent.change(screen.getByLabelText('记忆角色'), { target: { value: 'chen' } })
+    expect(screen.queryByRole('dialog')).toBeNull()
+    fireEvent.change(screen.getByLabelText('记忆角色'), { target: { value: 'lu' } })
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
   it('filters by character and searches local facts', () => {
     setup(); expect(screen.getByRole('heading', { name: '不吃辣' })).toBeInTheDocument(); expect(screen.queryByRole('heading', { name: '喜欢篮球' })).toBeNull()
     fireEvent.change(screen.getByLabelText('记忆角色'), { target: { value: 'chen' } })
