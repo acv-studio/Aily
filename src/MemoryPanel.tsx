@@ -81,6 +81,7 @@ export default function MemoryPanel({ memories, selected, onSave, onUpdate, onDe
     <p className="memory-help">{t('删除会清除记忆及摘要引用；旧导出备份不受控制，请自行删除旧备份。')}</p>
     <button className="clear-memories" disabled={busy} onClick={() => { if (confirm(t('仅清除{name}的全部长期记忆？聊天记录不受影响。', { name: t(characters.find(character => character.id === role)?.name || '') }))) void run(() => onClear(role)) }}>{t('清除该角色的全部记忆')}</button>
     </>}
+    {shareMemory && <MemoryShareDialog key={shareMemory.id} memory={shareMemory} close={() => setShareId(null)} canExport={() => shareableMemory(shareMemory, policies[shareMemory.characterId] || defaultMemoryPolicy, conversations[shareMemory.characterId])} />}
     {(editing || adding) && <div className="memory-modal-overlay"><form className="memory-modal glass" onSubmit={event => { event.preventDefault(); if (!text.trim()) return; void run(async () => { if (editing) await onUpdate(editing.id, { text: text.trim(), category: newCategory, ...(importance !== (editing.importance || 3) ? { importance } : {}), ...(expiresAt !== (editing.expiresAt?.slice(0, 10) || '') ? { expiresAt: expiresAt ? new Date(`${expiresAt}T23:59:59`).toISOString() : undefined } : {}) }); else await onSave({ text: text.trim(), category: newCategory }); setEditing(null); setAdding(false) }) }}>
       <h2>{t(editing ? '纠正长期记忆' : '添加确认记忆')}</h2><p>{t('修改后下次检索即使用新内容，不再引用旧结论。')}</p>
       <textarea aria-label={t('编辑记忆内容')} value={text} onChange={event => setText(event.target.value)} required maxLength={1000} />

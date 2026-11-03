@@ -207,6 +207,16 @@ describe('reply mode context and demo', () => {
     expect(body.messages).toEqual(context)
   })
 
+  it.each(REPLY_MODES)('preserves legacy (mode, locale) calls for %s alongside (locale, mode)', replyMode => {
+    for (const locale of ['zh-CN', 'en'] as const) {
+      const legacy = buildContext('lu', messages, memories, undefined, undefined, undefined, replyMode, locale)
+      const current = buildContext('lu', messages, memories, undefined, undefined, undefined, locale, replyMode)
+      expect(legacy).toEqual(current)
+      expect(buildContext('lu', messages, memories, undefined, undefined, undefined, undefined, locale))
+        .toEqual(buildContext('lu', messages, memories, undefined, undefined, undefined, locale))
+    }
+  })
+
   it('keeps seventh-argument locale callers unchanged when eighth mode is omitted', () => {
     for (const locale of ['zh-CN', 'en'] as const) {
       expect(buildContext('lu', messages, memories, undefined, undefined, undefined, locale))
