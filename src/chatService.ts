@@ -1,4 +1,5 @@
 import { t, translate, getLocale, resolveChatLocale, type Locale } from './i18n'
+import { getRelationship } from './relationship'
 import type { CharacterId } from './data'
 import { assessAssistantOutput, assessUserInput, localSafeReply, MAX_SAFETY_TEXT, SAFETY_SYSTEM_BOUNDARIES } from './safety'
 import { adultAuthorizationAllowed, defaultOnboardingProfile, normalizeOnboardingProfile, type OnboardingProfile } from './onboarding'
