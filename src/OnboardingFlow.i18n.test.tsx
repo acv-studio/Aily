@@ -4,7 +4,7 @@ import Onboarding, { OnboardingEditor } from './OnboardingFlow'
 import { setLocale } from './i18n'
 import { defaultOnboardingProfile } from './onboarding'
 
-beforeEach(() => setLocale('en'))
+beforeEach(() => { localStorage.clear(); setLocale('en') })
 afterEach(() => { cleanup(); setLocale('zh-CN') })
 
 const continueSetup = () => fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
@@ -15,6 +15,8 @@ describe('bilingual onboarding and profile editor', () => {
     render(<Onboarding selected="lu" setSelected={vi.fn()} finish={finish} apiKey="" setApiKey={vi.fn()} />)
     expect(screen.getByLabelText('界面语言 / Interface language')).toHaveValue('en')
     expect(screen.getByText('Step 1 of 9 · First meeting')).toBeInTheDocument()
+    fireEvent.click(screen.getByLabelText('I am at least 18 years old'))
+    fireEvent.click(screen.getByLabelText('I understand the AI identity and data disclosures'))
     fireEvent.click(screen.getByRole('button', { name: 'Meet your companion' }))
     expect(screen.getByText('Lu Tinglan')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Start our story' }))

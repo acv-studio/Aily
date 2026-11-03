@@ -6,7 +6,7 @@ import { acceptSafetyConsent } from './privacy'
 afterEach(cleanup)
 const proceed = () => fireEvent.click(screen.getByRole('button', { name: '继续' }))
 function start() {
-  acceptSafetyConsent()
+  localStorage.clear()
   const finish = vi.fn().mockResolvedValue(undefined)
   render(<Onboarding selected="lu" setSelected={vi.fn()} finish={finish} apiKey="" setApiKey={vi.fn()}/> )
   const encounter = screen.getByRole('button', { name: /遇见 TA/ })

@@ -6,6 +6,7 @@ import {
   toggleSocialLike, watchSocialFeed, type SocialFeedConfig, type SocialPost,
 } from './socialFeed'
 import './socialFeed.css'
+import DailyEventCard from './DailyEventCard'
 
 export default function MomentsScreen({ userName, selected, config, onChat }: {
   userName: string
@@ -72,6 +73,7 @@ export default function MomentsScreen({ userName, selected, config, onChat }: {
 
   return <section className="screen feed">
     <div className="feed-hero"><p>这一刻，他们也在生活</p><span>AI 角色的虚构动态 · 配图为本机示意图</span></div>
+    <DailyEventCard selected={selected} disabled={!!busy} onChat={onChat} />
     <div className="feed-controls glass">
       <label>动态角色<select aria-label="动态角色" value={generationRole} disabled={!!busy} onChange={event => setGenerationRole(event.target.value as CharacterId)}>{characters.map(character => <option key={character.id} value={character.id}>{character.name}</option>)}</select></label>
       <button disabled={!ready || readError || !!busy} onClick={() => void run('generate', signal => generateSocialPost(generationRole, { ...config, signal }))}><Sparkles size={16} />{busy === 'generate' ? '正在生成…' : '生成动态'}</button>

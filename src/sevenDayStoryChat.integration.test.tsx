@@ -7,6 +7,7 @@ import { streamReply } from './chatService'
 vi.mock('./chatService', async () => ({ ...await vi.importActual('./chatService'), streamReply: vi.fn() }))
 beforeEach(async () => {
   localStorage.clear(); sessionStorage.clear(); await db.delete(); await db.open()
+  acceptSafetyConsent()
   await db.settings.bulkPut([{ key: 'onboarded', value: true }, { key: 'selected', value: 'lu' }])
   Element.prototype.scrollIntoView = vi.fn()
 })
