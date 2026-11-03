@@ -1,3 +1,4 @@
+import { t } from './i18n'
 const encoder = new TextEncoder()
 const decoder = new TextDecoder()
 
@@ -13,7 +14,7 @@ async function deriveKey(password: string, salt: Uint8Array, usages: KeyUsage[])
 }
 
 export async function encryptBackup(plainText: string, password: string) {
-  if (password.length < 6) throw new Error('备份密码至少需要 6 位')
+  if (password.length < 6) throw new Error(t('备份密码至少需要 6 位'))
   const salt = crypto.getRandomValues(new Uint8Array(16)); const iv = crypto.getRandomValues(new Uint8Array(12))
   const key = await deriveKey(password, salt, ['encrypt'])
   const cipher = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, encoder.encode(plainText))
@@ -28,5 +29,5 @@ export async function decryptBackup(raw: string, password: string) {
     const key = await deriveKey(password, salt, ['decrypt'])
     const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, base64ToBytes(envelope.data))
     return decoder.decode(plain)
-  } catch { throw new Error('密码错误或备份文件已损坏') }
+  } catch { throw new Error(t('密码错误或备份文件已损坏')) }
 }

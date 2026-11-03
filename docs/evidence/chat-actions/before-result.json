@@ -1,0 +1,12 @@
+{
+  "phase": "before",
+  "revision": "a353b8c46782bd4168f71e9c1b4fa9e38374f522",
+  "viewport": "390x844",
+  "theme": "dark",
+  "timezone": "Asia/Shanghai",
+  "syntheticData": true,
+  "hiddenSearchRows": 0,
+  "requests": 1,
+  "pageErrors": [],
+  "result": "Baseline captured, known defects observed"
+}

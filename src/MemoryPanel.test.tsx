@@ -11,11 +11,11 @@ function setup() {
 }
 describe('confirmed memory controls', () => {
   it('filters by character and searches local facts', () => {
-    setup(); expect(screen.getByText('不吃辣')).toBeInTheDocument(); expect(screen.queryByText('喜欢篮球')).toBeNull()
+    setup(); expect(screen.getByRole('heading', { name: '不吃辣' })).toBeInTheDocument(); expect(screen.queryByRole('heading', { name: '喜欢篮球' })).toBeNull()
     fireEvent.change(screen.getByLabelText('记忆角色'), { target: { value: 'chen' } })
-    expect(screen.getByText('喜欢篮球')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '喜欢篮球' })).toBeInTheDocument()
     fireEvent.change(screen.getByLabelText('搜索记忆'), { target: { value: '不存在' } })
-    expect(screen.queryByText('喜欢篮球')).toBeNull()
+    expect(screen.queryByRole('heading', { name: '喜欢篮球' })).toBeNull()
   })
   it('changes importance and explicit expiry without changing them before save', async () => {
     const { onUpdate } = setup()

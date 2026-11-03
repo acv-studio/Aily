@@ -1,5 +1,6 @@
 import type { ChatMessage, ConfirmedMemory } from './chatService'
 import type { CharacterId } from './data'
+import { detectLanguage, translate, type Locale } from './i18n'
 
 export type MemoryCategory = 'profile' | 'relationship' | 'context' | 'emotion'
 export type MemoryPolicy = { disabledCategories: MemoryCategory[]; extractionEnabled: boolean }
@@ -161,7 +162,7 @@ export function extractCandidates(role: CharacterId, messages: ChatMessage[], ex
     const sensitive = isSensitive(message.text)
     const importance = /记住|remember|我叫|my name|过敏|allerg/i.test(message.text) ? 5 : categoryFor(message.text) === 'profile' ? 4 : 3
     result.push({
-      id, characterId: role, text: message.text.trim(), originalText: message.text,
+      id, characterId: role, text: message.text.trim(), originalText: message.text, language: detectLanguage(message.text),
       sourceMessageId: message.id, confirmedAt: (dateOf(message) || new Date(0)).toISOString(), updatedAt: dateOf(message)?.toISOString(),
       state: 'pending', enabled: false, category: categoryFor(message.text), importance,
       pinned: false, sensitive, conflictIds, topics: topics(message.text),
@@ -178,6 +179,23 @@ export type ConversationSummary = {
   text: string
   sourceMessageIds: number[]
   updatedAt: string
+}
+
+/** Translate only digest structure, never quoted messages or persisted source text. */
+export function displaySummary(summary: ConversationSummary, locale: Locale): string {
+  if (locale === 'zh-CN') return summary.text
+  const lines = summary.text.split('\n')
+  const header = 'LOCAL 本地话题摘要（确定性统计与原文摘录，非 AI 抽象总结）'
+  // Unknown/legacy arbitrary summaries remain original rather than rewriting user text.
+  if (lines[0] !== header) return summary.text
+  return lines.map((line, index) => {
+    if (index === 0) return translate(header, {}, locale)
+    if (index === 1) return line.replace(/(\d+) 条$/, (_, count: string) => translate('{count} 条', { count }, locale))
+    if (index === 2 && line.startsWith('话题 ')) return `${translate('话题', {}, locale)} ${line.slice(3)}`
+    if (index === 3 && line.startsWith('首条 ')) return `${translate('首条', {}, locale)} ${line.slice(3)}`
+    if (index === 4 && line.startsWith('末条 ')) return `${translate('末条', {}, locale)} ${line.slice(3)}`
+    return line
+  }).join('\n')
 }
 
 function periodKey(date: Date, period: ConversationSummary['period']): string {

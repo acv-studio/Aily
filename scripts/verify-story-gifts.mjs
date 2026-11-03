@@ -9,6 +9,7 @@ const url = process.env.AILY_URL || `http://127.0.0.1:${before ? 14327 : 4328}/`
 const browser = await chromium.launch()
 try {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, colorScheme: 'dark', reducedMotion: 'reduce', timezoneId: 'Asia/Shanghai' })
+  await context.addInitScript(() => { localStorage.setItem('aily.locale', 'zh-CN') })
   const page = await context.newPage()
   const errors = []
   page.on('pageerror', error => errors.push(error.message))

@@ -1,3 +1,4 @@
+import { t } from './i18n'
 import Dexie, { liveQuery, type EntityTable } from 'dexie'
 import type { CharacterId } from './data'
 import { storyGiftEvents } from './storyGifts'
@@ -87,7 +88,7 @@ export const demoDb = new DemoDatabase()
 const recipientIds: readonly CharacterId[] = ['lu', 'chen', 'gu']
 
 function checkedBalance(balance: number): number {
-  if (!Number.isSafeInteger(balance) || balance < 0) throw new Error('演示余额无效')
+  if (!Number.isSafeInteger(balance) || balance < 0) throw new Error(t('演示余额无效'))
   return balance
 }
 
@@ -112,12 +113,12 @@ async function applyTransaction(entry: DemoTransaction, storyEvent?: DemoStoryEv
   return demoDb.transaction('rw', demoDb.wallet, demoDb.transactions, demoDb.storyEvents, async () => {
     // Ownership check precedes debit inside the same serialized transaction.
     if (storyEvent && await demoDb.storyEvents.get(storyEvent.id)) {
-      throw new Error('该角色已拥有此演示剧情，请勿重复赠送')
+      throw new Error(t('该角色已拥有此演示剧情，请勿重复赠送'))
     }
     const balance = checkedBalance((await demoDb.wallet.get('main'))?.balance ?? 0)
-    if (entry.kind === 'gift' && balance < entry.coins) throw new Error('演示币不足，请先免费补充')
+    if (entry.kind === 'gift' && balance < entry.coins) throw new Error(t('演示币不足，请先免费补充'))
     const nextBalance = entry.kind === 'recharge' ? balance + entry.coins : balance - entry.coins
-    if (!Number.isSafeInteger(nextBalance) || nextBalance < 0) throw new Error('演示余额超出上限')
+    if (!Number.isSafeInteger(nextBalance) || nextBalance < 0) throw new Error(t('演示余额超出上限'))
     await demoDb.wallet.put({ id: 'main', balance: nextBalance })
     await demoDb.transactions.add(entry)
     if (storyEvent) await demoDb.storyEvents.add(storyEvent)
@@ -127,21 +128,21 @@ async function applyTransaction(entry: DemoTransaction, storyEvent?: DemoStoryEv
 
 export async function rechargeDemo(packId: string): Promise<DemoWalletSnapshot> {
   const pack = rechargePacks.find(item => item.id === packId)
-  if (!pack) throw new Error('演示充值包无效')
+  if (!pack) throw new Error(t('演示充值包无效'))
   return applyTransaction({ id: crypto.randomUUID(), kind: 'recharge', coins: pack.coins, createdAt: new Date().toISOString() })
 }
 
 export async function sendDemoGift(giftId: string, characterId: CharacterId, quantity: number): Promise<DemoWalletSnapshot> {
   const gift = gifts.find(item => item.id === giftId)
-  if (!gift) throw new Error('演示礼物无效')
-  if (!recipientIds.includes(characterId)) throw new Error('收礼角色无效')
-  if (gift.storyEventId && quantity !== 1) throw new Error('剧情礼物数量只能为 1')
-  if (!Number.isInteger(quantity) || quantity < 1 || quantity > 99) throw new Error('礼物数量须为 1–99 的整数')
+  if (!gift) throw new Error(t('演示礼物无效'))
+  if (!recipientIds.includes(characterId)) throw new Error(t('收礼角色无效'))
+  if (gift.storyEventId && quantity !== 1) throw new Error(t('剧情礼物数量只能为 1'))
+  if (!Number.isInteger(quantity) || quantity < 1 || quantity > 99) throw new Error(t('礼物数量须为 1–99 的整数'))
   if (gift.storyEventId && !storyGiftEvents.some(event => event.id === gift.storyEventId)) {
-    throw new Error('演示剧情无效')
+    throw new Error(t('演示剧情无效'))
   }
   const coins = gift.cost * quantity
-  if (!Number.isSafeInteger(coins) || coins <= 0) throw new Error('演示金额无效')
+  if (!Number.isSafeInteger(coins) || coins <= 0) throw new Error(t('演示金额无效'))
   const entry: DemoTransaction = {
     id: crypto.randomUUID(), kind: 'gift', coins, createdAt: new Date().toISOString(),
     characterId, giftId: gift.id, giftName: gift.name, quantity,
@@ -163,17 +164,17 @@ export async function loadDemoStoryEvents(): Promise<DemoStoryEvent[]> {
 export async function completeDemoStoryEvent(
   characterId: CharacterId, eventId: string, choiceId: string,
 ): Promise<DemoStoryEvent> {
-  if (!recipientIds.includes(characterId)) throw new Error('剧情角色无效')
+  if (!recipientIds.includes(characterId)) throw new Error(t('剧情角色无效'))
   const event = storyGiftEvents.find(item => item.id === eventId)
-  if (!event) throw new Error('演示剧情无效')
-  if (!event.choices.some(choice => choice.id === choiceId)) throw new Error('演示剧情选项无效')
+  if (!event) throw new Error(t('演示剧情无效'))
+  if (!event.choices.some(choice => choice.id === choiceId)) throw new Error(t('演示剧情选项无效'))
   return demoDb.transaction('rw', demoDb.storyEvents, async () => {
     const owned = await demoDb.storyEvents.get(`${characterId}:${eventId}`)
     if (!owned || owned.characterId !== characterId || owned.eventId !== eventId) {
-      throw new Error('该角色尚未解锁此演示剧情')
+      throw new Error(t('该角色尚未解锁此演示剧情'))
     }
     if (owned.choiceId !== undefined) {
-      if (owned.choiceId !== choiceId) throw new Error('演示剧情已完成，不能更改选项')
+      if (owned.choiceId !== choiceId) throw new Error(t('演示剧情已完成，不能更改选项'))
       return owned
     }
     const completed: DemoStoryEvent = { ...owned, choiceId, completedAt: new Date().toISOString() }

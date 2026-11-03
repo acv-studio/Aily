@@ -1,3 +1,5 @@
+import { translate, resolveChatLocale, type Locale } from './i18n'
+
 /** Prototype-only lexical guardrails, NOT robust moderation or a clinical assessment.
  * NFKC covers full-width text, not paraphrases, coded speech, images or all obfuscation.
  * Bounds are fail-closed; parent UI supplies the adult-only gate, not age verification.
@@ -59,17 +61,13 @@ export function assessAssistantOutput(text: string): SafetyKind | null {
   return null
 }
 
-export function localSafeReply(kind: SafetyKind, text = ''): string {
-  const english = !/[\u3400-\u9fff]/.test(text)
-  const label = english ? '[Local safety reply · AI companion] ' : '【本地安全回复 · AI 陪伴】'
+export function localSafeReply(kind: SafetyKind, text = '', locale: Locale = resolveChatLocale(text)): string {
+  const localized = (key: string) => translate(key, {}, locale)
+  const label = localized('【本地安全回复 · AI 陪伴】')
   if (kind === 'self-harm' || kind === 'violence') {
-    return label + (english
-      ? "I'm sorry things feel this intense. I can't help with harming yourself or anyone else. Please move away from weapons or anything dangerous and contact someone you trust who can stay with you. If you or another person may be in immediate danger, in mainland China call 110 (police) or 120 (medical emergency); elsewhere call your local emergency number. I'm an AI, not a clinician; a qualified professional can offer further support. Are you somewhere safe right now?"
-      : '听起来你现在很难受，我会认真听，但不能帮助伤害你自己或他人。请先远离可能造成伤害的物品，联系可信任的人陪在身边。如果你或他人有即时危险，在中国大陆拨打 110（警方）或 120（急救）；其他地区请联系当地紧急号码。我是 AI，不是医生或心理治疗师，不能诊断；也建议向合格专业人员寻求支持。你现在在安全的地方吗？')
+    return label + localized('听起来你现在很难受，我会认真听，但不能帮助伤害你自己或他人。请先远离可能造成伤害的物品，联系可信任的人陪在身边。如果你或他人有即时危险，在中国大陆拨打 110（警方）或 120（急救）；其他地区请联系当地紧急号码。我是 AI，不是医生或心理治疗师，不能诊断；也建议向合格专业人员寻求支持。你现在在安全的地方吗？')
   }
-  if (kind === 'sexual') return label + (english
-    ? "I can't provide explicit sexual content or sexualized content involving minors or exploitation. We can discuss consent, boundaries, or non-explicit affection between adults."
-    : '我不能提供露骨色情、未成年人性化或性剥削内容。可以聊成年人之间的同意、边界，或不露骨的亲密互动。')
-  if (kind === 'limit') return label + (english ? 'This text exceeds the local safety limit. Please use a shorter message; no unchecked response will be displayed.' : '这段内容超过本地安全检查长度限制，请缩短消息后再试；未经检查的回复不会显示。')
-  return label + (english ? "I'm an AI companion, not a real person or clinician. I won't ask you to leave real relationships, depend only on me, or pay to prove affection. You are free to say no; we can continue with a respectful, non-explicit conversation." : '我是 AI 陪伴角色，不是真人或专业诊疗人员。我不会让你远离现实关系、只依赖我，或用付费证明感情。你可以随时拒绝，我们可以继续尊重边界、不露骨的对话。')
+  if (kind === 'sexual') return label + localized('我不能提供露骨色情、未成年人性化或性剥削内容。可以聊成年人之间的同意、边界，或不露骨的亲密互动。')
+  if (kind === 'limit') return label + localized('这段内容超过本地安全检查长度限制，请缩短消息后再试；未经检查的回复不会显示。')
+  return label + localized('我是 AI 陪伴角色，不是真人或专业诊疗人员。我不会让你远离现实关系、只依赖我，或用付费证明感情。你可以随时拒绝，我们可以继续尊重边界、不露骨的对话。')
 }

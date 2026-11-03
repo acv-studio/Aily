@@ -3,7 +3,7 @@ import { mkdir } from 'node:fs/promises'
 const browser = await chromium.launch()
 const phase = process.env.AILY_PHASE || 'before'
 try {
-  const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, timezoneId: 'Asia/Shanghai', colorScheme: 'dark' })
+  const page = await browser.newPage({ locale: 'zh-CN', viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, timezoneId: 'Asia/Shanghai', colorScheme: 'dark' })
   await page.goto(process.env.AILY_URL || 'http://127.0.0.1:4174/')
   await page.evaluate(async () => {
     const { clearAllData, saveSetting, saveMemory, saveConversation } = await import('/src/db.ts')
