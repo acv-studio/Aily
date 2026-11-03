@@ -7,9 +7,13 @@ const proceed = () => fireEvent.click(screen.getByRole('button', { name: '继续
 function start() {
   const finish = vi.fn().mockResolvedValue(undefined)
   render(<Onboarding selected="lu" setSelected={vi.fn()} finish={finish} apiKey="" setApiKey={vi.fn()}/> )
+  const encounter = screen.getByRole('button', { name: /遇见 TA/ })
+  expect(encounter).toBeDisabled()
   fireEvent.click(screen.getByLabelText('我已年满 18 周岁'))
+  expect(encounter).toBeDisabled()
   fireEvent.click(screen.getByLabelText('我理解 AI 身份与数据说明'))
-  fireEvent.click(screen.getByRole('button', { name: /遇见 TA/ }))
+  expect(encounter).toBeEnabled()
+  fireEvent.click(encounter)
   fireEvent.click(screen.getByRole('button', { name: /开始我们的故事/ }))
   proceed()
   return finish
