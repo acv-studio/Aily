@@ -2,6 +2,7 @@ import { act, cleanup, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import useLocalChat from './useLocalChat'
 import { db, loadLocalData } from './db'
+import * as storage from './db'
 import { streamReply } from './chatService'
 
 vi.mock('./chatService', async () => ({ ...await vi.importActual('./chatService'), streamReply: vi.fn() }))
@@ -11,6 +12,42 @@ afterEach(() => { cleanup(); vi.restoreAllMocks() })
 async function setup() { const hook = renderHook(useLocalChat); await waitFor(() => expect(hook.result.current.ready).toBe(true)); return hook }
 
 describe('durable chat orchestration', () => {
+  it('rejects an ignored send during proactive persistence so the UI retains pending input', async () => {
+    const hook = await setup()
+    let release!: () => void
+    const gate = new Promise<void>(resolve => { release = resolve })
+    const original = storage.persistChatChanges
+    vi.spyOn(storage, 'persistChatChanges').mockImplementation(async (...args) => { await gate; return original(...args) })
+    let pending!: Promise<void>
+    act(() => { pending = hook.result.current.appendLocalMessage('lu', '【本地定时问候】你好'); hook.result.current.setDraft('不能丢失') })
+    await act(async () => { await expect(hook.result.current.send()).rejects.toThrow('忙碌') })
+    expect(hook.result.current.draft).toBe('不能丢失')
+    expect(stream).not.toHaveBeenCalled()
+    await act(async () => { release(); await pending })
+  })
+  it('keeps unconsented photos local; consented photo failure can retry without duplicate turns', async () => {
+    const hook = await setup()
+    const attachment = { dataUrl: 'data:image/png;base64,aGVsbG8=', mimeType: 'image/png', name: 'test.png' }
+    await act(() => hook.result.current.send({ attachment, kind: 'image' }))
+    expect(stream).not.toHaveBeenCalled()
+    expect(hook.result.current.conversations.lu[0].attachment).toEqual(attachment)
+    stream.mockRejectedValueOnce(new Error('image unavailable'))
+    await act(() => hook.result.current.send({ attachment, kind: 'image', imageConsent: true }))
+    const id = hook.result.current.conversations.lu.filter(message => message.from === 'user').at(-1)!.id
+    expect(stream.mock.calls.at(-1)![0].imageConsent).toBe(true)
+    expect(hook.result.current.error).toContain('支持图片输入')
+    stream.mockImplementation(async request => request.onDelta('看到图片'))
+    await act(() => hook.result.current.send({ retryId: id, imageConsent: true }))
+    expect(hook.result.current.conversations.lu.filter(message => message.from === 'user')).toHaveLength(2)
+    expect(hook.result.current.conversations.lu.at(-1)?.text).toBe('看到图片')
+  })
+  it('persists local proactive messages without paid network calls or duplicate user inputs', async () => {
+    const hook = await setup()
+    await act(() => hook.result.current.appendLocalMessage('chen', '【本机定时问候 · 非 AI 生成】你好'))
+    expect(stream).not.toHaveBeenCalled()
+    expect((await loadLocalData()).conversations.chen?.[0].from).toBe('character')
+    expect(hook.result.current.conversations.lu).toHaveLength(0)
+  })
   it('saves the user turn before the API and preserves failure through reload', async () => {
     const hook = await setup()
     stream.mockImplementation(async () => {

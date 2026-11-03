@@ -46,6 +46,8 @@ export type StreamRequest = {
   signal?: AbortSignal
   timeoutMs?: number
   onDelta: (text: string) => void
+  /** Consent applies only to this image turn, never to historical images. */
+  imageConsent?: boolean
 }
 
 const personas: Record<CharacterId, string> = {
@@ -118,6 +120,24 @@ export function buildContext(characterId: CharacterId, messages: ChatMessage[], 
   ]
 }
 
+export function buildRequestContext(request: Pick<StreamRequest, 'characterId' | 'messages' | 'memories' | 'imageConsent'>) {
+  const context = buildContext(request.characterId, request.messages, request.memories)
+  const latest = request.messages.filter(message => message.from === 'user' && !message.withdrawn).at(-1)
+  if (latest?.kind !== 'image') return context
+  if (!request.imageConsent) throw new Error('请确认将本次图片发送给已配置的模型服务')
+  const image = latest.attachment
+  const match = image?.dataUrl.match(/^data:(image\/(?:png|jpeg|webp|gif));base64,([A-Za-z0-9+/]+={0,2})$/)
+  if (!image || !match || match[1] !== image.mimeType || match[2].length > 4 * 1024 * 1024 || match[2].length % 4 !== 0) {
+    throw new Error('图片格式无效或超过 3MB，请重新选择图片')
+  }
+  const content = [
+    { type: 'text' as const, text: latest.text.slice(-1000) || '请看看这张图片，和我聊聊。' },
+    { type: 'image_url' as const, image_url: { url: image.dataUrl } },
+  ]
+  // Reserve one turn for the current image. Historical attachments stay local.
+  return [...context.slice(0, 1), ...context.slice(1).slice(-11), { role: 'user', content }]
+}
+
 function endpointUrl(endpoint?: string) {
   let url: URL
   try { url = new URL(endpoint || 'https://api.deepseek.com/chat/completions') } catch { throw new Error('API 地址无效') }
@@ -169,7 +189,12 @@ export async function testDeepSeekConnection(config: { apiKey: string; endpoint?
 }
 
 export async function streamReply(request: StreamRequest) {
-  if (!request.apiKey?.trim()) return demoReply(request)
+  const latest = request.messages.filter(message => message.from === 'user' && !message.withdrawn).at(-1)
+  if (!request.apiKey?.trim()) {
+    if (latest?.kind === 'image') throw new Error('请先配置有效 API Key 和支持识图的模型；演示模式不能识图')
+    return demoReply(request)
+  }
+  const context = buildRequestContext(request)
   const endpoint = endpointUrl(request.endpoint)
   const run = lifecycle(request.signal, request.timeoutMs)
   let reader: ReadableStreamDefaultReader<Uint8Array> | undefined
@@ -179,6 +204,7 @@ export async function streamReply(request: StreamRequest) {
     const response = await abortable(fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${request.apiKey.trim()}` },
+      body: JSON.stringify({ model: request.model || 'deepseek-chat', stream: true, messages: context }),
       body: JSON.stringify({ model: request.model || 'deepseek-chat', stream: true, messages: buildContext(request.characterId, request.messages, request.memories, request.summaries, request.memoryPolicy) }),
       signal: run.signal,
     }), run.signal)
