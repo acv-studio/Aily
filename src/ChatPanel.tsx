@@ -3,6 +3,8 @@ import { ArrowLeft, Search, Send, Square, Image as ImageIcon, Mic, Quote, X } fr
 import type { Character } from './data'
 import type { ChatMessage, ConfirmedMemory } from './chatService'
 import VoicePlayer from './VoicePlayer'
+import { REPLY_MODES, REPLY_MODE_LABELS, REPLY_MODE_DESCRIPTIONS, type ReplyMode } from './replyModes'
+import './replyModes.css'
 
 export type MemoryDraft = { text: string; category: NonNullable<ConfirmedMemory['category']>; sourceMessageId?: number }
 export interface ChatPanelProps {
@@ -17,6 +19,9 @@ export interface ChatPanelProps {
   stop: () => void
   replying: boolean
   error: string
+  replyMode?: ReplyMode
+  setReplyMode?: (mode: ReplyMode) => Promise<void>
+  modeSaving?: boolean
   temporary?: boolean
   toggleTemporary?: () => void
   pendingCount?: number
@@ -139,6 +144,10 @@ export default function ChatPanel(props: ChatPanelProps) {
       <button className="icon-button" aria-label="搜索消息" onClick={() => setSearchOpen(!searchOpen)}><Search /></button>
     </header>
     {props.toggleTemporary && <div className="chat-notice"><span>{props.temporary ? '临时会话：不落盘、不提取或引用记忆；退出模式后清除。请求仍发送到所配置的模型服务。' : `自动提议记忆需你确认${props.pendingCount ? ` · ${props.pendingCount} 条待确认，请到回忆页查看` : ''}`}</span><button disabled={replying} onClick={() => { setMemory(undefined); setQuote(undefined); setSearch(''); setAttachment(undefined); props.toggleTemporary?.() }}>{props.temporary ? '结束临时会话' : '临时会话'}</button></div>}
+    {props.setReplyMode && <section className="reply-mode-picker" aria-label="回复模式">
+      <div className="reply-mode-options" role="group" aria-label="选择回复模式">{REPLY_MODES.map(mode => <button key={mode} type="button" aria-pressed={(props.replyMode || 'brief') === mode} disabled={replying || props.modeSaving} onClick={() => { void props.setReplyMode?.(mode).catch(() => setNotice('回复模式未切换，请停止回复或检查本机存储后重试。')) }}>{REPLY_MODE_LABELS[mode]}</button>)}</div>
+      <p>{props.modeSaving ? '正在保存回复模式…' : REPLY_MODE_DESCRIPTIONS[props.replyMode || 'brief']}<span>仅影响下一次回复{props.temporary ? ' · 本次临时会话有效' : ''}</span></p>
+    </section>}
     {searchOpen && <div className="chat-search"><input aria-label="搜索聊天记录" placeholder="搜索当前角色的聊天记录" value={search} onChange={event => setSearch(event.target.value)} /><button onClick={() => { setSearch(''); setSearchOpen(false) }}>关闭</button></div>}
     <section className="messages" aria-label="聊天记录" aria-live="polite">
       {messages.length === 0 && <p className="chat-empty">从今天开始认识彼此。先说声你好吧。</p>}

@@ -68,6 +68,64 @@ describe('onboarding hook integration', () => {
   })
 })
 
+describe('reply-mode orchestration', () => {
+  it('persists modes per role and passes the selected mode on send and retry', async () => {
+    const hook = await setup()
+    expect(hook.result.current.replyMode).toBe('brief')
+    await act(() => hook.result.current.setReplyMode('story'))
+    act(() => hook.result.current.setSelected('chen'))
+    expect(hook.result.current.replyMode).toBe('brief')
+    await act(() => hook.result.current.setReplyMode('deep'))
+    stream.mockRejectedValueOnce(new Error('network'))
+    act(() => hook.result.current.setDraft('你好'))
+    await act(() => hook.result.current.send())
+    expect(stream.mock.calls.at(-1)![0].replyMode).toBe('deep')
+    const id = hook.result.current.chatMessages.find(item => item.from === 'user')!.id
+    await act(() => hook.result.current.setReplyMode('brief'))
+    stream.mockImplementation(async request => request.onDelta('好'))
+    await act(() => hook.result.current.send({ retryId: id }))
+    expect(stream.mock.calls.at(-1)![0].replyMode).toBe('brief')
+    expect(hook.result.current.chatMessages.filter(item => item.from === 'user')).toHaveLength(1)
+    hook.unmount()
+    const restored = await setup()
+    act(() => restored.result.current.setSelected('lu'))
+    expect(restored.result.current.replyMode).toBe('story')
+  })
+  it('keeps temporary changes in memory and restores the regular mode', async () => {
+    const hook = await setup()
+    await act(() => hook.result.current.setReplyMode('story'))
+    act(() => hook.result.current.toggleTemporary())
+    await act(() => hook.result.current.setReplyMode('deep'))
+    expect(hook.result.current.replyMode).toBe('deep')
+    expect((await db.settings.get('__replyMode:lu'))?.value).toBe('story')
+    act(() => hook.result.current.toggleTemporary())
+    expect(hook.result.current.replyMode).toBe('story')
+  })
+  it('uses the old length preference until a mode is explicitly chosen and keeps failed saves unchanged', async () => {
+    const hook = await setup()
+    await act(() => hook.result.current.finishOnboarding({ ...defaultOnboardingProfile('lu'), chatLength: 'long' }))
+    expect(hook.result.current.replyMode).toBe('deep')
+    vi.spyOn(db.settings, 'put').mockRejectedValueOnce(new Error('quota'))
+    await act(async () => { await expect(hook.result.current.setReplyMode('story')).rejects.toThrow('quota') })
+    expect(hook.result.current.replyMode).toBe('deep')
+    expect(hook.result.current.error).toContain('仍使用原模式')
+    expect(hook.result.current.modeSaving).toBe(false)
+  })
+  it('rejects mode changes while replying without changing the captured request', async () => {
+    const hook = await setup()
+    let finish!: () => void
+    stream.mockImplementation(async () => new Promise<void>(resolve => { finish = resolve }))
+    act(() => hook.result.current.setDraft('你好'))
+    let pending!: Promise<void>
+    act(() => { pending = hook.result.current.send() })
+    await waitFor(() => expect(stream).toHaveBeenCalled())
+    await expect(hook.result.current.setReplyMode('story')).rejects.toThrow('请先停止回复')
+    expect(stream.mock.calls[0][0].replyMode).toBe('brief')
+    await act(async () => { finish(); await pending })
+    expect(hook.result.current.replyMode).toBe('brief')
+  })
+})
+
 describe('durable chat orchestration', () => {
   it('blocks deletion during an uncompleted policy write and rejects new writes after draining', async () => {
     const hook = await setup()
