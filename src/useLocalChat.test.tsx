@@ -13,6 +13,23 @@ afterEach(() => { cleanup(); vi.restoreAllMocks() })
 async function setup() { const hook = renderHook(useLocalChat); await waitFor(() => expect(hook.result.current.ready).toBe(true)); return hook }
 
 describe('onboarding hook integration', () => {
+  it('blocks deletion during onboarding writes and rejects onboarding after deletion begins', async () => {
+    const hook = await setup()
+    let unblock!: () => void
+    const delayed = new Promise<void>(resolve => { unblock = resolve })
+    const original = db.settings.bulkPut.bind(db.settings)
+    const write = vi.spyOn(db.settings, 'bulkPut').mockImplementation((...args) => Dexie.Promise.resolve(delayed).then(() => original(...args)))
+    let pending!: Promise<void>
+    act(() => { pending = hook.result.current.finishOnboarding() })
+    await expect(hook.result.current.prepareForDeletion()).rejects.toThrow('等待保存')
+    await expect(hook.result.current.updateOnboarding(defaultOnboardingProfile('lu'))).rejects.toThrow('等待本机数据保存')
+    unblock()
+    await act(() => pending)
+    write.mockRestore()
+    await act(() => hook.result.current.prepareForDeletion())
+    await expect(hook.result.current.finishOnboarding()).rejects.toThrow('正在删除')
+    await expect(hook.result.current.updateOnboarding(defaultOnboardingProfile('lu'))).rejects.toThrow('正在删除')
+  })
   it('finishes atomically, exposes profile and restores settings and trial after remount', async () => {
     const hook = await setup()
     expect(hook.result.current.onboardingProfile).toBeNull()

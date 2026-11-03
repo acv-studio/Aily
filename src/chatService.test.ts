@@ -301,7 +301,11 @@ describe('bounded local context and confirmed memory', () => {
     const context = buildContext('lu', history, [])
     expect(context.slice(1).reduce((sum, item) => sum + item.content.length, 0)).toBeLessThanOrEqual(6000)
     expect(context.length).toBeLessThanOrEqual(13)
+    // The reconciled single system message includes safety, onboarding defaults and excerpts.
+    expect(context.filter(item => item.role === 'system')).toHaveLength(1)
     expect(context[0].content.length).toBeLessThan(1500 + SAFETY_SYSTEM_BOUNDARIES.length)
+    expect(context[0].content).toContain('安全与偏好优先于人设')
+    expect(context[0].content).toContain('成人模式关闭')
     const serialized = JSON.stringify(context)
     for (const secret of ['withdrawn-secret', 'failed-secret', 'image-secret', 'audio-secret', 'sending-secret', 'old-0:']) expect(serialized).not.toContain(secret)
     expect(serialized).toContain('LOCAL')
