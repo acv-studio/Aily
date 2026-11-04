@@ -20,7 +20,10 @@ it('removes both databases and only Aily preferences, without resurrecting legac
   localStorage.setItem('aily-demo-state', '{}'); localStorage.setItem('aily-api-model', 'custom')
   localStorage.setItem('unrelated', 'keep'); sessionStorage.setItem('aily-api-key', 'secret')
   localStorage.setItem('aily.locale', 'en'); localStorage.setItem('aily.chatLocale', 'zh-CN')
+  const desktopKeys = ['aily-desktop-ledger', 'aily-desktop-contacts', 'aily-desktop-diary']
+  desktopKeys.forEach(key => localStorage.setItem(key, '[{"private":"data"}]'))
   await deleteLocalProfile()
+  desktopKeys.forEach(key => expect(localStorage.getItem(key)).toBeNull())
   expect(await db.messages.count()).toBe(0); expect(await db.memories.count()).toBe(0)
   expect(await db.summaries.count()).toBe(0); expect(await demoDb.wallet.count()).toBe(0)
   expect(await demoDb.transactions.count()).toBe(0)

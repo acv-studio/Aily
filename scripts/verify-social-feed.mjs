@@ -25,7 +25,7 @@ try {
     }
   }, before)
   await page.reload()
-  await page.getByRole('button', { name: '此刻', exact: true }).click()
+  await page.getByRole('button', { name: '朋友圈', exact: true }).click()
   await page.locator('.moment').first().waitFor()
   await page.screenshot({ path: `${evidence}/${before ? 'before' : 'after'}-feed.png` })
   if (!before) {
@@ -41,10 +41,10 @@ try {
     await page.locator('.chat-header strong').filter({ hasText: '陈奕恒' }).waitFor()
     assert.match(await page.getByRole('textbox', { name: '发消息' }).inputValue(), /这片云很好看/)
     await page.getByRole('button', { name: '返回消息' }).click()
-    await page.getByRole('button', { name: '此刻', exact: true }).click()
+    await page.getByRole('button', { name: '朋友圈', exact: true }).click()
     await card.getByRole('button', { name: '取消点赞', exact: true }).waitFor()
     await page.reload()
-    await page.getByRole('button', { name: '此刻', exact: true }).click()
+    await page.getByRole('button', { name: '朋友圈', exact: true }).click()
     await card.getByRole('button', { name: '取消点赞', exact: true }).waitFor()
     await card.getByText('这片云很好看', { exact: true }).waitFor()
     await page.getByRole('combobox', { name: '动态角色' }).selectOption('gu')
@@ -54,7 +54,7 @@ try {
     assert.match(await page.locator('.moment').first().textContent(), /顾辰泽/)
     const other = await context.newPage()
     await other.goto(url)
-    await other.getByRole('button', { name: '此刻', exact: true }).click()
+    await other.getByRole('button', { name: '朋友圈', exact: true }).click()
     const otherCard = other.locator('.moment').filter({ hasText: '陈奕恒' }).first()
     await otherCard.getByRole('button', { name: '取消点赞', exact: true }).click()
     await card.getByRole('button', { name: '点赞', exact: true }).waitFor()
@@ -81,7 +81,7 @@ try {
       await route.fulfill({ contentType: 'text/event-stream', body: `data: ${JSON.stringify({ choices: [{ delta: { content: reply } }] })}\n\ndata: [DONE]\n\n` })
     })
     await page.reload()
-    await page.getByRole('button', { name: '此刻', exact: true }).click()
+    await page.getByRole('button', { name: '朋友圈', exact: true }).click()
     await page.getByRole('combobox', { name: '动态角色' }).selectOption('gu')
     await page.locator('.moment').first().waitFor()
     const beforeAI = await page.locator('.moment').count()
@@ -110,7 +110,7 @@ try {
       assert.doesNotMatch(JSON.stringify(request), /PRIVATE_BROWSER_CHAT|PRIVATE_BROWSER_MEMORY/)
     }
     await page.reload()
-    await page.getByRole('button', { name: '此刻', exact: true }).click()
+    await page.getByRole('button', { name: '朋友圈', exact: true }).click()
     await page.locator('.moment').first().getByText('AI 生成回应', { exact: true }).waitFor()
   }
   assert.deepEqual(errors, [])

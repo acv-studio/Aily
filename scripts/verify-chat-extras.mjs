@@ -1,0 +1,63 @@
+import assert from 'node:assert/strict'
+import { mkdir } from 'node:fs/promises'
+import { chromium } from 'playwright'
+
+const browser = await chromium.launch()
+try {
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 }, timezoneId: 'Asia/Shanghai', reducedMotion: 'reduce' })
+  const errors = []
+  page.on('pageerror', error => errors.push(error.message))
+  await page.goto('http://127.0.0.1:4175/')
+  // Isolated browser fixture; never reads or alters the user's browser profile.
+  await page.evaluate(async () => {
+    const { saveSetting } = await import('/src/db.ts')
+    await saveSetting('onboarded', true)
+    await saveSetting('selected', 'lu')
+    localStorage.setItem('aily.locale', 'zh-CN')
+    localStorage.setItem('aily-safety-consent-v1', 'adult-ai-privacy-accepted')
+  })
+  await page.reload()
+  await page.getByRole('button', { name: '与陆听澜聊天', exact: true }).waitFor()
+  assert.equal(await page.getByRole('button', { name: '商城', exact: true }).count(), 0)
+  assert.equal(await page.locator('.topbar button').count(), 0)
+  await page.getByRole('button', { name: '与陆听澜聊天', exact: true }).click()
+  const more = page.getByRole('button', { name: '更多发送选项', exact: true })
+  await more.click()
+  for (const name of ['照片', '视频', '表情', '经期记录', '送礼物']) await page.getByRole('button', { name, exact: true }).waitFor()
+  await mkdir('/Users/bytedance/daily/Aily/evidence/chat-extras', { recursive: true })
+  await page.screenshot({ path: '/Users/bytedance/daily/Aily/evidence/chat-extras/menu-4175.png' })
+  const footer = await page.locator('.composer').boundingBox()
+  await page.screenshot({ path: '/Users/bytedance/daily/Aily/evidence/chat-extras/menu-detail-4175.png', clip: { x: 0, y: Math.floor(footer.y), width: 390, height: 844 - Math.floor(footer.y) } })
+  await page.getByRole('button', { name: '经期记录', exact: true }).click()
+  const period = page.getByRole('dialog', { name: '经期记录', exact: true })
+  await period.waitFor()
+  await period.getByLabel('开始日期', { exact: true }).fill('2026-11-01')
+  await period.getByLabel('结束日期（选填）', { exact: true }).fill('2026-11-03')
+  await period.getByRole('button', { name: '保存经期记录', exact: true }).click()
+  await period.getByText('经期记录已保存在本机。', { exact: true }).waitFor()
+  await page.screenshot({ path: '/Users/bytedance/daily/Aily/evidence/chat-extras/period-4175.png' })
+  await period.getByRole('button', { name: '返回聊天', exact: true }).click()
+  assert.equal(await page.getByRole('button', { name: '经期记录', exact: true }).evaluate(el => el === document.activeElement), true)
+  await page.getByRole('button', { name: '送礼物', exact: true }).click()
+  const gifts = page.getByRole('dialog', { name: '送礼物', exact: true })
+  await gifts.getByText('不扣款演示', { exact: true }).waitFor()
+  assert.equal(await gifts.getByLabel('礼物接收角色').inputValue(), 'lu')
+  await gifts.getByRole('button', { name: '返回聊天', exact: true }).click()
+  assert.equal(await page.locator('.message-row').count(), 0)
+  await page.reload()
+  await page.getByRole('button', { name: '与陆听澜聊天', exact: true }).click()
+  await page.getByRole('button', { name: '更多发送选项', exact: true }).click()
+  await page.getByRole('button', { name: '经期记录', exact: true }).click()
+  await page.getByRole('dialog').getByRole('button', { name: '删除 2026-11-01 的经期记录', exact: true }).waitFor()
+  await page.keyboard.press('Escape')
+  await page.setViewportSize({ width: 320, height: 568 })
+  for (const name of ['经期记录', '送礼物']) {
+    const button = page.getByRole('button', { name, exact: true })
+    await button.scrollIntoViewIfNeeded()
+    const box = await button.boundingBox()
+    assert.ok(box.y >= 0 && box.y + box.height <= 568)
+  }
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true)
+  assert.deepEqual(errors, [])
+  console.log('PASS 4175: all five entries visible, period save and reload persistence, gifts target current character, modal focus restoration, no unintended chat messages, 320px layout, no browser errors.')
+} finally { await browser.close() }

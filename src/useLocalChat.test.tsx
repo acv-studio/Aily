@@ -2,8 +2,8 @@ import { act, cleanup, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import useLocalChat from './useLocalChat'
 import Dexie from 'dexie'
-import { db, loadLocalData } from './db'
-import { streamReply } from './chatService'
+import { db, deleteMemory, loadLocalData, persistChatChanges, saveMemory, saveMemoryPolicy } from './db'
+import { buildContext, retrieveMemories, streamReply, type ConfirmedMemory } from './chatService'
 import { defaultOnboardingProfile } from './onboarding'
 
 vi.mock('./chatService', async () => ({ ...await vi.importActual('./chatService'), streamReply: vi.fn() }))
@@ -11,6 +11,63 @@ const stream = vi.mocked(streamReply)
 beforeEach(async () => { localStorage.clear(); sessionStorage.clear(); await db.delete(); await db.open(); stream.mockReset() })
 afterEach(() => { cleanup(); vi.restoreAllMocks() })
 async function setup() { const hook = renderHook(useLocalChat); await waitFor(() => expect(hook.result.current.ready).toBe(true)); return hook }
+
+describe('local video attachment orchestration', () => {
+  const attachment = { name: 'clip.mp4', mimeType: 'video/mp4', dataUrl: 'data:video/mp4;base64,aGVsbG8=' }
+
+  it('saves video locally without a model request or assistant turn, including retry and withdrawal', async () => {
+    const hook = await setup()
+    act(() => { hook.result.current.setApiKey('configured-key'); hook.result.current.setDraft('local video caption') })
+    await act(() => hook.result.current.send({ kind: 'video', attachment }))
+    expect(stream).not.toHaveBeenCalled()
+    expect(hook.result.current.chatMessages).toHaveLength(1)
+    expect(hook.result.current.chatMessages[0]).toMatchObject({ kind: 'video', attachment, text: 'local video caption', status: 'sent' })
+    expect(hook.result.current.error).toContain('文字模型不会读取图片、语音或视频')
+    expect(hook.result.current.replying).toBe(false)
+    const id = hook.result.current.chatMessages[0].id
+    hook.unmount()
+    const restored = await setup()
+    expect(restored.result.current.chatMessages[0].attachment).toEqual(attachment)
+    await act(() => restored.result.current.send({ retryId: id }))
+    expect(restored.result.current.chatMessages).toHaveLength(1)
+    expect(stream).not.toHaveBeenCalled()
+    await act(() => restored.result.current.withdraw(id))
+    expect((await loadLocalData()).conversations.lu?.[0]).toMatchObject({ withdrawn: true, kind: 'video', text: '' })
+    expect((await loadLocalData()).conversations.lu?.[0]).not.toHaveProperty('attachment')
+    await act(() => restored.result.current.send({ retryId: id }))
+    expect(stream).not.toHaveBeenCalled()
+  })
+
+  it('keeps temporary video in memory only, infers video kind, and discards it when leaving', async () => {
+    const hook = await setup()
+    act(() => hook.result.current.toggleTemporary())
+    await act(() => hook.result.current.send({ attachment }))
+    expect(hook.result.current.chatMessages).toHaveLength(1)
+    expect(hook.result.current.chatMessages[0].kind).toBe('video')
+    expect(hook.result.current.error).toContain('未落盘')
+    expect(await db.messages.count()).toBe(0)
+    expect(stream).not.toHaveBeenCalled()
+    const id = hook.result.current.chatMessages[0].id
+    await act(() => hook.result.current.withdraw(id))
+    expect(hook.result.current.chatMessages[0]).toMatchObject({ withdrawn: true, text: '' })
+    expect(hook.result.current.chatMessages[0].attachment).toBeUndefined()
+    act(() => hook.result.current.toggleTemporary())
+    expect(hook.result.current.chatMessages).toEqual([])
+    expect(await db.messages.count()).toBe(0)
+  })
+
+  it.each([false, true])('rejects invalid video without clearing draft or sending in temporary=%s', async temporary => {
+    const hook = await setup()
+    if (temporary) act(() => hook.result.current.toggleTemporary())
+    act(() => hook.result.current.setDraft('keep this draft'))
+    await act(() => hook.result.current.send({ kind: 'video', attachment: { ...attachment, mimeType: 'video/avi' } }))
+    expect(hook.result.current.error).toContain('20MB')
+    expect(hook.result.current.draft).toBe('keep this draft')
+    expect(hook.result.current.chatMessages).toEqual([])
+    expect(await db.messages.count()).toBe(0)
+    expect(stream).not.toHaveBeenCalled()
+  })
+})
 
 describe('onboarding hook integration', () => {
   it('blocks deletion during onboarding writes and rejects onboarding after deletion begins', async () => {
@@ -140,6 +197,75 @@ describe('reply-mode orchestration', () => {
     expect(stream.mock.calls[0][0].replyMode).toBe('brief')
     await act(async () => { finish(); await pending })
     expect(hook.result.current.replyMode).toBe('brief')
+  })
+})
+
+describe('unified confirmed-memory orchestration', () => {
+  const fact = (id: string, characterId: ConfirmedMemory['characterId'], sourceMessageId?: number): ConfirmedMemory => ({ id, characterId, sourceMessageId, text: `晚饭偏好 ${id}`, category: 'profile', state: 'confirmed', enabled: true, confirmedAt: '2026-01-01' })
+
+  it('shares confirmed facts but not raw histories, summaries or relationship progress', async () => {
+    const hook = await setup()
+    await act(() => hook.result.current.beforeDataChange())
+    await persistChatChanges('chen', [{ id: 1, from: 'user', text: 'source-private-history', time: '' }])
+    await saveMemory(fact('shared', 'chen', 1))
+    await db.summaries.put({ id: 'chen-summary', characterId: 'chen', period: 'day', periodKey: '2026-01-01', text: '晚饭 source-summary', sourceMessageIds: [1], updatedAt: '2026-01-01' })
+    stream.mockImplementation(async request => {
+      expect(request.messages.some(message => message.text === 'source-private-history')).toBe(false)
+      expect(request.summaries).toEqual([])
+      const recalled = retrieveMemories(request.characterId, request.messages, request.memories, request.memoryPolicy, request.memorySources)
+      expect(recalled.map(memory => [memory.id, memory.characterId])).toEqual([['shared', 'chen']])
+      const prompt = buildContext(request.characterId, request.messages, request.memories, request.summaries, request.memoryPolicy, request.onboardingProfile, request.locale, request.replyMode, request.memorySources)[0].content
+      expect(prompt).toContain('"sourceCharacterId":"chen"')
+      expect(prompt).not.toContain('source-private-history')
+      expect(prompt).not.toContain('source-summary')
+      request.onDelta('回复')
+    })
+    act(() => hook.result.current.setDraft('晚饭怎么安排'))
+    await act(() => hook.result.current.send())
+    expect(stream).toHaveBeenCalledTimes(1)
+    expect((await db.memories.get('shared'))?.characterId).toBe('chen')
+    expect(await db.summaries.get('chen-summary')).toBeDefined()
+  })
+
+  it('reads fresh source policies and role-qualified withdrawn/deleted/missing exclusions', async () => {
+    const hook = await setup()
+    await act(() => hook.result.current.beforeDataChange())
+    await persistChatChanges('lu', [{ id: 1, from: 'user', text: '', withdrawn: true, time: '' }])
+    await persistChatChanges('chen', [
+      { id: 1, from: 'user', text: 'valid source', time: '' },
+      { id: 2, from: 'user', text: '', withdrawn: true, time: '' },
+      { id: 3, from: 'character', text: 'paired withdrawn source', time: '' },
+      { id: 4, from: 'user', text: 'deleted fact source', time: '' },
+      { id: 5, from: 'character', text: 'paired deleted source', time: '' },
+      { id: 6, from: 'user', text: '我想自杀', time: '' },
+      { id: 7, from: 'character', text: 'paired unsafe source', time: '' },
+    ])
+    await saveMemory(fact('deleted', 'chen', 4)); await deleteMemory('deleted')
+    for (const memory of [fact('shared', 'chen', 1), fact('withdrawn', 'chen', 2), fact('withdrawn-reply', 'chen', 3), fact('deleted-reply', 'chen', 5), fact('unsafe-reply', 'chen', 7), fact('missing', 'chen', 99), fact('policy-blocked', 'gu')]) await saveMemory(memory)
+    // Changed outside this hook: send must use current DB policies, not state snapshots.
+    await saveMemoryPolicy('gu', { extractionEnabled: true, disabledCategories: ['profile'] })
+    stream.mockImplementation(async request => {
+      expect(request.memorySources?.chen?.excludedSourceMessageIds).toEqual(expect.arrayContaining([2, 3, 6, 7, 99]))
+      expect(request.memorySources?.chen?.forgottenSourceMessageIds).toEqual(expect.arrayContaining([4, 5]))
+      expect(request.memorySources?.lu?.excludedSourceMessageIds).toContain(1)
+      expect(retrieveMemories(request.characterId, request.messages, request.memories, request.memoryPolicy, request.memorySources).map(memory => memory.id)).toEqual(['shared'])
+      request.onDelta('回复')
+    })
+    act(() => hook.result.current.setDraft('晚饭怎么安排'))
+    await act(() => hook.result.current.send())
+    expect(stream).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not load or recall durable memory in temporary sessions', async () => {
+    const hook = await setup()
+    await act(() => hook.result.current.beforeDataChange())
+    await saveMemory(fact('shared', 'chen'))
+    act(() => { hook.result.current.toggleTemporary(); hook.result.current.setDraft('晚饭怎么安排') })
+    stream.mockImplementation(async request => request.onDelta('回复'))
+    await act(() => hook.result.current.send())
+    expect(stream.mock.calls[0][0]).toMatchObject({ memories: [], summaries: [], memorySources: {} })
+    expect(await db.memories.get('shared')).toBeDefined()
+    expect(await db.messages.count()).toBe(0)
   })
 })
 

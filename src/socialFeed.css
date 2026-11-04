@@ -19,3 +19,7 @@
 .feed .comment-box button { font-size: 11px; padding: 8px; }
 .feed .moment footer button { min-height: 32px; font-size: 12px; }
 .feed .feed-hero span { display: block; margin-top: 6px; font-size: 11px; color: #aab0c0; }
+.feed-role-tabs { display: flex; flex: 1; flex-wrap: wrap; gap: 6px; }
+.feed-role-tabs button { min-height: 38px; flex: 1; padding: 8px 10px; border: 1px solid var(--line); border-radius: 12px; background: #1e2133; color: #c2c5d4; font-size: 12px; white-space: nowrap; }
+.feed-role-tabs button[aria-pressed="true"] { background: #a990ef; color: #171822; }
+.feed-role-tabs button:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }

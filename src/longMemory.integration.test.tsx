@@ -76,13 +76,29 @@ describe('long-memory hook integration and privacy boundaries', () => {
     expect(request.messages.some(message => message.id === 4)).toBe(true)
     expect(request.messages.some(message => message.id === 5)).toBe(true)
     expect(request.messages.at(-1)?.text).toBe('咖啡是什么口味？')
-    const context = buildContext(request.characterId, request.messages, request.memories, request.summaries, request.memoryPolicy)
+    const context = buildContext(request.characterId, request.messages, request.memories, request.summaries, request.memoryPolicy, request.onboardingProfile, request.locale, request.replyMode, request.memorySources)
     expect(JSON.stringify(context)).not.toContain('你喜欢咖啡，我记住了')
     expect(JSON.stringify(context)).not.toContain('原来的咖啡偏好')
     expect(JSON.stringify(context)).not.toContain('"text":"我喜欢咖啡"')
     if (action === 'correct') expect(context[0].content).toContain('我不喜欢咖啡')
     // Forgetting changes future context, not the user's retained chat transcript.
     expect((await loadLocalData()).conversations.lu?.find(message => message.id === 1)?.text).toBe(source.text)
+  })
+
+  it('recalls the corrected confirmed fact cross-character while keeping original wording and replies forgotten', async () => {
+    await saveConversation('lu', [source, { ...source, id: 2, from: 'character', text: '原来的咖啡偏好回复' }])
+    await saveMemory(confirmed)
+    const hook = await setup()
+    await act(() => hook.result.current.editMemory('fact', { text: '我不喜欢咖啡' }))
+    act(() => { hook.result.current.setSelected('chen'); hook.result.current.setDraft('咖啡是什么口味？') })
+    await act(() => hook.result.current.send())
+    const request = stream.mock.calls.at(-1)![0]
+    const prompt = buildContext(request.characterId, request.messages, request.memories, request.summaries, request.memoryPolicy, request.onboardingProfile, request.locale, request.replyMode, request.memorySources)[0].content
+    expect(prompt).toContain('我不喜欢咖啡')
+    expect(prompt).toContain('"sourceCharacterId":"lu"')
+    expect(prompt).not.toContain('"text":"我喜欢咖啡"')
+    expect(prompt).not.toContain('原来的咖啡偏好回复')
+    expect(await forgottenSourceIds('lu')).toEqual([1])
   })
 
   it('never persists temporary conversations or supplies durable memories/summaries', async () => {

@@ -27,7 +27,7 @@ try {
     localStorage.setItem('aily-safety-consent-v1', 'adult-ai-privacy-accepted')
   })
   await page.reload()
-  await page.getByRole('button', { name: '回忆', exact: true }).click()
+  await page.getByRole('button', { name: '记忆', exact: true }).click()
   await page.getByRole('button', { name: '分享回忆卡', exact: true }).click()
   const shareDialog = page.getByRole('dialog', { name: '分享回忆卡' })
   await shareDialog.waitFor()

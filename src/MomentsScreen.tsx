@@ -6,7 +6,7 @@ import {
   toggleSocialLike, watchSocialFeed, type SocialFeedConfig, type SocialPost,
 } from './socialFeed'
 import './socialFeed.css'
-import DailyEventCard from './DailyEventCard'
+import { useI18n } from './i18n'
 
 export default function MomentsScreen({ userName, selected, config, onChat }: {
   userName: string
@@ -14,17 +14,40 @@ export default function MomentsScreen({ userName, selected, config, onChat }: {
   config: SocialFeedConfig
   onChat: (characterId: CharacterId, text: string) => void
 }) {
+  const { t } = useI18n()
   const [posts, setPosts] = useState<SocialPost[]>([])
   const [ready, setReady] = useState(false)
   const [error, setError] = useState('')
   const [readError, setReadError] = useState(false)
   const [reload, setReload] = useState(0)
-  const [generationRole, setGenerationRole] = useState(selected)
+  const [feedRole, setFeedRole] = useState(selected)
   const [commenting, setCommenting] = useState<string | null>(null)
   const [draft, setDraft] = useState('')
   const [busy, setBusy] = useState<string | null>(null)
   const operation = useRef<AbortController | null>(null)
   const mounted = useRef(false)
+  const currentCharacter = characters.find(character => character.id === feedRole)!
+  const rolePosts = posts.filter(post => post.characterId === feedRole)
+
+  useEffect(() => {
+    // A parent-selected role starts a fresh view, even during a pending reply.
+    // Abort and detach the old operation so its completion cannot clear a new draft.
+    operation.current?.abort()
+    operation.current = null
+    setBusy(null)
+    setFeedRole(selected)
+    setCommenting(null)
+    setDraft('')
+    setError(previous => readError ? previous : '')
+  }, [selected])
+
+  const switchRole = (role: CharacterId) => {
+    if (operation.current || role === feedRole) return
+    setFeedRole(role)
+    setCommenting(null)
+    setDraft('')
+    if (!readError) setError('')
+  }
 
   useEffect(() => {
     mounted.current = true
@@ -63,7 +86,8 @@ export default function MomentsScreen({ userName, selected, config, onChat }: {
     if (!text) return
     void run(`comment:${post.id}`, async signal => {
       const comment = await addSocialComment(post.id, userName, text)
-      if (mounted.current) { setDraft(''); setCommenting(null) }
+      if (!mounted.current || signal.aborted) return
+      setDraft(''); setCommenting(null)
       await respondSocialComment(post.id, comment.id, { ...config, signal })
     })
   }
@@ -72,17 +96,16 @@ export default function MomentsScreen({ userName, selected, config, onChat }: {
   }
 
   return <section className="screen feed">
-    <div className="feed-hero"><p>这一刻，他们也在生活</p><span>AI 角色的虚构动态 · 配图为本机示意图</span></div>
-    <DailyEventCard selected={selected} disabled={!!busy} onChat={onChat} />
+    <div className="feed-hero"><p>{t('{name}的朋友圈', { name: t(currentCharacter.name) })}</p><span>AI 角色的虚构动态 · 配图为本机示意图</span></div>
     <div className="feed-controls glass">
-      <label>动态角色<select aria-label="动态角色" value={generationRole} disabled={!!busy} onChange={event => setGenerationRole(event.target.value as CharacterId)}>{characters.map(character => <option key={character.id} value={character.id}>{character.name}</option>)}</select></label>
-      <button disabled={!ready || readError || !!busy} onClick={() => void run('generate', signal => generateSocialPost(generationRole, { ...config, signal }))}><Sparkles size={16} />{busy === 'generate' ? '正在生成…' : '生成动态'}</button>
+      <div className="feed-role-tabs" role="group" aria-label={t('朋友圈角色')}>{characters.map(character => <button key={character.id} type="button" aria-pressed={feedRole === character.id} disabled={!!busy} onClick={() => switchRole(character.id)}>{t(character.name)}</button>)}</div>
+      <button disabled={!ready || readError || !!busy} onClick={() => void run('generate', signal => generateSocialPost(feedRole, { ...config, signal }))}><Sparkles size={16} />{busy === 'generate' ? '正在生成…' : '生成动态'}</button>
       <p>{config.apiKey?.trim() ? '生成与评论回应会发送至已配置的模型服务，仅发送当前任务、动态、评论及互动边界，不读取聊天或记忆。' : '未配置模型：动态和角色回应使用本机演示文案，非 AI 生成。'} 手动生成，不提供后台发布。动态和互动保存在本机，不包含在聊天备份中；导入或清空聊天会重置。</p>
     </div>
     {error && <div className="feed-error" role="alert">{error}{readError && <button onClick={() => { setError(''); setReady(false); setBusy(null); setReload(value => value + 1) }}>重试读取</button>}</div>}
     {!ready && !readError && <p role="status">正在读取本机动态…</p>}
-    {ready && !posts.length && <p>暂无动态，选择角色生成一条吧。</p>}
-    {posts.map(post => {
+    {ready && !rolePosts.length && <p>{t('{name}还没有动态，生成一条吧。', { name: t(currentCharacter.name) })}</p>}
+    {rolePosts.map(post => {
       const character = characters.find(item => item.id === post.characterId)!
       return <article className="moment glass" key={post.id}>
         <header><span className="simple-avatar" style={{ '--accent': character.accent } as React.CSSProperties}>{character.avatar}</span><div><strong>{character.name}<small>AI</small></strong><time dateTime={post.createdAt}>{new Date(post.createdAt).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</time></div><button className="hide-moment" aria-label="隐藏动态" disabled={!!busy} onClick={() => void run(`hide:${post.id}`, () => hideSocialPost(post.id))}>隐藏</button></header>

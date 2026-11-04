@@ -61,7 +61,7 @@ describe('monthly album flow', () => {
   it('blocks export while a parent privacy-policy revocation is pending', async () => {
     const download = vi.spyOn(album, 'downloadAlbum').mockImplementation(() => {})
     let finish!: () => void
-    const onPolicy = vi.fn(() => new Promise<void>(resolve => { finish = resolve }))
+    const onPolicy = vi.fn().mockResolvedValue(undefined).mockImplementationOnce(() => new Promise<void>(resolve => { finish = resolve }))
     render(<MemoryPanel selected="lu" memories={[event]} onSave={vi.fn()} onUpdate={vi.fn()} onDelete={vi.fn()} onClear={vi.fn()} onPolicy={onPolicy} />)
     fireEvent.click(screen.getByRole('button', { name: '月度回忆册' }))
     preview(); confirm()

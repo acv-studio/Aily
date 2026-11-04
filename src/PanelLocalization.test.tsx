@@ -23,15 +23,16 @@ describe('bilingual panel localization', () => {
   it('switches memory controls live while preserving original user memory and editor text', () => {
     const original = '用户偏好：我喜欢咖啡 — my own words'
     render(<MemoryPanel memories={[{ id: 'localization-memory', characterId: 'lu', text: original, originalText: original, confirmedAt: '2026-11-02T10:00:00Z' }]} selected="lu" onSave={vi.fn()} onUpdate={vi.fn()} onDelete={vi.fn()} onClear={vi.fn()} />)
-    expect(screen.getByText('Only remembered with your confirmation')).toBeInTheDocument()
+    expect(screen.getByText('My memories')).toBeInTheDocument()
     // The relationship timeline also shows the original confirmed memory.
-    expect(screen.getAllByText(original)).toHaveLength(3)
+    expect(screen.getAllByText(original)).toHaveLength(2)
     expect(screen.getByText('1 memory · 0 awaiting confirmation')).toBeInTheDocument()
+    fireEvent.click(screen.getByText('Details and controls'))
     fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
     expect(screen.getByLabelText('Edit memory content')).toHaveValue(original)
     act(() => setLocale('zh-CN'))
     expect(screen.getByLabelText('编辑记忆内容')).toHaveValue(original)
-    expect(screen.getByText('由你确认，才会被记住')).toBeInTheDocument()
+    expect(screen.getByText('我的记忆')).toBeInTheDocument()
   })
 
   it('translates gift dialogs, static data, and existing success notices on locale changes', async () => {

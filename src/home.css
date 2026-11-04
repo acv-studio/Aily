@@ -1,0 +1,46 @@
+.message-home.screen { padding-bottom: calc(124px + env(safe-area-inset-bottom)); }
+.desktop-home { padding-top: 9px; }
+.desktop-widgets { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: stretch; }
+.clock-widget { min-width: 0; min-height: 180px; border-radius: 26px; padding: 20px 16px; display: flex; flex-direction: column; justify-content: center; background: radial-gradient(ellipse at 5% 5%, #bea1ff1f, transparent 75%), #ffffff08; }
+.clock-widget-label { display: flex; align-items: center; gap: 7px; font-size: 10px; letter-spacing: .12em; color: #c7bddb; }
+.clock-live-dot { margin-left: auto; width: 5px; height: 5px; border-radius: 50%; background: #a8e6cf; box-shadow: 0 0 8px #a8e6cf50; }
+.clock-widget time { display: block; margin-top: 15px; font-size: clamp(32px, 9vw, 47px); font-weight: 300; letter-spacing: -.055em; font-variant-numeric: tabular-nums; line-height: 1.2; }
+.clock-widget p { font-size: 11px; color: #ded7e9; margin: 7px 0 0; line-height: 1.6; }
+.clock-widget > small { font-size: 9px; margin-top: 12px; color: #9ba0b5; }
+.desktop-section-heading { display: flex; align-items: center; gap: 14px; margin: 25px 4px 12px; font-size: 10px; letter-spacing: .12em; color: #a8a6bd; }
+.desktop-section-line { height: 1px; background: linear-gradient(90deg, #ffffff13, transparent); flex: 1; }
+.desktop-bot { position: relative; display: flex; align-items: center; gap: 15px; padding: 20px 17px; width: 100%; min-height: 120px; border-radius: 25px; text-align: left; overflow: hidden; background: radial-gradient(ellipse at 0 50%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 80%), #ffffff06; }
+.desktop-bot > .avatar { width: 64px; height: 64px; flex: none; border-radius: 21px; font-size: 27px; box-shadow: 0 8px 24px #00000024; }
+.desktop-bot-copy { flex: 1; min-width: 0; }
+.desktop-bot-title { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.desktop-bot-title strong { font-size: 16px; font-weight: 600; }
+.desktop-bot-title > span { border: 1px solid #ffffff17; padding: 3px 5px; font-size: 8px; color: #c9c5d6; border-radius: 6px; }
+.desktop-bot-copy p { font-size: 11px; color: #b1b8c9; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; margin: 9px 0; }
+.desktop-bot-copy > small { color: var(--accent); display: flex; align-items: center; gap: 5px; font-size: 9px; }
+.desktop-bot-chevron { color: #b5bfcc; flex: none; }
+.desktop-tools-heading { margin-top: 29px; margin-bottom: 19px; }
+.desktop-app-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px 16px; padding: 1px 5px; }
+.desktop-app { display: flex; align-items: center; flex-direction: column; gap: 10px; min-width: 0; background: transparent; padding: 2px 0; font-size: 11px; color: #dad9e5; }
+.desktop-app-icon { width: 65px; height: 65px; display: grid; place-items: center; border-radius: 21px; color: var(--tool-color); border: 1px solid color-mix(in srgb, var(--tool-color) 24%, transparent); background: linear-gradient(145deg, color-mix(in srgb, var(--tool-color) 17%, #222638), color-mix(in srgb, var(--tool-color) 4%, #171b2b)); box-shadow: inset 0 1px #ffffff0d, 0 8px 20px #00000026; transition: transform .18s ease, border-color .18s ease; }
+.desktop-app:hover .desktop-app-icon { transform: translateY(-3px); border-color: color-mix(in srgb, var(--tool-color) 60%, transparent); }
+.desktop-app:active .desktop-app-icon { transform: scale(.96); }
+.desktop-partners-toggle { display: flex; align-items: center; justify-content: center; gap: 5px; margin: 29px auto 14px; padding: 8px 12px; min-height: 36px; background: transparent; color: #a6a5bc; font-size: 10px; }
+.desktop-partners-toggle .expanded { transform: rotate(90deg); }
+.companion-strip { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.companion-tile { min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 9px; border-radius: 22px; padding: 18px 7px 14px; text-align: center; }
+.companion-tile.selected { border-color: color-mix(in srgb, var(--accent) 55%, transparent); background: color-mix(in srgb, var(--accent) 8%, #1c2031); }
+.companion-tile .avatar { width: 48px; height: 48px; border-radius: 16px; font-size: 23px; flex: none; }
+.companion-tile strong { font-size: 12px; line-height: 1.4; overflow-wrap: anywhere; }
+.companion-tile > small { font-size: 9px; line-height: 1.5; color: #b2b9cb; }
+.desktop-home-note { font-size: 9px; color: #777e98; text-align: center; letter-spacing: .1em; margin: 18px 0 0; }
+@media (max-width: 350px) {
+  .message-home.screen { padding-left: 16px; padding-right: 16px; }
+  .desktop-widgets { gap: 9px; }
+  .clock-widget { padding: 18px 12px; }
+  .desktop-bot { gap: 11px; padding: 17px 13px; }
+  .desktop-bot > .avatar { width: 54px; height: 54px; }
+  .desktop-bot-title strong { font-size: 14px; }
+  .desktop-app-grid { gap: 22px 10px; }
+  .desktop-app-icon { width: 59px; height: 59px; }
+}
+@media (prefers-reduced-motion: reduce) { .desktop-app-icon { transition: none; } }

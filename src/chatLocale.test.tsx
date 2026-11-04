@@ -45,6 +45,7 @@ describe('localized chat display and original content', () => {
     expect(screen.getByText(/2 pending/)).toBeInTheDocument()
     expect(screen.getByText(chineseMessages[0].text)).toBeInTheDocument()
     expect(time).toHaveBeenCalledWith('en', { hour: '2-digit', minute: '2-digit' })
+    fireEvent.click(screen.getByRole('button', { name: 'Chat settings' }))
     fireEvent.click(screen.getByRole('button', { name: 'Search messages' }))
     fireEvent.change(screen.getByRole('textbox', { name: 'Search chat history' }), { target: { value: '胃' } })
     expect(screen.getByText('Found 1 message')).toBeInTheDocument()

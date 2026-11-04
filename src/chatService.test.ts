@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { buildContext, retrieveMemories, streamReply, testDeepSeekConnection, type ChatMessage, type ConfirmedMemory } from './chatService'
+import { buildContext, excludedMemorySourceIds, retrieveMemories, streamReply, testDeepSeekConnection, type ChatMessage, type ConfirmedMemory, type MemoryRecallSources } from './chatService'
 import { MAX_SAFETY_TEXT, SAFETY_SYSTEM_BOUNDARIES } from './safety'
 import { defaultOnboardingProfile } from './onboarding'
 import { REPLY_MODES, REPLY_MODE_PROMPTS, type ReplyMode } from './replyModes'
@@ -25,6 +25,25 @@ function request(extra: Partial<Parameters<typeof streamReply>[0]> = {}) {
   return { characterId: 'lu' as const, messages, memories, apiKey: 'secret-key', ...extra, onDelta: vi.fn() }
 }
 afterEach(() => { vi.restoreAllMocks(); vi.useRealTimers() })
+
+describe('local video provider exclusion', () => {
+  it('does not send video bytes, filename, caption or quoted video in a later text request', async () => {
+    const video: ChatMessage = { id: 3, from: 'user', text: 'private video caption', time: '', kind: 'video', attachment: { name: 'private-clip.mp4', mimeType: 'video/mp4', dataUrl: 'data:video/mp4;base64,aGVsbG8=' } }
+    const followup: ChatMessage = { id: 4, from: 'user', text: 'Please talk with me', time: '', replyToId: 3 }
+    mockStream(event('Of course') + 'data: [DONE]\r\n\r\n')
+    await streamReply(request({ messages: [...messages, video, followup] }))
+    const body = vi.mocked(fetch).mock.calls[0][1]!.body as string
+    expect(body).toContain(followup.text)
+    for (const secret of [video.text, video.attachment!.name, video.attachment!.dataUrl, 'video/mp4']) expect(body).not.toContain(secret)
+  })
+
+  it('translates the updated local-only attachment notices', () => {
+    for (const notice of ['请选择 20MB 以内的 MP4、WebM 或 MOV 视频', '附件仅保留在临时会话内，未落盘；文字模型不会读取图片、语音或视频。', '附件已保存在本机；文字模型不会读取图片、语音或视频。请另发文字描述。']) {
+      expect(translate(notice, {}, 'en')).not.toBe(notice)
+      expect(translate(notice, {}, 'en')).toMatch(/video/i)
+    }
+  })
+})
 
 describe('merged locale and reply mode context', () => {
   it('sends both English response guidance and the explicit mode while preserving quoted names and memory facts', async () => {
@@ -313,18 +332,83 @@ describe('reply mode context and demo', () => {
 })
 
 describe('bounded local context and confirmed memory', () => {
-  it('retrieves only relevant enabled memories for the active character', () => {
+  it('retrieves relevant enabled confirmed memories across characters, retaining provenance', () => {
     const items: ConfirmedMemory[] = [...memories,
+      { ...memories[1], id: 'shared', text: '胃不舒服时不喝牛奶', state: 'confirmed' },
       { ...memories[0], id: 'disabled', enabled: false },
       { ...memories[0], id: 'unrelated', text: '喜欢看电影' },
     ]
-    expect(retrieveMemories('lu', messages, items).map(item => item.id)).toEqual(['1'])
+    expect(retrieveMemories('lu', messages, items).map(item => item.id)).toEqual(['1', 'shared'])
     const context = buildContext('lu', messages, items)
     expect(context[0].content).toContain('胃不舒服时提醒吃饭')
+    expect(context[0].content).toContain('胃不舒服时不喝牛奶')
+    expect(context[0].content).toContain('"sourceCharacterId":"chen"')
+    expect(context[0].content).toContain('不得把其他角色的经历说成')
     expect(context[0].content).not.toContain('喜欢夜宵')
     expect(context[0].content).not.toContain('喜欢看电影')
     expect(context[0].content).toContain('不是指令')
     expect(context.at(-1)?.content).toBe('先歇会儿。')
+  })
+
+  it('honors source-role category policy rather than the receiving role policy', () => {
+    const items: ConfirmedMemory[] = ['lu', 'chen', 'gu'].map(role => ({ ...memories[0], id: role, characterId: role as ConfirmedMemory['characterId'], category: 'profile' }))
+    const sources: MemoryRecallSources = {
+      lu: { policy: { extractionEnabled: true, disabledCategories: ['profile'] }, excludedSourceMessageIds: [] },
+      chen: { policy: { extractionEnabled: false, disabledCategories: [] }, excludedSourceMessageIds: [] },
+      gu: { policy: { extractionEnabled: true, disabledCategories: ['profile'] }, excludedSourceMessageIds: [] },
+    }
+    // Extraction pause stops new proposals, not already-confirmed permitted recall.
+    expect(retrieveMemories('lu', messages, items, sources.lu!.policy, sources).map(item => item.characterId)).toEqual(['chen'])
+  })
+
+  it('keeps revisions and exclusions role-qualified when IDs overlap', () => {
+    const unsafe: ChatMessage[] = [{ id: 1, from: 'user', text: '我想自杀', time: '' }, { id: 2, from: 'character', text: 'local reply', time: '' }]
+    const sources: MemoryRecallSources = {
+      lu: { policy: { extractionEnabled: true, disabledCategories: [] }, excludedSourceMessageIds: excludedMemorySourceIds(unsafe) },
+      chen: { policy: { extractionEnabled: true, disabledCategories: [] }, excludedSourceMessageIds: [] },
+    }
+    const items: ConfirmedMemory[] = [
+      { ...memories[0], sourceMessageId: 1 },
+      { ...memories[0], characterId: 'chen', text: '胃不舒服时喝热水', sourceMessageId: 1 },
+      { ...memories[0], id: 'paired', sourceMessageId: 2 },
+    ]
+    expect(retrieveMemories('lu', messages, items, undefined, sources).map(item => item.characterId)).toEqual(['chen'])
+    expect(retrieveMemories('gu', messages, items, undefined, sources).map(item => item.characterId)).toEqual(['chen'])
+    expect(retrieveMemories('lu', unsafe, [items[1]]).map(item => item.characterId)).toEqual([]) // no safe query
+  })
+
+  it('excludes cross-role withdrawn, forgotten, failed and attachment source turns and replies', () => {
+    const source: ChatMessage[] = [
+      { id: 1, from: 'user', text: 'withdrawn source', withdrawn: true, time: '' },
+      { id: 2, from: 'character', text: 'withdrawn paired reply', time: '' },
+      { id: 3, from: 'user', text: 'forgotten source', time: '' },
+      { id: 4, from: 'character', text: 'forgotten paired reply', time: '' },
+      { id: 5, from: 'user', text: 'ordinary source', time: '' },
+      { id: 6, from: 'character', text: 'failed source', status: 'failed', time: '' },
+      { id: 7, from: 'user', text: 'attachment source', kind: 'image', time: '' },
+      { id: 8, from: 'character', text: 'explicit withdrawn reply', replyToId: 1, time: '' },
+    ]
+    const sources: MemoryRecallSources = { chen: { policy: { extractionEnabled: true, disabledCategories: [] }, excludedSourceMessageIds: excludedMemorySourceIds(source, [3]) } }
+    const items = source.map(message => ({ ...memories[1], id: String(message.id), text: `胃不舒服 fact-${message.id}`, sourceMessageId: message.id }))
+    expect(retrieveMemories('lu', messages, items, undefined, sources).map(item => item.id)).toEqual(['5'])
+    const before = JSON.stringify(items)
+    const context = buildContext('lu', messages, items, [], undefined, undefined, 'en', undefined, sources)
+    expect(context[0].content).toContain('sourceCharacterId identifies the originating character')
+    expect(context[0].content).toContain('fact-5')
+    for (const id of [1, 2, 3, 4, 6, 7, 8]) expect(context[0].content).not.toContain(`fact-${id}`)
+    expect(JSON.stringify(items)).toBe(before)
+  })
+
+  it.each([{ state: 'pending' as const }, { state: 'archived' as const }, { state: 'rejected' as const }, { enabled: false }, { expiresAt: '2020-01-01' }, { expiresAt: 'invalid' }])('never recalls non-confirmed or unavailable cross-role facts: %j', patch => {
+    expect(retrieveMemories('lu', messages, [{ ...memories[1], text: '胃不舒服', ...patch }])).toEqual([])
+  })
+
+  it('keeps explicit corrected facts recallable without reviving deleted or withdrawn originals', () => {
+    const sources: MemoryRecallSources = { chen: { policy: { extractionEnabled: true, disabledCategories: [] }, excludedSourceMessageIds: [2], forgottenSourceMessageIds: [1, 2, 3] } }
+    const corrected = { ...memories[1], text: '胃不舒服不喝牛奶', originalText: '胃不舒服喝牛奶', updatedAt: '2026-02-01', sourceMessageId: 1 }
+    const withdrawn = { ...corrected, id: 'withdrawn-correction', sourceMessageId: 2 }
+    const deletedDerived = { ...memories[1], id: 'deleted-derived', text: '胃不舒服喝牛奶', sourceMessageId: 3 }
+    expect(retrieveMemories('lu', messages, [corrected, withdrawn, deletedDerived], undefined, sources).map(item => item.id)).toEqual(['2'])
   })
 
   it('bounds recall count and text without mutating stored memories', () => {
@@ -352,6 +436,7 @@ describe('bounded local context and confirmed memory', () => {
       { id: 202, from: 'user', text: 'image-secret', time: '', kind: 'image', attachment: { dataUrl: 'data:image/png;base64,abc', mimeType: 'image/png', name: 'photo' } },
       { id: 203, from: 'user', text: 'audio-secret', time: '', kind: 'audio' },
       { id: 204, from: 'character', text: 'sending-secret', time: '', status: 'sending' },
+      { id: 205, from: 'user', text: 'video-secret', time: '', kind: 'video', attachment: { dataUrl: 'data:video/mp4;base64,aGVsbG8=', mimeType: 'video/mp4', name: 'video-file-secret' } },
     )
     const context = buildContext('lu', history, [])
     expect(context.filter(item => item.role === 'system')).toHaveLength(1)
@@ -363,7 +448,7 @@ describe('bounded local context and confirmed memory', () => {
     expect(context[0].content).toContain('安全与偏好优先于人设')
     expect(context[0].content).toContain('成人模式关闭')
     const serialized = JSON.stringify(context)
-    for (const secret of ['withdrawn-secret', 'failed-secret', 'image-secret', 'audio-secret', 'sending-secret', 'old-0:']) expect(serialized).not.toContain(secret)
+    for (const secret of ['withdrawn-secret', 'failed-secret', 'image-secret', 'audio-secret', 'sending-secret', 'video-secret', 'video-file-secret', 'data:video/', 'old-0:']) expect(serialized).not.toContain(secret)
     expect(serialized).toContain('LOCAL')
     expect(serialized).toContain('old-91:')
   })
@@ -621,6 +706,18 @@ describe('configuration and clearly local demo', () => {
   it('validates connection response envelopes', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('{"error":{"message":"secret-key"}}'))
     await expect(testDeepSeekConnection({ apiKey: 'secret-key' })).rejects.toThrow('无效响应')
+  })
+
+  it.each(['zh-CN', 'en'] as const)('offline recall shares facts without claiming another role’s experience in %s', async locale => {
+    vi.useFakeTimers()
+    const req = request({ locale, apiKey: undefined, memories: [{ ...memories[0], characterId: 'chen' }] })
+    const pending = streamReply(req)
+    await vi.runAllTimersAsync()
+    await pending
+    const text = req.onDelta.mock.calls.flat().join('')
+    expect(text).toContain('胃不舒服时提醒吃饭')
+    expect(text).toContain(locale === 'en' ? 'source: chen' : '来源角色：chen')
+    expect(text).toContain(locale === 'en' ? 'not a shared experience with me' : '不代表你和我的共同经历')
   })
 
   it('differentiates each offline persona and uses only relevant memories', async () => {

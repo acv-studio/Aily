@@ -28,6 +28,7 @@ try {
   await page.getByRole('button', { name: '返回消息', exact: true }).click()
   await page.getByRole('button', { name: '我的', exact: true }).click()
   if (phase === 'after') {
+    await page.getByRole('button', { name: '语言设置 简体中文', exact: true }).click()
     await page.getByRole('combobox', { name: '界面语言 / Interface language' }).selectOption('en')
     await page.getByRole('heading', { name: 'My Aily' }).waitFor()
     await page.screenshot({ path: 'docs/evidence/i18n/after-profile-en.png', fullPage: true })

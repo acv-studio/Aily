@@ -20,7 +20,7 @@ try {
   })
   await page.reload()
   await page.getByRole('button', { name: '去找他', exact: true }).waitFor()
-  await page.getByRole('button', { name: '回忆', exact: true }).click()
+  await page.getByRole('button', { name: '记忆', exact: true }).click()
   await page.getByLabel('记忆角色').waitFor()
   await page.screenshot({ path: `${dir}/${before ? 'before' : 'after'}-intimate.png`, fullPage: true })
   if (!before) {
@@ -32,7 +32,7 @@ try {
     await page.getByRole('button', { name: '保存专属称呼' }).click()
     await page.getByRole('status').filter({ hasText: '称呼已保存' }).waitFor()
     await page.reload()
-    await page.getByRole('button', { name: '回忆', exact: true }).click()
+    await page.getByRole('button', { name: '记忆', exact: true }).click()
     assert.equal(await page.getByLabel('专属称呼', { exact: true }).inputValue(), '雨宝')
     await page.screenshot({ path: `${dir}/after-saved.png`, fullPage: true })
     await page.getByLabel('记忆角色').selectOption('chen')

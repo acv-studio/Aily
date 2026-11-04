@@ -20,6 +20,42 @@ async function acceptDisclosure(name = '确认并继续') {
 }
 
 describe('Aily core journey', () => {
+  it('opens each horizontal companion in their own persisted conversation', async () => {
+    const scrollDescriptor = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'scrollIntoView')
+    Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', { configurable: true, value: vi.fn() })
+    try {
+    await saveSetting('onboarded', true)
+    acceptSafetyConsent()
+    await storage.saveConversation('chen', [{ id: 1, from: 'user', text: '恒的聊天', time: '12:00' }])
+    await storage.saveConversation('gu', [{ id: 2, from: 'user', text: '泽的聊天', time: '13:00' }])
+    render(<App />)
+    fireEvent.click(await screen.findByRole('button', { name: '其他聊天伙伴' }))
+    fireEvent.click(screen.getByRole('button', { name: '打开陈奕恒的会话' }))
+    expect(screen.getByText('恒的聊天')).toBeInTheDocument()
+    expect(screen.queryByText('泽的聊天')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '返回消息' }))
+    fireEvent.click(screen.getByRole('button', { name: '其他聊天伙伴' }))
+    fireEvent.click(screen.getByRole('button', { name: '打开顾辰泽的会话' }))
+    expect(screen.getByText('泽的聊天')).toBeInTheDocument()
+    expect(screen.queryByText('恒的聊天')).not.toBeInTheDocument()
+    await waitFor(async () => expect((await loadLocalData()).settings.selected).toBe('gu'))
+    } finally {
+      if (scrollDescriptor) Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', scrollDescriptor)
+      else delete (HTMLElement.prototype as Partial<HTMLElement>).scrollIntoView
+    }
+  })
+  it('removes the header store entry and keeps four bottom navigation items', async () => {
+    await saveSetting('onboarded', true)
+    acceptSafetyConsent()
+    render(<App />)
+    fireEvent.click(await screen.findByRole('button', { name: '我的' }))
+    expect(screen.queryByRole('button', { name: '通知' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '商城' })).not.toBeInTheDocument()
+    expect(screen.getByRole('navigation').querySelectorAll('button')).toHaveLength(4)
+    expect(Array.from(screen.getByRole('navigation').querySelectorAll('button'), button => button.textContent)).toEqual(['消息', '记忆', '提醒', '我的'])
+    fireEvent.click(screen.getByRole('button', { name: '消息' }))
+    expect(screen.getByRole('heading', { name: '有人一直记得你' })).toBeInTheDocument()
+  })
   it('handles same-document invitation navigation without bypassing consent and preselects the recommended role', async () => {
     render(<App />)
     await screen.findByRole('button', { name: '遇见 TA' })
@@ -38,7 +74,7 @@ describe('Aily core journey', () => {
     await storage.saveMemory({ id: 'event', characterId: 'lu', category: 'relationship', text: '我们完成海边故事', confirmedAt: '2026-11-01T10:00:00Z' })
     render(<App />)
     await acceptDisclosure()
-    fireEvent.click(await screen.findByRole('button', { name: '回忆' }))
+    fireEvent.click(await screen.findByRole('button', { name: '记忆' }))
     fireEvent.click(screen.getByRole('button', { name: '周记月记' }))
     fireEvent.click(screen.getByRole('button', { name: '预览并确认' }))
     const original = storage.saveMemory
@@ -62,7 +98,7 @@ describe('Aily core journey', () => {
     fireEvent.click(screen.getByLabelText('我已年满 18 周岁'))
     fireEvent.click(screen.getByLabelText('我理解 AI 身份与数据说明'))
     fireEvent.click(screen.getByRole('button', { name: '确认并继续' }))
-    expect(await screen.findByRole('button', { name: /去找他/ })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: '与陆听澜聊天' })).toBeInTheDocument()
   })
 
   it('introduces the memory-first value proposition after loading storage', async () => {
@@ -116,7 +152,7 @@ describe('Aily core journey', () => {
     expect(screen.getByText(/API Key 只保留在本次浏览器会话，不包含在备份内/)).toBeInTheDocument()
     expect((await loadLocalData()).settings.onboarded).not.toBe(true)
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: '完成引导' })) })
-    await waitFor(() => expect(screen.getAllByText('陈奕恒')).toHaveLength(2))
+    await screen.findByRole('button', { name: '与阿恒聊天' })
     expect(screen.queryByRole('button', { name: '确认并继续' })).not.toBeInTheDocument()
     expect(hasSafetyConsent()).toBe(true)
     const data = await loadLocalData()

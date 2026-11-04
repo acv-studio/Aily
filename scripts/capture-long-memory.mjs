@@ -14,7 +14,7 @@ try {
     await saveConversation('lu', [{ id: 1, from: 'user', text: '我喜欢清淡晚饭，不吃辣', time: '18:00', createdAt: '2026-01-01T10:00:00.000Z', status: 'sent' }, { id: 2, from: 'character', text: '好的，晚饭会照顾你的口味。', time: '18:01', createdAt: '2026-01-01T10:01:00.000Z', status: 'sent' }, { id: 3, from: 'user', text: '记住，我想在项目结束后去看海', time: '18:02', createdAt: '2026-11-01T10:02:00.000Z', status: 'sent' }])
   })
   await page.reload()
-  await page.getByRole('button', { name: '回忆', exact: true }).click()
+  await page.getByRole('button', { name: '记忆', exact: true }).click()
   await page.getByText('我喜欢清淡晚饭，不吃辣', { exact: true }).waitFor()
   if (phase === 'after') await page.getByRole('heading', { name: '记住，我想在项目结束后去看海', exact: true }).waitFor()
   await mkdir('docs/evidence/long-memory', { recursive: true })
