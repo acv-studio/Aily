@@ -1,0 +1,15 @@
+.reminders-intro { margin: 8px 0 20px; }
+.reminder-smart-entry { margin-bottom: 18px; border-color: #a889ff50; background: linear-gradient(130deg,#a889ff18,#62d8e809); }
+.reminder-count { font-style: normal; font-size: 11px; margin-left: 9px; padding: 2px 7px; border-radius: 12px; background: #a889ff35; color: #e2d2ff; }
+.reminders-intro h2 { font-size: 20px; margin: 0 0 8px; }
+.reminders-intro p, .reminders-note { font-size: 12px; line-height: 1.7; color: #aeb7ca; }
+.reminder-settings-card { display: flex; align-items: center; gap: 12px; width: 100%; padding: 18px 16px; border-radius: 20px; text-align: left; }
+.reminder-settings-card > svg:first-child { color: #c2adff; flex-shrink: 0; }
+.reminder-settings-card span { flex: 1; min-width: 0; }
+.reminder-settings-card strong { display: block; font-size: 14px; margin-bottom: 5px; }
+.reminder-settings-card small { display: block; color: #aeb7ca; font-size: 11px; line-height: 1.5; }
+.character-moments-page { position: fixed; inset: 0; z-index: 20; width: 100%; max-width: 480px; height: 100dvh; margin: 0 auto; background: #101423; overflow-y: auto; overscroll-behavior: contain; }
+.character-moments-header { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 12px; padding: calc(10px + env(safe-area-inset-top)) 14px 10px; background: #1b2032; border-bottom: 1px solid var(--line); }
+.character-moments-header .icon-button { width: 36px; height: 36px; flex-shrink: 0; }
+.character-moments-header h1 { font-size: 16px; margin: 0; }
+.character-moments-page .feed { padding-top: 18px; padding-bottom: calc(30px + env(safe-area-inset-bottom)); }

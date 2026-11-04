@@ -61,7 +61,7 @@ try {
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true)
     await page.getByRole('button', { name: '关闭故事' }).click()
     await page.getByRole('button', { name: '返回消息', exact: true }).click()
-    await page.getByRole('button', { name: '回忆', exact: true }).click()
+    await page.getByRole('button', { name: '记忆', exact: true }).click()
     await page.getByText(/与陆听澜完成/).first().waitFor()
     const memories = await page.evaluate(async () => {
       const database = await new Promise((resolve, reject) => { const request = indexedDB.open('aily'); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error) })

@@ -2,7 +2,7 @@ import 'fake-indexeddb/auto'
 import Dexie from 'dexie'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { archiveExpiredMemories, confirmProposal, forgottenSourceIds, loadMemoryPolicy, loadSummaries, saveMemoryPolicy, saveProposals, saveSummaries, clearAllData, clearCharacterData, clearCharacterMemories, db, deleteMemory, exportData, importData, initializeLocalData, loadLocalData, loadRoleConversation, persistChatChanges, saveConversation, saveMemory, saveSetting, updateMemory } from './db'
-import type { ChatMessage, ConfirmedMemory } from './chatService'
+import { MAX_LOCAL_VIDEO_BYTES, type ChatMessage, type ConfirmedMemory } from './chatService'
 import { defaultMemoryPolicy, type ConversationSummary } from './longMemory'
 import { finishOnboarding, updateOnboarding } from './db'
 import { defaultOnboardingProfile, onboardingMemoryId } from './onboarding'
@@ -542,6 +542,58 @@ describe('local data repository', () => {
     await importData(raw)
     expect((await loadLocalData()).conversations.lu?.[0].text).toBe('陆')
     await expect(importData('{}')).rejects.toThrow('不是有效的 Aily 备份文件')
+  })
+
+  it.each(['video/mp4', 'video/webm', 'video/quicktime'])('persists and backs up local %s videos, including withdrawal', async mimeType => {
+    const video: ChatMessage = { ...message, kind: 'video', attachment: { name: 'clip', mimeType, dataUrl: `data:${mimeType};base64,aGVsbG8=` }, status: 'sent', replyToId: 0 }
+    await persistChatChanges('lu', [video])
+    db.close(); await db.open()
+    expect(await loadRoleConversation('lu')).toEqual([video])
+    expect((await importData(await exportData())).conversations.lu).toEqual([video])
+    const withdrawn = { ...video, withdrawn: true, text: '', attachment: undefined }
+    await persistChatChanges('lu', [withdrawn])
+    const restored = await importData(await exportData())
+    expect(restored.conversations.lu?.[0]).toMatchObject({ kind: 'video', withdrawn: true, text: '' })
+    expect(restored.conversations.lu?.[0]).not.toHaveProperty('attachment')
+  })
+
+  it('round-trips a 20MB video beyond the legacy attachment cap and rejects one byte over atomically', async () => {
+    const base64 = (bytes: number) => 'A'.repeat(Math.floor(bytes / 3) * 4) + (bytes % 3 === 1 ? 'AA==' : bytes % 3 === 2 ? 'AAA=' : '')
+    const video: ChatMessage = { ...message, kind: 'video', attachment: { name: 'large.mp4', mimeType: 'video/mp4', dataUrl: `data:video/mp4;base64,${base64(MAX_LOCAL_VIDEO_BYTES)}` } }
+    await persistChatChanges('lu', [video])
+    const raw = await exportData()
+    expect(raw.length).toBeGreaterThan(10_000_000)
+    expect((await importData(raw)).conversations.lu?.[0]).toEqual(video)
+    const tooLarge = { ...video, attachment: { ...video.attachment!, dataUrl: `data:video/mp4;base64,${base64(MAX_LOCAL_VIDEO_BYTES + 1)}` } }
+    await expect(persistChatChanges('lu', [tooLarge])).rejects.toThrow('备份文件')
+    await expect(importData(JSON.stringify({ ...backup(), conversations: { lu: [tooLarge] } }))).rejects.toThrow('备份文件')
+    expect(await loadRoleConversation('lu')).toEqual([video])
+  })
+
+  it.each([
+    ['unsupported MIME', { name: 'clip.avi', mimeType: 'video/avi', dataUrl: 'data:video/avi;base64,aGVsbG8=' }],
+    ['external URL', { name: 'clip.mp4', mimeType: 'video/mp4', dataUrl: 'https://example.com/clip.mp4' }],
+    ['mismatched MIME', { name: 'clip.mp4', mimeType: 'video/mp4', dataUrl: 'data:video/webm;base64,aGVsbG8=' }],
+    ['bad base64', { name: 'clip.mp4', mimeType: 'video/mp4', dataUrl: 'data:video/mp4;base64,AAAA!' }],
+    ['bad padding', { name: 'clip.mp4', mimeType: 'video/mp4', dataUrl: 'data:video/mp4;base64,A=' }],
+    ['empty video', { name: 'clip.mp4', mimeType: 'video/mp4', dataUrl: 'data:video/mp4;base64,' }],
+  ])('rejects %s videos before persistence or backup replacement', async (_name, attachment) => {
+    await persistChatChanges('lu', [message])
+    const video = { ...message, kind: 'video' as const, attachment }
+    await expect(persistChatChanges('lu', [video])).rejects.toThrow('备份文件')
+    await expect(importData(JSON.stringify({ ...backup(), conversations: { lu: [video] } }))).rejects.toThrow('备份文件')
+    expect(await loadRoleConversation('lu')).toEqual([message])
+  })
+
+  it('rejects video kind/MIME mismatches and preserves the legacy image/audio cap', async () => {
+    const attachment = { name: 'clip.mp4', mimeType: 'video/mp4', dataUrl: 'data:video/mp4;base64,aGVsbG8=' }
+    await expect(persistChatChanges('lu', [{ ...message, kind: 'text', attachment }])).rejects.toThrow()
+    await expect(persistChatChanges('lu', [{ ...message, kind: 'video' }])).rejects.toThrow()
+    await expect(persistChatChanges('lu', [{ ...message, kind: 'video', attachment: { ...attachment, mimeType: 'image/png', dataUrl: 'data:image/png;base64,aGVsbG8=' } }])).rejects.toThrow()
+    for (const mimeType of ['image/png', 'audio/webm']) {
+      await expect(persistChatChanges('lu', [{ ...message, attachment: { name: 'large', mimeType, dataUrl: `data:${mimeType};base64,${'A'.repeat(10_000_000)}` } }])).rejects.toThrow()
+    }
+    expect(await db.messages.count()).toBe(0)
   })
 
   it('round-trips supported optional message and memory fields', async () => {

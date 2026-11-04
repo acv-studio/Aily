@@ -1,0 +1,8 @@
+.chat-extra-overlay { position: absolute; inset: 0; z-index: 20; display: flex; align-items: flex-end; background: #070a14b8; }
+.chat-extra-dialog { width: 100%; max-height: 90%; display: flex; flex-direction: column; background: #191e2e; border: 1px solid #3b4056; border-radius: 22px 22px 0 0; box-shadow: 0 -12px 50px #0006; overflow: hidden; }
+.chat-extra-dialog > header { display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; padding: 12px 18px; border-bottom: 1px solid #34384b; }
+.chat-extra-dialog > header h2 { font-size: 17px; margin: 0; }
+.chat-extra-dialog > header button { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; background: #292e43; color: #d5c6f2; }
+.chat-extra-body { overflow-y: auto; min-height: 0; overscroll-behavior: contain; padding-bottom: env(safe-area-inset-bottom); }
+.chat-extra-body .gift-store { padding-bottom: 24px; }
+.chat-more-options > button:focus-visible > span { outline: 2px solid #b79be6; outline-offset: 3px; }

@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { within, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import MemoryPanel from './MemoryPanel'
 import { MemoryShareDialog } from './SharingPanel'
@@ -9,14 +9,16 @@ const memories = [{ id: 'm1', characterId: 'lu' as const, text: '不吃辣', cat
 function setup() {
   const onSave = vi.fn().mockResolvedValue(undefined), onUpdate = vi.fn().mockResolvedValue(undefined)
   render(<MemoryPanel memories={memories} selected="lu" onSave={onSave} onUpdate={onUpdate} onDelete={vi.fn()} onClear={vi.fn()} />)
+  fireEvent.click(screen.getAllByText('详情与管理')[0])
   return { onSave, onUpdate }
 }
 describe('confirmed memory controls', () => {
-  it('revokes sharing when the source is withdrawn, archived or removed and isolates role switches', () => {
+  it('revokes sharing when the source is withdrawn, archived or removed across the unified collection', () => {
     const event = { ...memories[0], category: 'relationship' as const, text: '一起散步', sourceMessageId: 42 }
     const props = { selected: 'lu' as const, onSave: vi.fn(), onUpdate: vi.fn(), onDelete: vi.fn(), onClear: vi.fn() }
     const source = { id: 42, from: 'user' as const, text: '一起散步', time: '' }
     const view = render(<MemoryPanel {...props} memories={[event]} conversations={{ lu: [source] }} />)
+    fireEvent.click(screen.getByText('详情与管理'))
     fireEvent.click(screen.getByRole('button', { name: '分享回忆卡' }))
     expect(screen.getByRole('dialog')).toBeInTheDocument()
     const firstProps = vi.mocked(MemoryShareDialog).mock.calls.at(-1)![0]
@@ -28,14 +30,12 @@ describe('confirmed memory controls', () => {
     view.rerender(<MemoryPanel {...props} memories={[]} />)
     expect(screen.queryByRole('dialog')).toBeNull()
     view.rerender(<MemoryPanel {...props} memories={[event]} conversations={{ lu: [source] }} />)
-    fireEvent.change(screen.getByLabelText('记忆角色'), { target: { value: 'chen' } })
-    expect(screen.queryByRole('dialog')).toBeNull()
-    fireEvent.change(screen.getByLabelText('记忆角色'), { target: { value: 'lu' } })
-    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(screen.queryByLabelText('记忆角色')).toBeNull()
   })
 
   it('switches between shared-event views and retains memory management', () => {
     render(<MemoryPanel memories={[{ ...memories[0], category: 'relationship', text: '我们完成共同故事' }]} selected="lu" onSave={vi.fn()} onUpdate={vi.fn()} onDelete={vi.fn()} onClear={vi.fn()} />)
+    fireEvent.click(screen.getByText('回忆创作'))
     fireEvent.click(screen.getByRole('button', { name: '回忆卡' }))
     expect(screen.getByText('回忆插画 · 非实拍照片')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '时间轴' }))
@@ -44,17 +44,19 @@ describe('confirmed memory controls', () => {
     fireEvent.click(screen.getByRole('button', { name: '周记月记' }))
     expect(screen.getByRole('button', { name: '预览并确认' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '管理、编辑或删除记忆' }))
+    fireEvent.click(screen.getByText('详情与管理'))
     expect(screen.getByRole('button', { name: '编辑' })).toBeInTheDocument()
   })
   it('prevents journal view and role remounts while a save is pending', async () => {
     let finish!: () => void
     const onSave = vi.fn(() => new Promise<void>(resolve => { finish = resolve }))
     render(<MemoryPanel memories={[{ ...memories[0], category: 'relationship', text: '我们完成共同故事' }]} selected="lu" onSave={onSave} onUpdate={vi.fn()} onDelete={vi.fn()} onClear={vi.fn()} />)
+    fireEvent.click(screen.getByText('回忆创作'))
     fireEvent.click(screen.getByRole('button', { name: '周记月记' }))
     fireEvent.click(screen.getByRole('button', { name: '预览并确认' }))
     fireEvent.click(screen.getByRole('button', { name: '确认保存周记' }))
     expect(screen.getByRole('button', { name: '时间轴' })).toBeDisabled()
-    expect(screen.getByLabelText('记忆角色')).toBeDisabled()
+    expect(screen.queryByLabelText('记忆角色')).toBeNull()
     expect(screen.getByRole('button', { name: '管理、编辑或删除记忆' })).toBeDisabled()
     fireEvent.click(screen.getByRole('button', { name: '时间轴' }))
     expect(onSave).toHaveBeenCalledTimes(1)
@@ -64,9 +66,10 @@ describe('confirmed memory controls', () => {
   })
   it('does not start a journal save while a policy write owns the navigation lock', async () => {
     let finish!: () => void
-    const onPolicy = vi.fn(() => new Promise<void>(resolve => { finish = resolve }))
+    const onPolicy = vi.fn().mockResolvedValue(undefined).mockImplementationOnce(() => new Promise<void>(resolve => { finish = resolve }))
     const onSave = vi.fn().mockResolvedValue(undefined)
     render(<MemoryPanel memories={[{ ...memories[0], category: 'relationship', text: '我们完成共同故事' }]} selected="lu" onSave={onSave} onPolicy={onPolicy} onUpdate={vi.fn()} onDelete={vi.fn()} onClear={vi.fn()} />)
+    fireEvent.click(screen.getByText('回忆创作'))
     fireEvent.click(screen.getByRole('button', { name: '周记月记' }))
     fireEvent.click(screen.getByRole('button', { name: '预览并确认' }))
     fireEvent.click(screen.getByText('记忆与敏感信息控制'))
@@ -77,16 +80,56 @@ describe('confirmed memory controls', () => {
     finish()
     await waitFor(() => expect(screen.getByRole('button', { name: '确认保存周记' })).toBeEnabled())
   })
-  it('filters by character and searches local facts', () => {
-    setup(); expect(screen.getByRole('heading', { name: '不吃辣' })).toBeInTheDocument(); expect(screen.queryByRole('heading', { name: '喜欢篮球' })).toBeNull()
-    fireEvent.change(screen.getByLabelText('记忆角色'), { target: { value: 'chen' } })
+  it('shows all characters together and searches local facts', () => {
+    setup()
+    expect(screen.getByRole('heading', { name: '不吃辣' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: '喜欢篮球' })).toBeInTheDocument()
+    expect(screen.queryByLabelText('记忆角色')).toBeNull()
+    fireEvent.change(screen.getByLabelText('搜索记忆'), { target: { value: '篮球' } })
+    expect(screen.getByRole('heading', { name: '喜欢篮球' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: '不吃辣' })).toBeNull()
     fireEvent.change(screen.getByLabelText('搜索记忆'), { target: { value: '不存在' } })
     expect(screen.queryByRole('heading', { name: '喜欢篮球' })).toBeNull()
   })
+  it('looks up original messages by source character, not colliding message IDs', () => {
+    render(<MemoryPanel memories={[{ ...memories[1], sourceMessageId: 42 }]} selected="lu" onSave={vi.fn()} onUpdate={vi.fn()} onDelete={vi.fn()} onClear={vi.fn()} conversations={{ lu: [{ id: 42, from: 'user', text: '错误来源', time: '' }], chen: [{ id: 42, from: 'user', text: '正确来源', time: '' }] }} />)
+    fireEvent.click(screen.getByText('详情与管理'))
+    fireEvent.click(screen.getByRole('button', { name: '查看来源' }))
+    expect(screen.getByText('#42 · 正确来源')).toBeInTheDocument()
+    expect(screen.queryByText('#42 · 错误来源')).toBeNull()
+  })
+  it('filters pending records across all characters and respects each source policy', () => {
+    render(<MemoryPanel memories={[memories[0], { ...memories[1], state: 'pending' }]} selected="lu" onSave={vi.fn()} onUpdate={vi.fn()} onDelete={vi.fn()} onClear={vi.fn()} onConfirm={vi.fn()} policies={{ chen: { extractionEnabled: true, disabledCategories: ['profile'] } }} />)
+    fireEvent.change(screen.getByLabelText('记忆状态筛选'), { target: { value: 'pending' } })
+    expect(screen.queryByRole('heading', { name: '不吃辣' })).toBeNull()
+    fireEvent.click(screen.getByText('详情与管理'))
+    expect(screen.getByRole('button', { name: '确认记住' })).toBeDisabled()
+  })
+  it('applies category controls to all source policies without resetting other restrictions', async () => {
+    const onPolicy = vi.fn().mockResolvedValue(undefined)
+    render(<MemoryPanel memories={memories} selected="lu" onSave={vi.fn()} onUpdate={vi.fn()} onDelete={vi.fn()} onClear={vi.fn()} onPolicy={onPolicy} policies={{ chen: { extractionEnabled: false, disabledCategories: ['emotion'] } }} />)
+    fireEvent.click(screen.getByText('记忆与敏感信息控制'))
+    fireEvent.click(screen.getByLabelText('允许用户偏好记忆'))
+    await waitFor(() => expect(onPolicy).toHaveBeenCalledTimes(3))
+    expect(onPolicy).toHaveBeenCalledWith('lu', { extractionEnabled: true, disabledCategories: ['profile'] })
+    expect(onPolicy).toHaveBeenCalledWith('chen', { extractionEnabled: false, disabledCategories: ['emotion', 'profile'] })
+    expect(onPolicy).toHaveBeenCalledWith('gu', { extractionEnabled: true, disabledCategories: ['profile'] })
+  })
+  it('clears every role only after the all-memory confirmation', async () => {
+    const confirmation = vi.spyOn(window, 'confirm').mockReturnValue(false)
+    const onClear = vi.fn().mockResolvedValue(undefined)
+    render(<MemoryPanel memories={memories} selected="lu" onSave={vi.fn()} onUpdate={vi.fn()} onDelete={vi.fn()} onClear={onClear} />)
+    fireEvent.click(screen.getByRole('button', { name: '清除全部记忆' }))
+    expect(onClear).not.toHaveBeenCalled()
+    confirmation.mockReturnValue(true)
+    fireEvent.click(screen.getByRole('button', { name: '清除全部记忆' }))
+    await waitFor(() => expect(onClear).toHaveBeenCalledTimes(3))
+    expect(onClear.mock.calls.map(call => call[0])).toEqual(['lu', 'chen', 'gu'])
+    confirmation.mockRestore()
+  })
   it('changes importance and explicit expiry without changing them before save', async () => {
     const { onUpdate } = setup()
-    fireEvent.click(screen.getByRole('button', { name: '编辑' }))
+    fireEvent.click(within(screen.getByRole('heading', { name: '不吃辣' }).closest('article')!).getByRole('button', { name: '编辑' }))
     fireEvent.change(screen.getByLabelText('重要度'), { target: { value: '5' } })
     fireEvent.change(screen.getByLabelText('情境到期'), { target: { value: '2027-06-01' } })
     expect(onUpdate).not.toHaveBeenCalled()
@@ -97,6 +140,7 @@ describe('confirmed memory controls', () => {
   it('restores archives only as a new pending proposal', async () => {
     const onUpdate = vi.fn().mockResolvedValue(undefined)
     render(<MemoryPanel memories={[{ ...memories[0], state: 'archived', enabled: false }]} selected="lu" onSave={vi.fn()} onUpdate={onUpdate} onDelete={vi.fn()} onClear={vi.fn()} />)
+    fireEvent.click(screen.getByText('详情与管理'))
     expect(screen.queryByRole('button', { name: '恢复引用' })).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: '恢复归档' }))
     await waitFor(() => expect(onUpdate).toHaveBeenCalledWith('m1', { state: 'pending', enabled: false }))
@@ -104,6 +148,7 @@ describe('confirmed memory controls', () => {
   it('requires explicit consent for sensitive proposals and does not offer the misleading resume control', async () => {
     const onConfirm = vi.fn().mockResolvedValue(undefined)
     render(<MemoryPanel memories={[{ ...memories[0], state: 'pending', sensitive: true, enabled: false }]} selected="lu" onSave={vi.fn()} onUpdate={vi.fn()} onDelete={vi.fn()} onClear={vi.fn()} onConfirm={onConfirm} />)
+    fireEvent.click(screen.getByText('详情与管理'))
     expect(screen.getByText(/敏感信息：要我记住吗/)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '恢复引用' })).toBeNull()
     expect(onConfirm).not.toHaveBeenCalled()
@@ -111,7 +156,7 @@ describe('confirmed memory controls', () => {
     await waitFor(() => expect(onConfirm).toHaveBeenCalledWith('m1'))
   })
   it('edits the content and category only after explicit save', async () => {
-    const { onUpdate } = setup(); fireEvent.click(screen.getByRole('button', { name: '编辑' }))
+    const { onUpdate } = setup(); fireEvent.click(within(screen.getByRole('heading', { name: '不吃辣' }).closest('article')!).getByRole('button', { name: '编辑' }))
     fireEvent.change(screen.getByLabelText('编辑记忆内容'), { target: { value: '可以微辣' } })
     expect(onUpdate).not.toHaveBeenCalled()
     fireEvent.click(screen.getByRole('button', { name: '保存记忆' }))

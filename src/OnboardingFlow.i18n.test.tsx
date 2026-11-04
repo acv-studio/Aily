@@ -53,6 +53,8 @@ describe('bilingual onboarding and profile editor', () => {
     const save = vi.fn().mockRejectedValue(new Error('storage'))
     const profile = { ...defaultOnboardingProfile('chen'), userName: '艳艳', characterName: '阿恒', blockedTopics: '工作 / work', safeWord: '停一下', notificationStart: '23:15', notificationEnd: '07:30' }
     render(<OnboardingEditor initial={profile} save={save} close={vi.fn()} />)
+    expect(screen.queryByRole('combobox', { name: '界面语言 / Interface language' })).not.toBeInTheDocument()
+    expect(screen.queryByText('中文 / English')).not.toBeInTheDocument()
     expect(screen.getByLabelText('Your name or nickname')).toHaveValue('艳艳')
     expect(screen.getByLabelText('What would you like to call your companion?')).toHaveValue('阿恒')
     expect(screen.getByLabelText('Topics to avoid')).toHaveValue('工作 / work')
@@ -61,7 +63,7 @@ describe('bilingual onboarding and profile editor', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save preferences' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('Preferences were not saved.')
     expect(save).toHaveBeenCalledWith(profile)
-    fireEvent.change(screen.getByLabelText('界面语言 / Interface language'), { target: { value: 'zh-CN' } })
+    act(() => setLocale('zh-CN'))
     expect(screen.getByRole('heading', { name: '称呼与互动偏好' })).toBeInTheDocument()
     expect(screen.getByLabelText('你的名字或昵称')).toHaveValue('艳艳')
     expect(screen.getByLabelText('你想怎么称呼 TA')).toHaveValue('阿恒')

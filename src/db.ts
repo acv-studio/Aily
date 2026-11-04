@@ -1,8 +1,8 @@
 import { t } from './i18n'
 import Dexie, { type EntityTable, type Table } from 'dexie'
-import type { CharacterId } from './data'
-import type { ChatMessage, ConfirmedMemory } from './chatService'
-import { normalizeOnboardingProfile, onboardingMemoryId, onboardingMemoryText, validateOnboardingProfile, withoutAdultAuthorization, type OnboardingProfile } from './onboarding'
+import { characters, type CharacterId } from './data'
+import { validLocalVideoAttachment, type ChatMessage, type ConfirmedMemory } from './chatService'
+import { defaultOnboardingProfile, normalizeOnboardingProfile, onboardingMemoryId, onboardingMemoryText, validateOnboardingProfile, withoutAdultAuthorization, type OnboardingProfile } from './onboarding'
 import { conflictMemoryIds, defaultMemoryPolicy, type ConversationSummary, type MemoryPolicy } from './longMemory'
 
 type StoredMessage = ChatMessage & { characterId: CharacterId }
@@ -90,14 +90,19 @@ function validateMessage(value: unknown): ChatMessage {
   optional(value, 'replyToId', messageId)
   optional(value, 'withdrawn', item => typeof item === 'boolean')
   optional(value, 'createdAt', timestamp)
-  optional(value, 'kind', item => ['text', 'image', 'audio'].includes(item as string))
+  optional(value, 'kind', item => ['text', 'image', 'audio', 'video'].includes(item as string))
   optional(value, 'attachment', validAttachment)
+  // Withdrawals deliberately retain the kind while removing the attachment.
+  if (value.kind === 'video') check(validLocalVideoAttachment(value.attachment) || value.withdrawn === true && !Object.hasOwn(value, 'attachment'))
+  if (isRecord(value.attachment) && typeof value.attachment.mimeType === 'string' && value.attachment.mimeType.startsWith('video/')) check(value.kind === 'video')
   return { ...value } as ChatMessage
 }
 
 function validAttachment(value: unknown): boolean {
   if (!isRecord(value)) return false
   keys(value, ['name', 'mimeType', 'dataUrl'])
+  if (validLocalVideoAttachment(value)) return true
+  // Preserve the existing image/audio data-URL cap; video has its own byte cap.
   return string(value.name, 512, true) && string(value.mimeType, 128, true)
     && /^(image|audio)\/[a-z0-9.+-]+$/i.test(value.mimeType)
     && string(value.dataUrl, 10_000_000, true)
@@ -463,6 +468,26 @@ export async function finishOnboarding(profile: OnboardingProfile, messages: Cha
 }
 export async function updateOnboarding(profile: OnboardingProfile): Promise<OnboardingSaveResult> {
   return persistOnboarding(profile, [], false)
+}
+
+/** Switch the default and active role together without rewriting any conversation or memory. */
+export async function setPrimaryCharacter(id: CharacterId): Promise<OnboardingProfile> {
+  const role = characters.find(character => character.id === id)
+  if (!role) throw new Error(t('请选择有效角色'))
+  return db.transaction('rw', db.settings, async () => {
+    if ((await db.settings.get('onboarded'))?.value !== true) throw new Error(t('请先完成首次引导'))
+    const previous = normalizeOnboardingProfile((await db.settings.get('onboardingProfile'))?.value)
+    const profile = validateOnboardingProfile({
+      ...(previous || defaultOnboardingProfile(id)),
+      characterId: id,
+      characterName: previous?.characterId === id ? previous.characterName : role.name,
+    })
+    await db.settings.bulkPut([
+      { key: 'onboardingProfile', value: profile },
+      { key: 'selected', value: id },
+    ])
+    return profile
+  })
 }
 
 export async function exportData() {

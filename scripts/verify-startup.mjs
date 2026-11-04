@@ -27,11 +27,11 @@ try {
     localStorage.setItem('aily-safety-consent-v1', 'adult-ai-privacy-accepted')
   })
   await page.reload()
-  await page.getByRole('button', { name: '回忆', exact: true }).click()
+  await page.getByRole('button', { name: '记忆', exact: true }).click()
   await page.getByRole('button', { name: '分享回忆卡', exact: true }).click()
   await page.getByRole('dialog', { name: '分享回忆卡' }).waitFor()
   await page.getByRole('button', { name: '取消', exact: true }).click()
-  for (const tab of ['此刻', '商城', '我的', '消息']) {
+  for (const tab of ['朋友圈', '商城', '我的', '消息']) {
     await page.getByRole('button', { name: tab, exact: true }).click()
   }
   await page.getByRole('button', { name: '去找他', exact: true }).click()

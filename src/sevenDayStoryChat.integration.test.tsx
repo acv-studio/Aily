@@ -20,7 +20,7 @@ it('refreshes story memories without interrupting an active streamed reply', asy
     request.onDelta('，完整回复')
   })
   render(<App />)
-  fireEvent.click(await screen.findByRole('button', { name: /去找他/ }))
+  fireEvent.click(await screen.findByRole('button', { name: '与陆听澜聊天' }))
   expect(screen.queryByRole('button', { name: '确认并继续' })).not.toBeInTheDocument()
   fireEvent.change(screen.getByRole('textbox', { name: '发消息' }), { target: { value: '你好' } })
   fireEvent.click(screen.getByRole('button', { name: '发送消息' }))
