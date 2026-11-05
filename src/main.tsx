@@ -4,5 +4,6 @@ import App from './App'
 import './styles.css'
 import './glassMotion.css'
 import './chatLayout.css'
+import './chunui-web.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(<React.StrictMode><App /></React.StrictMode>)

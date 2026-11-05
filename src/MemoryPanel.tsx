@@ -49,9 +49,9 @@ export default function MemoryPanel({ memories, selected, onSave, onUpdate, onDe
   const confirmedCount = visible.filter(item => item.state !== 'pending').length
   return <section className="screen memory-page">
     <div className="memory-intro"><span className="memory-kicker">LONG-TERM MEMORY</span><p>{t('所有记忆放在一起，直接查看和搜索，不用切换角色。已确认且允许引用的内容，会在聊天相关时读取；敏感内容仍需你确认。')}</p><div className="memory-stats"><span><strong>{confirmedCount}</strong>{t('已记住')}</span></div></div>
+    <div className="memory-toolbar"><div><span>{t('{count} 条记忆', { count: confirmedCount })}</span></div><button disabled={busy} onClick={() => { setAdding(true); setEditing(null); setText(''); setNewCategory('profile') }}>{t('＋ 添加记忆')}</button></div>
     <div className="memory-controls glass"><div className="memory-filters"><label>{t('分类')}<select aria-label={t('记忆分类筛选')} value={category} onChange={event => setCategory(event.target.value)}><option value="all">{t('全部分类')}</option>{Object.entries(categories).map(([key, value]) => <option key={key} value={key}>{t(value)}</option>)}</select></label><label>{t('状态')}<select aria-label={t('记忆状态筛选')} value={status} onChange={event => setStatus(event.target.value)}>{[['all', '全部状态'], ['confirmed', '已记住'], ['archived', '已归档']].map(([key, label]) => <option key={key} value={key}>{t(label)}</option>)}</select></label></div><input className="memory-search" aria-label={t('搜索记忆')} placeholder={t('搜索全部记忆')} value={search} onChange={event => setSearch(event.target.value)} /></div>
     <>
-    <div className="memory-toolbar"><div><span>{t('{count} 条记忆', { count: confirmedCount })}</span></div><button disabled={busy} onClick={() => { setAdding(true); setEditing(null); setText(''); setNewCategory('profile') }}>{t('＋ 添加记忆')}</button></div>
     {error && <p role="alert" className="chat-error">{t(error)}</p>}
     {!visible.length && <p className="chat-empty">{t('还没有符合条件的记忆。可在聊天中选择“记住这条”。')}</p>}
     {visible.map(memory => { const memoryPolicy = policies[memory.characterId] || defaultMemoryPolicy; return <article className="memory-card glass managed-memory" key={memory.id}>

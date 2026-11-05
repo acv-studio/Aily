@@ -64,6 +64,7 @@ export default function ProfileScreen(props: Props) {
     }
   }
   const [showApi, setShowApi] = useState(false)
+  const [provider, setProvider] = useState<'magpie' | 'deepseek'>(() => endpoint.includes('magpie') ? 'magpie' : 'deepseek')
   const [showLanguage, setShowLanguage] = useState(false)
   const [showLocalData, setShowLocalData] = useState(false)
   const [showMembership, setShowMembership] = useState(false)
@@ -116,14 +117,14 @@ export default function ProfileScreen(props: Props) {
     <section className="profile-group" aria-labelledby="profile-general-heading">
       <h3 id="profile-general-heading">{t('通用设置')}</h3>
       <div className="profile-settings glass">
-        <SettingRow icon={<MemoryStick />} label={t('DeepSeek 连接')} value={apiKey ? t('已配置') : t('演示模式')} onClick={() => setShowApi(!showApi)} expanded={showApi} controls="profile-api" />
+        <SettingRow icon={<MemoryStick />} label={t('AI 服务')} value={provider === 'magpie' ? 'Magpie' : apiKey ? 'DeepSeek' : t('未配置')} onClick={() => setShowApi(!showApi)} expanded={showApi} controls="profile-api" />
         {showApi && <div id="profile-api" className="api-settings profile-inline-panel">
-          <h3>{t('DeepSeek 连接')}</h3>
-          <p>{t('对话内容会直接发送至你配置的服务。Key 只保留在当前浏览器会话，不写入记忆或导出数据。')}</p>
-          <label>API Key<div className="secret-input"><input aria-label="API Key" type={visible ? 'text' : 'password'} value={apiKey} onChange={event => setApiKey(event.target.value)} placeholder="sk-…" /><button onClick={() => setVisible(!visible)}>{visible ? t('隐藏') : t('显示')}</button></div></label>
-          <label>{t('接口地址')}<input value={endpoint} onChange={event => setEndpoint(event.target.value)} /></label>
-          <label>{t('模型')}<input value={model} onChange={event => setModel(event.target.value)} /></label>
-          <div className="api-actions"><button onClick={() => { setEndpoint('/api/magpie/v1/messages'); setModel('group/auto-mimo-v2-6-flash-free'); setApiKey('magpie'); setResult('已填写本地 Magpie 网关配置，请测试连接') }}>使用本地 Magpie 网关</button><button className="test-api" onClick={() => void test()} disabled={testing}>{testing ? t('正在测试…') : t('测试连接')}</button><button onClick={() => { setApiKey(''); setResult('已删除本次会话中的 Key') }}>{t('删除 Key')}</button></div>
+          <h3>{t('AI 服务')}</h3>
+          <p>{t('选择 DeepSeek 或本地 Magpie 网关。DeepSeek 需要你填写自己的 Key；Magpie 使用本机默认网关。')}</p>
+          <div className="provider-switch" role="radiogroup" aria-label={t('AI 服务')}><button role="radio" aria-checked={provider === 'magpie'} className={provider === 'magpie' ? 'selected' : ''} onClick={() => { setProvider('magpie'); setEndpoint('/api/magpie/v1/messages'); setModel('ferry/claude-gpt-5-6-luna'); setApiKey('magpie'); setResult('已切换到本地 Magpie 网关') }}>Magpie</button><button role="radio" aria-checked={provider === 'deepseek'} className={provider === 'deepseek' ? 'selected' : ''} onClick={() => { setProvider('deepseek'); setEndpoint('https://api.deepseek.com/chat/completions'); setModel('deepseek-chat'); setApiKey(''); setResult('请填写 DeepSeek API Key') }}>DeepSeek</button></div>
+          {provider === 'deepseek' && <label>DeepSeek API Key<div className="secret-input"><input aria-label="DeepSeek API Key" type={visible ? 'text' : 'password'} value={apiKey} onChange={event => setApiKey(event.target.value)} placeholder="sk-…" /><button onClick={() => setVisible(!visible)}>{visible ? t('隐藏') : t('显示')}</button></div></label>}
+          <p className="api-provider-detail">{provider === 'magpie' ? 'ferry/claude-gpt-5-6-luna · /api/magpie/v1/messages' : 'deepseek-chat · https://api.deepseek.com/chat/completions'}</p>
+          <div className="api-actions"><button className="test-api" onClick={() => void test()} disabled={testing || provider === 'deepseek' && !apiKey.trim()}>{testing ? t('正在测试…') : t('测试连接')}</button>{provider === 'deepseek' && <button onClick={() => { setApiKey(''); setResult('已删除本次会话中的 Key') }}>{t('删除 Key')}</button>}</div>
           {result && <p className="api-result" role="status">{t(result)}</p>}
         </div>}
         <SettingRow icon={<Globe2 />} label={t('语言设置')} value={locale === 'zh-CN' ? '简体中文' : 'English'} onClick={() => setShowLanguage(!showLanguage)} expanded={showLanguage} controls="profile-language" />

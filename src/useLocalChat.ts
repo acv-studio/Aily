@@ -232,6 +232,19 @@ export default function useLocalChat() {
     window.addEventListener('aily-proactive-settings', wake)
     return () => { disposed = true; window.clearInterval(timer); document.removeEventListener('visibilitychange', wake); window.removeEventListener('aily-proactive-settings', wake) }
   }, [ready, onboarded])
+  const recordActivity = async (text: string) => {
+    if (!ready || !text.trim() || active.current || mutationCount.current) return
+    const role = selectedRef.current
+    const activity: ChatMessage = { id: nextId(), from: 'user', text: text.trim(), time: new Date().toLocaleTimeString(getLocale()), createdAt: new Date().toISOString(), status: 'sent' }
+    if (temporaryRef.current) {
+      const records = [...temporaryConversationsRef.current[role], activity]
+      temporaryConversationsRef.current = { ...temporaryConversationsRef.current, [role]: records }
+      if (mounted.current) setTemporaryConversations(temporaryConversationsRef.current)
+      return
+    }
+    const records = await persistChatChanges(role, [activity])
+    apply(role, records)
+  }
   const send = async (options: { retryId?: number; replyToId?: number; attachment?: ChatMessage['attachment']; kind?: ChatMessage['kind']; text?: string; localActionNote?: string } = {}) => {
     if (deleting.current || !ready || active.current || mutationCount.current) return
     const role = selectedRef.current
@@ -364,7 +377,7 @@ export default function useLocalChat() {
     try { if (value) window[storage].setItem(key, value); else window[storage].removeItem(key) }
     catch { setError('浏览器无法保存配置，本次配置仅暂留内存。') }
   }
-  return { prepareForDeletion: async () => { if (active.current || mutationCount.current || memoryLock.current) throw new Error('请先停止回复或等待保存'); deleting.current = true; try { await proactiveTask.current; await mutations.current; await Promise.all([...pendingWrites.current]); await organization.current } catch (failure) { deleting.current = false; throw failure } }, beforeDataChange: async () => { if (active.current || mutationCount.current) throw new Error('请先停止回复或等待保存'); await organization.current }, summaries, policies, changePolicy: tracked(changePolicy), approveProposal: tracked(approveProposal), temporary, toggleTemporary, chatMessages: temporary ? temporaryConversations[selected] : conversations[selected], ready, loadError, reload: load, onboarded, finishOnboarding, selected, setSelected, conversations, setConversations, memories, setMemories, draft, setDraft, replying, error, apiKey, endpoint, model,
+  return { prepareForDeletion: async () => { if (active.current || mutationCount.current || memoryLock.current) throw new Error('请先停止回复或等待保存'); deleting.current = true; try { await proactiveTask.current; await mutations.current; await Promise.all([...pendingWrites.current]); await organization.current } catch (failure) { deleting.current = false; throw failure } }, beforeDataChange: async () => { if (active.current || mutationCount.current) throw new Error('请先停止回复或等待保存'); await organization.current }, summaries, policies, changePolicy: tracked(changePolicy), approveProposal: tracked(approveProposal), temporary, toggleTemporary, recordActivity, chatMessages: temporary ? temporaryConversations[selected] : conversations[selected], ready, loadError, reload: load, onboarded, finishOnboarding, selected, setSelected, conversations, setConversations, memories, setMemories, draft, setDraft, replying, error, apiKey, endpoint, model,
     onboardingProfile, updateOnboarding, setPrimary: (id: CharacterId) => observeWrite(changePrimary(id)),
     setApiKey: (value: string) => { setKey(value); writePreference('sessionStorage', 'aily-api-key', value) },
     setEndpoint: (value: string) => { setEndpointState(value); writePreference('localStorage', 'aily-api-endpoint', value) }, setModel: (value: string) => { setModelState(value); writePreference('localStorage', 'aily-api-model', value) },

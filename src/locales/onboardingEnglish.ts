@@ -1,4 +1,11 @@
 export const onboardingEnglish: Record<string, string> = {
+  '选择 AI 服务': 'Choose an AI service',
+  '选择一种回复生成方式，之后随时可以在“我的”中修改。': 'Choose how replies are generated. You can change it any time in Profile.',
+  '本地网关': 'Local gateway',
+  '推荐 · 使用当前设备的本地网关': 'Recommended · Use the local gateway on this device',
+  '填写自己的 DeepSeek API Key': 'Enter your own DeepSeek API Key',
+  'Key 仅保留在本次浏览器会话': 'Your key stays only in this browser session',
+  '聊天内容会发送至你选择的 AI 服务以生成回复。API Key 只保留在本次浏览器会话，不包含在备份内。': 'Chat content is sent to your chosen AI service to generate replies. The API Key stays only in this browser session and is excluded from backups.',
   '选择语言': 'Choose your language',
   '请选择界面语言，之后可以在“我的”中修改。': 'Choose the interface language. You can change it later in Profile.',
   '无法保护本机数据，请重新打开页面': 'Could not protect local data. Please reopen this page.',

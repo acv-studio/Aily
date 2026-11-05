@@ -38,6 +38,8 @@ export interface ChatPanelProps {
   openMoments?: () => void
   openCall?: () => void
   openPreferences?: () => void
+  recordActivity?: (text: string) => Promise<void>
+  relationshipStage?: string
   isPrimary?: boolean
   setPrimary?: () => Promise<void>
 }
@@ -153,6 +155,7 @@ export default function ChatPanel(props: ChatPanelProps) {
     return () => document.removeEventListener('keydown', dismiss)
   }, [modeOpen])
   const [quote, setQuote] = useState<number>()
+  const [activeActions, setActiveActions] = useState<number>()
   const [memory, setMemory] = useState<MemoryDraft>()
   const [notice, setNotice] = useState('')
   const [recording, setRecording] = useState(false)
@@ -289,7 +292,7 @@ export default function ChatPanel(props: ChatPanelProps) {
   }
   return <main ref={screen} className="chat-screen" style={{ '--accent': character.accent } as React.CSSProperties}>
     <header className="chat-header glass">
-      <button className="icon-button" aria-label={t('返回消息')} disabled={replying} onClick={props.close}><ArrowLeft /></button>
+      <button className="icon-button" aria-label={t('返回消息')} onClick={props.close}><ArrowLeft /></button>
       <span className="avatar" style={{ '--accent': character.accent } as React.CSSProperties}>{t(character.avatar)}</span>
       <div className="chat-identity"><strong>{t(character.name)}</strong><small>{t('AI 角色')} · {props.demo ? t('演示模式') : 'DeepSeek'}{replying && <span> · {t('正在回复…')}</span>}</small></div>
       <div ref={settingsMenu} className="chat-settings">
@@ -306,20 +309,11 @@ export default function ChatPanel(props: ChatPanelProps) {
           {props.openMoments && <button disabled={replying || primarySaving || recording || readingFile} onClick={() => { setSettingsOpen(false); props.openMoments?.() }}><Sparkles size={17} /><span>{t('查看朋友圈')}</span></button>}
           {props.openPreferences && <button disabled={replying || recording || readingFile} onClick={() => { setSettingsOpen(false); props.openPreferences?.() }}><Settings2 size={17} /><span>{t('修改称呼与互动偏好')}</span></button>}
           <button disabled={replying || recording || readingFile} onClick={() => { setSettingsOpen(false); setHistoryOpen(true) }}><CalendarHeart size={17} /><span>{t('对话历史')}</span></button>
-          {props.toggleTemporary && <button disabled={replying || recording || readingFile} onClick={() => { setMemory(undefined); setQuote(undefined); setSearch(''); setAttachment(undefined); setSettingsOpen(false); props.toggleTemporary?.() }}><ShieldCheck size={17} /><span>{props.temporary ? t('结束临时会话') : t('临时会话')}</span></button>}
+          {props.toggleTemporary && <button disabled={replying || recording || readingFile} onClick={async () => { if (!props.temporary) await props.recordActivity?.('你开启了临时会话'); setMemory(undefined); setQuote(undefined); setSearch(''); setAttachment(undefined); setSettingsOpen(false); props.toggleTemporary?.() }}><ShieldCheck size={17} /><span>{props.temporary ? t('结束临时会话') : t('临时会话')}</span></button>}
           <button onClick={() => { toggleSearch(); setSettingsOpen(false); settingsTrigger.current?.focus() }}><Search size={17} /><span>{t('搜索消息')}</span></button>
         </section>}
       </div>
     </header>
-    {props.setReplyMode && <div className="chat-controls">
-      <div className="chat-toolbar">
-        <button className="chat-mode-trigger" aria-label={t('回复模式：{mode}', { mode: t(REPLY_MODE_LABELS[props.replyMode || 'brief']) })} aria-expanded={modeOpen} aria-controls="chat-reply-modes" onClick={() => { setModeOpen(!modeOpen) }}>{t(REPLY_MODE_LABELS[props.replyMode || 'brief'])}<ChevronDown size={14} /></button>
-      </div>
-      {modeOpen && <section id="chat-reply-modes" className="reply-mode-picker chat-popover" aria-label={t('回复模式')}>
-        <div className="reply-mode-options" role="group" aria-label={t('选择回复模式')}>{REPLY_MODES.map(mode => <button key={mode} type="button" aria-pressed={(props.replyMode || 'brief') === mode} disabled={replying || props.modeSaving} onClick={async () => { try { await props.setReplyMode?.(mode); setModeOpen(false) } catch { setNotice('回复模式未切换，请停止回复或检查本机存储后重试。') } }}>{t(REPLY_MODE_LABELS[mode])}</button>)}</div>
-        <p>{props.modeSaving ? t('正在保存回复模式…') : t(REPLY_MODE_DESCRIPTIONS[props.replyMode || 'brief'])}<span>{t('仅影响下一次回复')}{props.temporary ? t(' · 本次临时会话有效') : ''}</span></p>
-      </section>}
-    </div>}
     {searchOpen && <div className="chat-search"><input aria-label={t('搜索聊天记录')} placeholder={t('搜索当前角色的聊天记录')} value={search} onChange={event => setSearch(event.target.value)} /><button onClick={() => { setSearch(''); setSearchOpen(false) }}>{t('关闭')}</button></div>}
     <section className="messages" aria-label={t('聊天记录')} aria-live="polite">
       {messages.length === 0 && !query && <div className="chat-intro">
@@ -334,16 +328,16 @@ export default function ChatPanel(props: ChatPanelProps) {
         {message.from === 'character' && <span className="avatar" style={{ '--accent': character.accent } as React.CSSProperties}>{t(character.avatar)}</span>}
         <div className="message-content">
           {!message.withdrawn && message.replyToId !== undefined && <blockquote>{quoteText(messages.find(item => item.id === message.replyToId))}</blockquote>}
-          <div className={`bubble ${message.status === 'sending' ? 'streaming' : ''} ${message.attachment && message.kind !== 'text' ? 'attachment-bubble' : ''}`}>
+          <div className={`bubble ${message.status === 'sending' ? 'streaming' : ''} ${message.attachment && message.kind !== 'text' ? 'attachment-bubble' : ''} ${activeActions === message.id ? 'actions-open' : ''}`} tabIndex={!message.withdrawn && message.status !== 'sending' ? 0 : undefined} role={!message.withdrawn && message.status !== 'sending' ? 'button' : undefined} aria-expanded={!message.withdrawn && message.status !== 'sending' ? activeActions === message.id : undefined} aria-label={!message.withdrawn && message.status !== 'sending' ? t('消息操作') : undefined} onClick={event => { if ((event.target as HTMLElement).closest('button,input,audio,video')) return; if (!message.withdrawn && message.status !== 'sending') setActiveActions(activeActions === message.id ? undefined : message.id) }} onKeyDown={event => { if ((event.key === 'Enter' || event.key === ' ') && !message.withdrawn && message.status !== 'sending') { event.preventDefault(); setActiveActions(activeActions === message.id ? undefined : message.id) } }}>
             {message.withdrawn ? <em>{t('你撤回了一条消息')}</em> : <>
               {message.kind === 'image' && message.attachment && <img className="chat-image" src={message.attachment.dataUrl} alt={message.attachment.name} />}
               {message.kind === 'video' && (message.attachment ? <VideoPlayer src={message.attachment.dataUrl} onPlay={playAudio} /> : <em>{t('视频附件不可用')}</em>)}
               {message.kind === 'audio' && (message.attachment ? <VoicePlayer src={message.attachment.dataUrl} onPlay={playAudio} /> : <em>{t('语音附件不可用')}</em>)}
-              {message.text || (message.status === 'sending' ? t('正在回复…') : '')}
+              {renderMessageText(message.text) || (message.status === 'sending' ? t('正在回复…') : '')}
             </>}
           </div>
           <time>{message.createdAt ? new Date(message.createdAt).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' }) : message.time}</time>
-          {!message.withdrawn && message.status !== 'sending' && <div className="message-actions">
+          {!message.withdrawn && message.status !== 'sending' && activeActions === message.id && <div className="message-actions">
             <button aria-label={t('引用消息 {id}', { id: message.id })} onClick={() => setQuote(message.id)}><Quote size={12} />{t('引用')}</button>
             {message.text && !props.temporary && <button onClick={() => setMemory({ text: message.text, category: 'profile', sourceMessageId: message.id })}>{t('记住这条')}</button>}
             {message.from === 'user' && <button disabled={replying} onClick={() => props.withdraw(message.id)}>{t('撤回')}</button>}
@@ -359,7 +353,8 @@ export default function ChatPanel(props: ChatPanelProps) {
       <div>{t('待发送：')}<span>{attachment.data.name}</span>{attachment.kind === 'image' && <img className="chat-image attachment-preview-image" src={attachment.data.dataUrl} alt={attachment.data.name} />}{attachment.kind === 'video' && <VideoPlayer src={attachment.data.dataUrl} preview onPlay={playAudio} />}{attachment.kind === 'audio' && <VoicePlayer src={attachment.data.dataUrl} preview onPlay={playAudio} />}</div>
       <button onClick={() => setAttachment(undefined)}>{t('移除')}</button>
     </div>}
-    <div className="quick-replies"><button onClick={props.openStory}>{t('📖 共同故事')}</button><button onClick={props.openGame}>{t('✊ 猜拳')}</button>{props.openMoments && <button disabled={replying || recording} onClick={props.openMoments}>{t('✨ 朋友圈')}</button>}</div>
+    <div className="quick-replies">{props.setReplyMode && <div className="inline-mode"><button className="chat-mode-trigger" aria-label={t('回复模式：{mode}', { mode: t(REPLY_MODE_LABELS[props.replyMode || 'brief']) })} aria-expanded={modeOpen} aria-controls="chat-reply-modes" onClick={() => setModeOpen(!modeOpen)}>{t(REPLY_MODE_LABELS[props.replyMode || 'brief'])}<ChevronDown size={14} /></button></div>}<button onClick={() => { void props.recordActivity?.('你发起了共同故事'); props.openStory() }}>{t('📖 共同故事')}</button><button onClick={() => { void props.recordActivity?.('你发起了猜拳'); props.openGame() }}>{t('✊ 猜拳')}</button>{props.openMoments && <button disabled={replying || recording} onClick={() => { void props.recordActivity?.('你查看了 TA 的朋友圈'); props.openMoments?.() }}>{t('✨ 朋友圈')}</button>}<button onClick={() => { const topic=randomRelationshipTopic(props.relationshipStage); setDraft(t(topic)); composerInput.current?.focus() }}><Sparkles size={14}/>{t('随机话题')}</button></div>
+    {modeOpen && <section id="chat-reply-modes" className="reply-mode-picker quick-mode-popover" aria-label={t('回复模式')}><div className="reply-mode-options" role="group" aria-label={t('选择回复模式')}>{REPLY_MODES.map(mode => <button key={mode} type="button" aria-pressed={(props.replyMode || 'brief') === mode} disabled={replying || props.modeSaving} onClick={async () => { try { await props.setReplyMode?.(mode); await props.recordActivity?.(`你将聊天模式切换为「${t(REPLY_MODE_LABELS[mode])}」`); setModeOpen(false) } catch { setNotice('回复模式未切换，请停止回复或检查本机存储后重试。') } }}>{t(REPLY_MODE_LABELS[mode])}</button>)}</div><p>{props.modeSaving ? t('正在保存回复模式…') : t(REPLY_MODE_DESCRIPTIONS[props.replyMode || 'brief'])}<span>{t('仅影响下一次回复')}{props.temporary ? t(' · 本次临时会话有效') : ''}</span></p></section>}
     <input hidden ref={imageInput} aria-label={t('选择照片文件')} type="file" accept="image/png,image/jpeg,image/webp,image/gif" disabled={replying || recording || readingFile} onChange={event => { void chooseFile('image', event.target.files?.[0]); event.target.value = '' }} />
     <input hidden ref={videoInput} aria-label={t('选择视频文件')} type="file" accept="video/mp4,video/webm,video/quicktime" disabled={replying || recording || readingFile} onChange={event => { void chooseFile('video', event.target.files?.[0]); event.target.value = '' }} />
     <footer className={`composer glass ${moreOpen ? 'composer-expanded' : ''}`}>
@@ -398,6 +393,24 @@ export default function ChatPanel(props: ChatPanelProps) {
       <div className="memory-actions"><button type="submit">{t('确认记住')}</button><button type="button" onClick={() => setMemory(undefined)}>{t('暂不保存')}</button></div>
     </form></div>}
   </main>
+}
+
+function renderMessageText(text: string) {
+  if (!text.includes('**')) return text
+  const parts = text.split(/(\*\*[^*]+\*\*)/g)
+  return <>{parts.map((part, index) => part.startsWith('**') && part.endsWith('**') ? <strong key={index}>{part.slice(2, -2)}</strong> : part)}</>
+}
+
+function randomRelationshipTopic(stage = '初遇') {
+  const topics: Record<string, string[]> = {
+    初遇: ['我想多认识你一点。你最近最喜欢做什么？', '如果今天可以不用赶时间，你最想怎么度过？', '想听你说说，你眼里的自己是什么样的。'],
+    熟悉: ['我突然好奇，你最喜欢的一种小小仪式感是什么？', '你觉得什么样的陪伴会让人安心？', '今天有没有一件很小但让你开心的事？'],
+    信任: ['最近有没有一件事，你希望有人认真听你说完？', '如果可以把今天的一个情绪交给我保管，你会选什么？', '你现在最想被怎样理解？'],
+    亲密: ['我们以后想一起养成一个什么小习惯？', '如果给我们今天取一个名字，你会怎么叫它？', '有一句平时没说出口的话，想现在告诉我吗？'],
+    相伴: ['回头看我们最近的相处，哪一刻让你觉得很珍贵？', '接下来想和我一起完成一件什么小事？', '如果把这一周写进故事里，你希望留下哪一幕？'],
+  }
+  const list = topics[stage] || topics.初遇
+  return list[Math.floor(Math.random() * list.length)]
 }
 
 function readDataUrl(blob: Blob): Promise<string> {

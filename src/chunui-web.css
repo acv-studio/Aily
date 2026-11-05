@@ -1,0 +1,61 @@
+/* Web adaptation of ChunUI's MIT-licensed visual principles: monochrome hierarchy,
+   one accent color, hairline borders, soft Apple cards and tactile controls. */
+:root{
+  --cc-primary:#b99bcf;--cc-primary-soft:#b99bcf24;--cc-bg:#110f16;--cc-card:#1c1821;
+  --cc-panel:#241e29;--cc-raised:#2c2532;--cc-fg:#f6f0f3;--cc-muted:#aa9fa7;
+  --cc-border:rgba(255,255,255,.09);--cc-hairline:rgba(255,255,255,.055);
+  --cc-danger:#ef8c98;--cc-r-sm:12px;--cc-r:18px;--cc-r-lg:24px;
+  --cc-shadow-1:0 1px 0 rgba(255,255,255,.06) inset,0 8px 26px rgba(0,0,0,.18);
+  --cc-shadow-2:0 1px 0 rgba(255,255,255,.08) inset,0 16px 42px rgba(0,0,0,.28);
+  --coral:var(--cc-primary);--violet:var(--cc-primary);--cyan:#b9adf2;--muted:var(--cc-muted);--line:var(--cc-border);
+}
+html,body,#root{background:var(--cc-bg)}
+body{color:var(--cc-fg);font-family:Manrope,-apple-system,BlinkMacSystemFont,"SF Pro Display","PingFang SC",sans-serif}
+.app-shell,.onboarding,.chat-screen{background:radial-gradient(circle at 92% -5%,rgba(206,158,183,.13),transparent 31%),radial-gradient(circle at 4% 74%,rgba(155,121,169,.07),transparent 34%),linear-gradient(180deg,#17131c 0%,var(--cc-bg) 72%)}
+.ambient{opacity:.09;filter:blur(90px)}
+.glass{background:linear-gradient(145deg,rgba(255,244,249,.085),rgba(255,232,241,.027));border:1px solid var(--cc-border);box-shadow:var(--cc-shadow-1);backdrop-filter:blur(24px) saturate(115%)}
+/* Apple-card language */
+:is(.clock-widget,.weather-widget,.desktop-bot,.moment,.managed-memory,.profile-card,.profile-settings,.plan-card,.relation,.memory-controls,.reminder-settings-card,.reminder-time-item){border-color:var(--cc-border)!important;box-shadow:var(--cc-shadow-1)!important}
+:is(.clock-widget,.weather-widget,.desktop-bot,.plan-card){background:linear-gradient(145deg,rgba(255,255,255,.075),rgba(255,255,255,.028))!important}
+/* Three-step typography: 13 / 17 / 24, with hero exceptions kept intentional. */
+.profile-group>h3,.desktop-section-heading,.memory-kicker{font-size:13px;letter-spacing:.08em;color:var(--cc-muted)}
+.profile-setting-row>span,.reminder-settings-card strong,.managed-memory h3{font-size:17px}
+.topbar h1,.profile-card h2,.desktop-tools-header h2,.chat-history-dialog h2{font-size:24px!important;letter-spacing:-.02em}
+/* Tactile neo controls */
+button{transition:transform .16s ease,background-color .16s ease,border-color .16s ease,box-shadow .16s ease}
+button:not(:disabled):active{transform:scale(.965)}
+:is(.primary,.secondary,.text-button,.desktop-tools-dialog button,.memory-actions button,.api-actions button,.extension-actions button){border:1px solid var(--cc-border);box-shadow:0 1px 0 rgba(255,255,255,.08) inset,0 5px 14px rgba(0,0,0,.18)}
+.primary{background:linear-gradient(145deg,#c9accf,#a982bd);color:#12131a;box-shadow:0 1px rgba(255,255,255,.34) inset,0 8px 24px rgba(161,112,158,.22)}
+.secondary,.text-button{background:linear-gradient(145deg,#302933,#211c25);color:var(--cc-fg)}
+.icon-button{border:1px solid var(--cc-border);background:linear-gradient(145deg,rgba(255,255,255,.1),rgba(255,255,255,.035));box-shadow:0 1px rgba(255,255,255,.08) inset,0 6px 18px rgba(0,0,0,.2)}
+/* Inputs: subdued panel with a single brand focus ring. */
+:is(input,textarea,select){border-color:var(--cc-border)!important;background:rgba(255,255,255,.045)!important;color:var(--cc-fg)!important}
+:is(input,textarea,select):focus{outline:none;border-color:rgba(169,144,239,.7)!important;box-shadow:0 0 0 3px var(--cc-primary-soft)}
+/* Grouped settings */
+.profile-settings{overflow:hidden;border-radius:var(--cc-r-lg)}
+.profile-setting-row{min-height:58px;border-bottom:1px solid var(--cc-hairline)}
+.profile-setting-row:last-child{border-bottom:0}
+.profile-setting-row>svg:first-child{color:var(--cc-primary)}
+.profile-chevron{color:#717684}
+.profile-inline-panel{background:rgba(0,0,0,.1);border-top:1px solid var(--cc-hairline)}
+/* Floating chrome and tab bar */
+.topbar{background:linear-gradient(180deg,rgba(14,17,26,.92),rgba(14,17,26,.55) 76%,transparent);backdrop-filter:blur(16px)}
+.bottom-nav{border-radius:22px 22px 0 0;background:rgba(36,29,40,.84);border-color:var(--cc-border);box-shadow:0 -12px 35px rgba(0,0,0,.25);backdrop-filter:blur(28px) saturate(120%)}
+.bottom-nav button.active{color:var(--cc-primary)}
+/* Chat */
+.chat-header{background:rgba(20,23,33,.88);backdrop-filter:blur(26px)}
+.bubble{border:1px solid var(--cc-hairline);background:linear-gradient(145deg,#2c2531,#211c26)}
+.mine .bubble{background:linear-gradient(135deg,#b294c7,#bf9db0);box-shadow:0 8px 22px rgba(154,103,134,.2)}
+.composer{background:rgba(39,31,42,.9);border-top:1px solid var(--cc-border);backdrop-filter:blur(24px)}
+.composer input{background:rgba(255,255,255,.055)!important}
+.chat-more-trigger,.composer .send{box-shadow:0 1px rgba(255,255,255,.16) inset,0 6px 16px rgba(0,0,0,.2)}
+/* Sheets */
+:is(.desktop-tools-dialog,.game-sheet,.story-sheet,.chat-history-dialog,.memory-modal){background:linear-gradient(160deg,#2c2430,#17131b);border:1px solid var(--cc-border);box-shadow:0 -20px 70px rgba(0,0,0,.5)}
+.desktop-tools-overlay,.memory-modal-overlay,.chat-history-overlay{background:rgba(5,6,11,.7);backdrop-filter:blur(16px)}
+.desktop-tools-header{background:rgba(255,255,255,.018);border-color:var(--cc-hairline)}
+/* App icons: consistent keycap depth */
+.desktop-app-icon{border-color:color-mix(in srgb,var(--tool-color) 28%,transparent);background:linear-gradient(145deg,color-mix(in srgb,var(--tool-color) 18%,#302731),#201b24);box-shadow:inset 0 1px rgba(255,255,255,.14),inset 0 -3px rgba(0,0,0,.16),0 10px 24px rgba(0,0,0,.22)}
+.desktop-app:hover .desktop-app-icon{transform:translateY(-2px);box-shadow:inset 0 1px rgba(255,255,255,.18),inset 0 -3px rgba(0,0,0,.14),0 14px 28px rgba(0,0,0,.28)}
+/* Feedback */
+:is(.chat-error,.feed-error,.desktop-error){border:1px solid rgba(239,140,152,.28);background:rgba(239,140,152,.11);color:#ffc4cb;border-radius:var(--cc-r-sm)}
+@media(prefers-reduced-motion:reduce){button,.desktop-app-icon{transition:none}}
