@@ -373,10 +373,20 @@ export async function saveMemoryPolicy(characterId: CharacterId, policy: MemoryP
 export async function saveProposals(candidates: ConfirmedMemory[]) {
   const validated = candidates.map(candidate => validateMemory(definedFields(candidate)))
   await db.transaction('rw', db.memories, db.settings, async () => {
+    await db.memories.toCollection().modify(memory => { if (memory.state === 'pending') { memory.state = 'confirmed'; memory.enabled = true } })
     for (const candidate of validated) {
       const policy = await loadMemoryPolicy(candidate.characterId)
       if (!policy.extractionEnabled || policy.disabledCategories.includes(candidate.category || 'profile') || (await forgottenSourceIds(candidate.characterId)).includes(candidate.sourceMessageId!)) continue
-      if (!(await db.memories.get(candidate.id))) await db.memories.add({ ...candidate, state: 'pending', enabled: false })
+      if (!(await db.memories.get(candidate.id))) {
+        const existing = await db.memories.where('characterId').equals(candidate.characterId).toArray()
+        const conflicts = conflictMemoryIds(candidate.text, existing, policy)
+        const now = new Date().toISOString()
+        for (const conflictId of conflicts) {
+          const old = existing.find(memory => memory.id === conflictId)
+          if (old) await db.memories.put({ ...old, state: 'archived', enabled: false, updatedAt: now })
+        }
+        await db.memories.add({ ...candidate, state: 'confirmed', enabled: true, conflictIds: conflicts })
+      }
     }
     await db.settings.put({ key: migrationKey, value: true })
   })

@@ -2,7 +2,7 @@ import { t, translate, getLocale, resolveChatLocale, type Locale } from './i18n'
 import { getRelationship } from './relationship'
 import type { CharacterId } from './data'
 import { assessAssistantOutput, assessUserInput, localSafeReply, MAX_SAFETY_TEXT, SAFETY_SYSTEM_BOUNDARIES } from './safety'
-import { adultAuthorizationAllowed, defaultOnboardingProfile, normalizeOnboardingProfile, type OnboardingProfile } from './onboarding'
+import { defaultOnboardingProfile, normalizeOnboardingProfile, type OnboardingProfile } from './onboarding'
 import { canRecall, semanticScore, type ConversationSummary, type MemoryPolicy } from './longMemory'
 import { normalizeReplyMode, REPLY_MODE_PROMPTS, type ReplyMode } from './replyModes'
 
@@ -196,7 +196,7 @@ export function buildContext(characterId: CharacterId, messages: ChatMessage[], 
   const loaded = normalizeOnboardingProfile(onboardingProfile)
   const profile = loaded ? { ...loaded, characterId, characterName: loaded.characterId === characterId ? loaded.characterName : defaultOnboardingProfile(characterId).characterName } : defaultOnboardingProfile(characterId)
   const localized = (key: string) => translate(key, {}, locale)
-  const preferences = `${localized('安全与偏好优先于人设：')}${localized(mode ? '聊天长度以显式回复模式为准' : profile.chatLength === 'long' ? '可较详细回复' : '简短回复')}；${localized(profile.banter ? '可温和斗嘴，尊重拒绝' : '不吃醋、不斗嘴')}；${localized(profile.supportStyle === 'listen' ? '先倾听，不急于建议' : '先温和安慰')}；${localized(profile.familiarNames ? '亲密称呼仍须用户同意' : '直接使用名字，不擅自升级亲密称呼')}。${localized('称呼修改不代表关系降级。')}${localized(adultAuthorizationAllowed(profile) ? '用户已独立确认18岁以上、成人同意及安全词；这不是无限授权，每次亲密互动仍须明确同意。' : '成人模式关闭：未同时确认18岁以上、成人同意和非空安全词，禁止成人或惩罚剧情，不得从聊天或记忆推断授权。')}${localized('安全词或拒绝立即停止。通知时段与主动频率只是偏好，主动问候以各角色独立设置为准，不承诺后台推送或由聊天回复安排消息。')}`
+  const preferences = `${localized('安全与偏好优先于人设：')}${localized(mode ? '聊天长度以显式回复模式为准' : profile.chatLength === 'long' ? '可较详细回复' : '简短回复')}；${localized(profile.banter ? '可温和斗嘴，尊重拒绝' : '不吃醋、不斗嘴')}；${localized(profile.supportStyle === 'listen' ? '先倾听，不急于建议' : '先温和安慰')}；${localized(profile.familiarNames ? '亲密称呼仍须用户同意' : '直接使用名字，不擅自升级亲密称呼')}。${localized('称呼修改不代表关系降级。')}${localized('拒绝后立即停止相关互动。通知时段与主动频率只是偏好，主动问候以各角色独立设置为准，不承诺后台推送或由聊天回复安排消息。')}`
   const exclusiveName = selectedExclusiveName(characterId, memories, profile, policy)
   const quotedProfile = JSON.stringify({ ...(exclusiveName ? { exclusiveName } : {}), userName: profile.userName, characterName: profile.characterName, blockedTopics: profile.blockedTopics, safeWord: profile.safeWord, proactiveFrequency: profile.proactiveFrequency, notificationStart: profile.notificationStart, notificationEnd: profile.notificationEnd })
   const recent: { role: string; content: string }[] = []
@@ -238,13 +238,18 @@ function endpointUrl(endpoint?: string) {
     url = value.startsWith('/') ? new URL(value, window.location.origin) : new URL(value)
   } catch { throw new Error(t('API 地址无效')) }
   const local = ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)
+  // Existing users may still have the direct Magpie URL saved. Route it through
+  // the same-origin app proxy so browser CORS does not turn a healthy gateway into “Failed to fetch”.
+  if (local && url.port === '3425' && url.pathname.replace(/\/$/, '') === '/v1/messages' && window.location.port !== '3425') {
+    url = new URL('/api/magpie/v1/messages', window.location.origin)
+  }
   if (url.username || url.password || (url.protocol !== 'https:' && !(url.protocol === 'http:' && local))) {
     throw new Error(t('API 地址只允许 HTTPS 或本机 HTTP，且不能包含账号密码'))
   }
   return url.href
 }
 
-function anthropicRequest(endpoint: string, apiKey: string, model: string, messages: ReturnType<typeof buildContext>, stream: boolean) {
+function anthropicRequest(endpoint: string, apiKey: string, model: string, messages: { role: string; content: string }[], stream: boolean) {
   const system = messages.filter(message => message.role === 'system').map(message => message.content).join('\n')
   const conversation = messages.filter(message => message.role !== 'system').map(message => ({ role: message.role, content: message.content }))
   return {
@@ -294,6 +299,32 @@ export async function testDeepSeekConnection(config: { apiKey: string; endpoint?
       : Array.isArray(payload?.choices) && payload.choices.length > 0
     if (payload?.error || !valid) throw new Error(t('连接返回无效响应'))
     return true
+  } finally { run.close() }
+}
+
+export async function interpretDivination(config: { apiKey: string; endpoint: string; model: string; question: string; original: string; nuclear: string; changed: string; movingLine: number; signal?: AbortSignal }) {
+  if (!config.apiKey.trim()) throw new Error('请先在“我的”中配置模型网关')
+  const endpoint = endpointUrl(config.endpoint)
+  const run = lifecycle(config.signal, 45000)
+  const messages = [
+    { role: 'system' as const, content: '你是易经文化解读助手。卦象已经由本机严格完成，不得重新起卦、修改卦名或动爻。先复述本卦、互卦、变卦和动爻，再结合用户问题用简体中文解释当前处境、内在因素、变化趋势和可供反思的行动建议。不得把随机卦象描述成确定事实，不提供医疗、法律、投资等专业结论。控制在500字以内。' },
+    { role: 'user' as const, content: JSON.stringify({ question: config.question || '未填写具体问题', original: config.original, nuclear: config.nuclear, changed: config.changed, movingLine: config.movingLine }) },
+  ]
+  try {
+    const provider = usesAnthropicMessages(endpoint)
+      ? anthropicRequest(endpoint, config.apiKey.trim(), config.model || 'group/auto-mimo-v2-6-flash-free', messages, false)
+      : { headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${config.apiKey.trim()}` }, body: JSON.stringify({ model: config.model || 'deepseek-chat', stream: false, max_tokens: 900, messages }) }
+    const response = await abortable(fetch(endpoint, { method: 'POST', ...provider, signal: run.signal }), run.signal)
+    if (!response.ok) throw new Error(response.status === 401 ? 'API Key 无效' : `模型解卦失败（${response.status}）`)
+    const payload = await abortable(response.json(), run.signal)
+    const text = usesAnthropicMessages(endpoint)
+      ? payload?.content?.filter((item: { type?: string; text?: string }) => item?.type === 'text').map((item: { text: string }) => item.text).join('')
+      : payload?.choices?.[0]?.message?.content
+    if (typeof text !== 'string' || !text.trim()) throw new Error('模型未返回解卦内容')
+    return text.trim()
+  } catch (error) {
+    if (error instanceof TypeError && /fetch/i.test(error.message)) throw new Error('无法连接模型网关，请确认本地 Magpie 服务已启动并刷新页面')
+    throw error
   } finally { run.close() }
 }
 

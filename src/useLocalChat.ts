@@ -82,9 +82,11 @@ export default function useLocalChat() {
     pendingWrites.current.add(task)
     return task
   }
-  const [apiKey, setKey] = useState(() => readPreference('sessionStorage', 'aily-api-key'))
-  const [endpoint, setEndpointState] = useState(() => readPreference('localStorage', 'aily-api-endpoint', 'https://api.deepseek.com/chat/completions'))
-  const [model, setModelState] = useState(() => readPreference('localStorage', 'aily-api-model', 'deepseek-chat'))
+  const savedApiKey = readPreference('sessionStorage', 'aily-api-key')
+  const useDefaultGateway = !savedApiKey
+  const [apiKey, setKey] = useState(() => savedApiKey || 'magpie')
+  const [endpoint, setEndpointState] = useState(() => useDefaultGateway ? '/api/magpie/v1/messages' : readPreference('localStorage', 'aily-api-endpoint', '/api/magpie/v1/messages'))
+  const [model, setModelState] = useState(() => useDefaultGateway ? 'group/auto-mimo-v2-6-flash-free' : readPreference('localStorage', 'aily-api-model', 'group/auto-mimo-v2-6-flash-free'))
   const load = async () => {
     setLoadError('')
     try {
@@ -230,7 +232,7 @@ export default function useLocalChat() {
     window.addEventListener('aily-proactive-settings', wake)
     return () => { disposed = true; window.clearInterval(timer); document.removeEventListener('visibilitychange', wake); window.removeEventListener('aily-proactive-settings', wake) }
   }, [ready, onboarded])
-  const send = async (options: { retryId?: number; replyToId?: number; attachment?: ChatMessage['attachment']; kind?: ChatMessage['kind']; text?: string } = {}) => {
+  const send = async (options: { retryId?: number; replyToId?: number; attachment?: ChatMessage['attachment']; kind?: ChatMessage['kind']; text?: string; localActionNote?: string } = {}) => {
     if (deleting.current || !ready || active.current || mutationCount.current) return
     const role = selectedRef.current
     const isTemporary = temporaryRef.current
@@ -270,7 +272,7 @@ export default function useLocalChat() {
       const context = history.filter(message => {
         if (message.from === 'user') lastUserForgotten = !!message.withdrawn || forgotten.has(message.id)
         return !forgotten.has(message.id) && !lastUserForgotten
-      })
+      }).map(message => message.id === user.id && options.localActionNote ? { ...message, text: `${message.text}\n[本机操作结果：${options.localActionNote}。请准确确认已经完成，不要声称无法执行。]` } : message)
       const recallMemories = isTemporary ? [] : await db.memories.toArray()
       const memorySources: MemoryRecallSources = {}
       if (!isTemporary) {

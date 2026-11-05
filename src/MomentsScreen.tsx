@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Heart, MessageCircle, Send, Sparkles } from 'lucide-react'
+import { Heart, MessageCircle, RefreshCw, Send } from 'lucide-react'
 import { characters, type CharacterId } from './data'
 import {
   addSocialComment, generateSocialPost, hideSocialPost, respondSocialComment,
@@ -40,14 +40,6 @@ export default function MomentsScreen({ userName, selected, config, onChat }: {
     setDraft('')
     setError(previous => readError ? previous : '')
   }, [selected])
-
-  const switchRole = (role: CharacterId) => {
-    if (operation.current || role === feedRole) return
-    setFeedRole(role)
-    setCommenting(null)
-    setDraft('')
-    if (!readError) setError('')
-  }
 
   useEffect(() => {
     mounted.current = true
@@ -98,13 +90,12 @@ export default function MomentsScreen({ userName, selected, config, onChat }: {
   return <section className="screen feed">
     <div className="feed-hero"><p>{t('{name}的朋友圈', { name: t(currentCharacter.name) })}</p><span>AI 角色的虚构动态 · 配图为本机示意图</span></div>
     <div className="feed-controls glass">
-      <div className="feed-role-tabs" role="group" aria-label={t('朋友圈角色')}>{characters.map(character => <button key={character.id} type="button" aria-pressed={feedRole === character.id} disabled={!!busy} onClick={() => switchRole(character.id)}>{t(character.name)}</button>)}</div>
-      <button disabled={!ready || readError || !!busy} onClick={() => void run('generate', signal => generateSocialPost(feedRole, { ...config, signal }))}><Sparkles size={16} />{busy === 'generate' ? '正在生成…' : '生成动态'}</button>
-      <p>{config.apiKey?.trim() ? '生成与评论回应会发送至已配置的模型服务，仅发送当前任务、动态、评论及互动边界，不读取聊天或记忆。' : '未配置模型：动态和角色回应使用本机演示文案，非 AI 生成。'} 手动生成，不提供后台发布。动态和互动保存在本机，不包含在聊天备份中；导入或清空聊天会重置。</p>
+      <button className="feed-refresh" disabled={!ready || readError || !!busy} onClick={() => void run('generate', signal => generateSocialPost(feedRole, { ...config, signal }))}><RefreshCw size={16} className={busy === 'generate' ? 'spinning' : ''} />{busy === 'generate' ? '正在刷新…' : '刷新'}</button>
+      <p>{config.apiKey?.trim() ? '生成与评论回应会发送至已配置的模型服务，仅发送当前任务、动态、评论及互动边界，不读取聊天或记忆。' : '未配置模型：动态和角色回应使用本机演示文案，非 AI 生成。'} 点击刷新时生成，不提供后台发布。动态和互动保存在本机，不包含在聊天备份中；导入或清空聊天会重置。</p>
     </div>
     {error && <div className="feed-error" role="alert">{error}{readError && <button onClick={() => { setError(''); setReady(false); setBusy(null); setReload(value => value + 1) }}>重试读取</button>}</div>}
     {!ready && !readError && <p role="status">正在读取本机动态…</p>}
-    {ready && !rolePosts.length && <p>{t('{name}还没有动态，生成一条吧。', { name: t(currentCharacter.name) })}</p>}
+    {ready && !rolePosts.length && <p>{t('{name}还没有动态，刷新看看吧。', { name: t(currentCharacter.name) })}</p>}
     {rolePosts.map(post => {
       const character = characters.find(item => item.id === post.characterId)!
       return <article className="moment glass" key={post.id}>

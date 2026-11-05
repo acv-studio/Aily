@@ -78,12 +78,38 @@
 .chat-emoji-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; }
 .chat-emoji-grid button { display: grid; place-items: center; min-width: 0; min-height: 44px; font-size: 26px; border-radius: 12px; padding: 4px; background: transparent; }
 .chat-emoji-grid button:hover { background: #2f354b; }
+.bubble:not(.attachment-bubble),.mine .bubble:not(.attachment-bubble),.message-row:not(.mine) .bubble:not(.attachment-bubble) { border-radius:17px; }
+.bubble.attachment-bubble,.mine .bubble.attachment-bubble,.message-row:not(.mine) .bubble.attachment-bubble { padding:4px; border-radius:18px; }
+.attachment-bubble .chat-image,.attachment-bubble .chat-video,.attachment-bubble .chat-video-player { margin:0; border-radius:14px; overflow:hidden; }
+.attachment-bubble .custom-voice { border:0; background:transparent; }
+.custom-voice { position:relative; display:flex; align-items:center; gap:9px; width:min(250px,100%); min-height:46px; padding:7px 10px; border:1px solid #ffffff18; border-radius:16px; background:linear-gradient(135deg,#ffffff0b,#ffffff04); overflow:hidden; }
+.custom-voice audio { display:none!important; }
+.custom-voice .voice-toggle { flex:none; width:32px; height:32px; display:grid; place-items:center; padding:0; border-radius:50%; background:#ffffff1a; color:#fff; }
+.custom-voice.is-playing .voice-toggle { background:#ffffff2b; }
+.voice-wave { flex:1; min-width:70px; height:20px; display:flex; align-items:center; justify-content:center; gap:2px; pointer-events:none; }
+.voice-wave i { width:3px; border-radius:3px; background:currentColor; transition:opacity .15s; }
+.voice-seek { position:absolute; left:50px; right:43px; width:auto; height:30px; opacity:0; cursor:pointer; }
+.custom-voice time { flex:none; min-width:28px; color:inherit; font-size:9px; font-variant-numeric:tabular-nums; }
+.custom-voice>p { position:absolute; inset:auto 0 -34px; }
 .chat-video { display: block; width: 240px; max-width: 100%; max-height: 240px; border-radius: 12px; background: #111625; }
 .chat-video-player { min-width: 0; max-width: 100%; }
 .chat-video-player p { font-size: 11px; line-height: 1.5; }
 .attachment-preview-image { max-height: 100px; width: auto; max-width: 140px; margin: 6px 0 0; object-fit: contain; }
 .chat-screen > .quoted-preview > div { min-width: 0; overflow-wrap: anywhere; }
 .chat-screen > .quoted-preview .chat-video { height: 110px; margin-top: 6px; }
+.chat-history-overlay { position: fixed; inset: 0; z-index: 90; display: flex; justify-content: center; align-items: flex-end; background: #050610c7; backdrop-filter: blur(10px); }
+.chat-history-dialog { width: min(100%,480px); max-height: 90dvh; display: flex; flex-direction: column; border: 1px solid #ffffff1a; border-radius: 28px 28px 0 0; background: #151a2a; box-shadow: 0 -20px 60px #0008; }
+.chat-history-dialog>header { display: flex; align-items: center; justify-content: space-between; padding: 20px; border-bottom: 1px solid #ffffff12; }
+.chat-history-dialog h2 { margin: 3px 0 0; font-size: 21px; }
+.chat-history-dialog header small { color: #9d8bd6; font-size: 10px; }
+.chat-history-dialog header button { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 50%; background: #ffffff0d; }
+.chat-history-body { overflow-y: auto; padding: 18px; overscroll-behavior: contain; }
+.chat-history-body h3 { margin: 6px 0 12px; color: #c7ccdc; font-size: 12px; }
+.chat-history-summaries { margin-bottom: 24px; }
+.chat-history-summaries article,.chat-history-message { margin: 8px 0; padding: 12px 14px; border: 1px solid #ffffff0e; border-radius: 15px; background: #ffffff08; }
+.chat-history-summaries small,.chat-history-message small { color: #969eb2; font-size: 9px; }
+.chat-history-summaries p,.chat-history-message p { margin: 7px 0 0; color: #e4e7ef; font-size: 12px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
+.chat-history-message.mine { margin-left: 30px; background: linear-gradient(135deg,#8f79d629,#62cddd1c); }
 @media (prefers-reduced-motion: reduce) { .chat-screen .chat-more-trigger svg { transition: none; } }
 @media (max-height: 700px) {
   .chat-intro { margin-top: 0; }

@@ -79,8 +79,10 @@ export function normalizeOnboardingProfile(value: unknown): OnboardingProfile | 
   if (value.proactiveFrequency === 'off' || value.proactiveFrequency === 'daily' || value.proactiveFrequency === 'occasional') profile.proactiveFrequency = value.proactiveFrequency
   if (value.supportStyle === 'listen' || value.supportStyle === 'comfort') profile.supportStyle = value.supportStyle
   for (const key of ['notificationStart', 'notificationEnd'] as const) if (clock(value[key])) profile[key] = value[key]
-  // A missing/malformed safe word must not be silently repaired into authorization.
-  if (!text(value.safeWord, 80, true) || !adultAuthorizationAllowed(profile)) profile.adultEnabled = false
+  // Adult mode has been removed. Keep legacy fields disabled for backward-compatible data loading.
+  profile.adultEnabled = false
+  profile.ageConfirmed = false
+  profile.adultConsent = false
   return profile
 }
 
@@ -91,5 +93,5 @@ export function withoutAdultAuthorization(profile: OnboardingProfile): Onboardin
 
 export const onboardingMemoryId = (id: CharacterId) => `onboarding:relationship:${id}`
 export function onboardingMemoryText(profile: OnboardingProfile): string {
-  return t('第一次确认彼此的称呼：{names}。称呼之后可随时修改，不代表关系降级。', { names: JSON.stringify({ userName: profile.userName, characterName: profile.characterName, familiarNames: profile.familiarNames }) })
+  return t('第一次确认彼此的称呼：你希望被称为“{userName}”，并称呼 TA 为“{characterName}”。称呼之后可随时修改，不代表关系降级。', { userName: profile.userName, characterName: profile.characterName })
 }

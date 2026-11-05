@@ -18,10 +18,7 @@ const isLocale = (value: unknown): value is Locale => value === 'zh-CN' || value
 function stored(key: string): string | null {
   try { return globalThis.localStorage?.getItem(key) ?? null } catch { return null }
 }
-function systemLocale(): Locale {
-  return typeof navigator !== 'undefined' && /^en\b/i.test(navigator.language) ? 'en' : 'zh-CN'
-}
-let locale: Locale = isLocale(stored('aily.locale')) ? stored('aily.locale') as Locale : systemLocale()
+let locale: Locale = isLocale(stored('aily.locale')) ? stored('aily.locale') as Locale : 'zh-CN'
 let chatLocale: ChatLocale = isLocale(stored('aily.chatLocale')) ? stored('aily.chatLocale') as Locale : 'auto'
 function publish() {
   if (typeof document !== 'undefined') {
@@ -71,7 +68,7 @@ export function useI18n() {
 }
 if (typeof window !== 'undefined') {
   window.addEventListener('storage', event => {
-    if (event.key === null || event.key === 'aily.locale') locale = isLocale(stored('aily.locale')) ? stored('aily.locale') as Locale : systemLocale()
+    if (event.key === null || event.key === 'aily.locale') locale = isLocale(stored('aily.locale')) ? stored('aily.locale') as Locale : 'zh-CN'
     if (event.key === null || event.key === 'aily.chatLocale') chatLocale = isLocale(stored('aily.chatLocale')) ? stored('aily.chatLocale') as Locale : 'auto'
     if (event.key === null || event.key === 'aily.locale' || event.key === 'aily.chatLocale') publish()
   })

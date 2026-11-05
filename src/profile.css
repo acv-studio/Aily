@@ -84,6 +84,9 @@
 .profile-inline-panel .language-settings label { font-size: 11px; }
 .profile-inline-panel .language-settings select { font-size: 12px; }
 .profile-screen .data-transfer { margin-top: 0; }
+.memory-settings-profile { margin-top: 10px; }
+.memory-settings-profile .profile-inline-panel>p { margin-top:0; color:#aeb5c8; font-size:11px; line-height:1.6; }
+.memory-settings-profile .policy-categories { margin-top:4px; }
 .profile-screen .ai-note { margin: 0; font-size: 10px; line-height: 1.7; color: #9299af; }
 @media (max-width: 350px) {
   .profile-screen.screen { padding-left: 16px; padding-right: 16px; }

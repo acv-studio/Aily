@@ -1,7 +1,9 @@
-.safety-consent { padding: 20px; margin-top: 22px; text-align: left; }
-.safety-consent h2 { font-size: 20px; margin-top: 0; }
-.safety-consent p, .safety-panel p { font-size: 14px; line-height: 1.7; color: #bdc4d6; overflow-wrap: anywhere; }
-.safety-consent label, .safety-panel label { display: flex; align-items: center; gap: 10px; margin: 15px 0; font-size: 14px; }
+.safety-consent { padding: 18px; margin-top: 18px; text-align: left; }
+.safety-consent h2 { font-size: 20px; margin: 0 0 12px; }
+.safety-consent p, .safety-panel p { font-size: 13px; line-height: 1.65; color: #bdc4d6; overflow-wrap: anywhere; }
+.safety-consent label, .safety-panel label { display: flex; align-items: center; gap: 10px; margin: 14px 0; font-size: 14px; }
+.onboarding-flow .safety-consent label { flex-direction: row; align-items: center; justify-content: flex-start; }
+.onboarding-flow .safety-consent label input { flex: 0 0 auto; margin: 0; }
 .safety-consent input[type=checkbox] { width: 18px; height: 18px; flex-shrink: 0; accent-color: #b59bff; }
 .safety-consent .primary { width: 100%; margin-top: 14px; }
 .safety-consent button:disabled, .safety-panel button:disabled { opacity: .45; cursor: not-allowed; }
@@ -12,3 +14,19 @@
 .safety-panel input { min-width: 0; padding: 12px; border: 1px solid #777; border-radius: 10px; background: #171925; color: white; }
 .danger-action { padding: 12px 16px; border: 1px solid #f09caa; border-radius: 12px; color: #ffc0c9; background: #392230; }
 .safety-panel [role=alert], .safety-consent [role=alert] { color: #ffc0c9; }
+.language-welcome { margin: auto 0; display: grid; gap: 18px; }
+.language-welcome h1 { margin: 4px 0; font: 400 38px/1.1 "DM Serif Display",serif; }
+.language-welcome .language-settings { margin: 4px 0; }
+@media (max-height: 850px) {
+  .onboarding-flow .welcome { padding-top: 12px; }
+  .onboarding-flow .welcome h1 { font-size: 36px; margin: 8px 0 10px; }
+  .onboarding-flow .welcome .lead { line-height: 1.55; margin: 6px 0; }
+  .onboarding-flow .memory-preview { margin: 16px 0; padding: 12px; }
+  .onboarding-flow .welcome .disclosure { margin: 8px; }
+  .onboarding-flow .safety-consent { margin-top: 10px; padding: 14px 16px; }
+  .onboarding-flow .safety-consent h2 { font-size: 17px; margin-bottom: 7px; }
+  .onboarding-flow .safety-consent p { font-size: 11px; line-height: 1.5; margin: 7px 0; }
+  .onboarding-flow .safety-consent label { margin: 9px 0; font-size: 12px; }
+  .onboarding-flow .safety-consent .text-button { min-height: 34px; margin-bottom: 2px; padding: 5px 9px; font-size: 11px; }
+  .onboarding-flow .safety-consent .primary { min-height: 46px; height: 46px; margin-top: 8px; }
+}

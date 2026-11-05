@@ -1,8 +1,10 @@
 import { useRef, useState, type CSSProperties, type ReactNode } from 'react'
-import { Bell, ChevronRight, Globe2, Home, MemoryStick, MessageCircle, Settings2, ShieldCheck, Sparkles, Users } from 'lucide-react'
+import { Bell, ChevronRight, Database, Globe2, Home, MemoryStick, MessageCircle, ShieldCheck, Sparkles, Users } from 'lucide-react'
 import { useI18n } from './i18n'
 import LanguageSettings from './LanguageSettings'
 import DataTransferPanel from './DataTransferPanel'
+import MemorySettings from './MemorySettings'
+import type { MemoryPolicy } from './longMemory'
 import { testDeepSeekConnection } from './chatService'
 import type { loadLocalData } from './db'
 import { characters, type CharacterId } from './data'
@@ -13,6 +15,8 @@ type Props = {
   primaryName: string
   primaryId: CharacterId
   setPrimary: (id: CharacterId) => Promise<void>
+  policies?: Partial<Record<CharacterId, MemoryPolicy>>
+  onPolicy?: (role: CharacterId, policy: MemoryPolicy) => Promise<void>
   apiKey: string
   endpoint: string
   model: string
@@ -61,6 +65,7 @@ export default function ProfileScreen(props: Props) {
   }
   const [showApi, setShowApi] = useState(false)
   const [showLanguage, setShowLanguage] = useState(false)
+  const [showLocalData, setShowLocalData] = useState(false)
   const [showMembership, setShowMembership] = useState(false)
   const [visible, setVisible] = useState(false)
   const [testing, setTesting] = useState(false)
@@ -73,11 +78,10 @@ export default function ProfileScreen(props: Props) {
   }
 
   return <section className="screen profile profile-screen">
-    <button className="profile-card glass" onClick={props.openPreferences} aria-label={t('编辑本机陪伴档案')}>
+    <article className="profile-card glass" aria-label={t('本机陪伴档案')}>
       <div className="profile-avatar">{Array.from(userName)[0]}</div>
       <div><h2>{userName}</h2><p>{t('本机陪伴档案')}</p></div>
-      <ChevronRight aria-hidden="true" />
-    </button>
+    </article>
 
     <article className="plan-card">
       <div className="profile-plan-top"><span><Sparkles aria-hidden="true" /> Aily Plus</span><small>{t('免费版')}</small></div>
@@ -103,10 +107,10 @@ export default function ProfileScreen(props: Props) {
           {primaryResult === 'success' && <p className="profile-primary-feedback" role="status">{t('主角色已更新')}</p>}
           {primaryResult === 'error' && <p className="profile-primary-feedback profile-primary-error" role="alert">{t('主角色保存失败，请重新选择以重试。')}</p>}
         </div>}
-        <SettingRow icon={<Settings2 />} label={t('修改称呼与互动偏好')} onClick={props.openPreferences} />
         {props.openReminders && <SettingRow icon={<Bell />} label={t('智能提醒')} onClick={props.openReminders} />}
-        <SettingRow icon={<MessageCircle />} label={t('角色主动消息设置')} onClick={props.openProactive} />
+        <SettingRow icon={<MessageCircle />} label={t('主动提醒设置')} onClick={props.openProactive} />
       </div>
+      {props.onPolicy && <MemorySettings policies={props.policies || {}} onPolicy={props.onPolicy} />}
     </section>
 
     <section className="profile-group" aria-labelledby="profile-general-heading">
@@ -131,7 +135,8 @@ export default function ProfileScreen(props: Props) {
 
     <section className="profile-group" aria-labelledby="profile-data-heading">
       <h3 id="profile-data-heading">{t('本机数据')}</h3>
-      <DataTransferPanel beforeDataChange={props.beforeDataChange} onImported={props.onImported} onCleared={props.onCleared} />
+      <div className="profile-settings glass"><SettingRow icon={<Database />} label={t('本机聊天与记忆')} value={showLocalData ? t('收起') : t('已隐藏')} onClick={() => setShowLocalData(!showLocalData)} expanded={showLocalData} controls="profile-local-data" /></div>
+      {showLocalData && <div id="profile-local-data"><DataTransferPanel beforeDataChange={props.beforeDataChange} onImported={props.onImported} onCleared={props.onCleared} /></div>}
     </section>
     <p className="ai-note"><ShieldCheck aria-hidden="true" />{t('Aily 是 AI 角色陪伴应用，不是真人或专业医疗服务')}</p>
   </section>

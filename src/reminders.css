@@ -3,6 +3,14 @@
 .reminder-count { font-style: normal; font-size: 11px; margin-left: 9px; padding: 2px 7px; border-radius: 12px; background: #a889ff35; color: #e2d2ff; }
 .reminders-intro h2 { font-size: 20px; margin: 0 0 8px; }
 .reminders-intro p, .reminders-note { font-size: 12px; line-height: 1.7; color: #aeb7ca; }
+.reminder-time-list { display: grid; gap: 9px; margin: 0 0 18px; }
+.reminder-time-item { display: grid; grid-template-columns: 82px minmax(0,1fr); align-items: center; gap: 12px; padding: 14px 15px; border-radius: 17px; }
+.reminder-time-item time { color: #c8b5ff; font-size: 11px; font-variant-numeric: tabular-nums; }
+.reminder-time-item strong,.reminder-time-item small { display: block; }
+.reminder-time-item strong { font-size: 13px; overflow-wrap: anywhere; }
+.reminder-time-item small { margin-top: 4px; color: #8f98ad; font-size: 10px; }
+.reminder-time-item.due { border-color: #ff9ca650; background: linear-gradient(130deg,#ff7e8b14,#a889ff0c); }
+.reminder-time-item.due time,.reminder-time-item.due small { color: #ffb0b8; }
 .reminder-settings-card { display: flex; align-items: center; gap: 12px; width: 100%; padding: 18px 16px; border-radius: 20px; text-align: left; }
 .reminder-settings-card > svg:first-child { color: #c2adff; flex-shrink: 0; }
 .reminder-settings-card span { flex: 1; min-width: 0; }

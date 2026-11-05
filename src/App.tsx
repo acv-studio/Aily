@@ -88,6 +88,24 @@ function AilyApp({ onDelete }: { onDelete: () => Promise<void> }) {
   const setSelected = chat.setSelected
   const finishOnboarding = chat.finishOnboarding
   const saveGameMemory = (text: string) => { void chat.saveConfirmed({ text, category: 'relationship' }).catch(() => alert('回忆保存失败，请重试')) }
+  const sendWithLocalActions: typeof chat.send = async (options = {}) => {
+    const text = options.text?.trim() ?? draft.trim()
+    let localActionNote = options.localActionNote
+    if (!options.retryId && text && !chat.temporary) {
+      const reminder = parseReminder(text)
+      if (reminder) {
+        await reminders.add({ kind: 'plan', title: reminder.title, enabled: true, scheduledAt: reminder.at.toISOString(), repeatMinutes: null, temperatureBelow: null, station: '', exit: '', leadMinutes: 0 })
+        localActionNote = `已创建提醒“${reminder.title}”，时间为${reminder.at.toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}`
+      } else {
+        const memory = parseExplicitMemory(text)
+        if (memory) {
+          await chat.saveConfirmed({ text: memory, category: 'profile' })
+          localActionNote = `已将“${memory}”保存为本机长期记忆`
+        }
+      }
+    }
+    await chat.send({ ...options, localActionNote })
+  }
   if (!chat.ready) return <main className="app-shell loading-screen"><p>{chat.loadError || '正在读取本机聊天与记忆…'}</p>{chat.loadError && <button onClick={chat.reload}>{t('重试读取')}</button>}</main>
   if (invitation) return <InviteLanding role={invitation} start={() => { setSelected(invitation); dismissInvitation() }} dismiss={dismissInvitation} />
   if (onboarded && !consented && !hasSafetyConsent()) return <main className="onboarding"><SafetyConsent returning onAccepted={() => { acceptSafetyConsent(); setConsented(true) }} /></main>
@@ -95,20 +113,20 @@ function AilyApp({ onDelete }: { onDelete: () => Promise<void> }) {
   if (inviteOpen) return <main className="app-shell"><InvitePanel role={selected} close={() => setInviteOpen(false)} /></main>
   if (privacyOpen) return <main className="app-shell"><SafetyPrivacyPanel close={() => setPrivacyOpen(false)} onDelete={deleteProfile} /></main>
   if (remindersOpen) return <main className="app-shell"><SmartReminderPanel controller={reminders} close={() => setRemindersOpen(false)} /></main>
-  if (callOpen) return <CallScreen character={character} messages={chat.chatMessages} replying={replying} send={chat.send} close={() => { if (!replying) setCallOpen(false) }} />
-  if (chatOpen) return <><div inert={momentsOpen}><ChatPanel isPrimary={selected === primaryId} setPrimary={setPrimary} replyMode={chat.replyMode} setReplyMode={chat.setReplyMode} modeSaving={chat.modeSaving} character={character} messages={chat.chatMessages} temporary={chat.temporary} toggleTemporary={chat.toggleTemporary} pendingCount={chat.memories.filter(memory => memory.characterId === selected && memory.state === 'pending').length} draft={draft} setDraft={setDraft} send={chat.send} close={() => { if (!replying) setChatOpen(false) }} saveMemory={chat.saveConfirmed} withdraw={chat.withdraw} stop={chat.stop} replying={replying} error={chatError} demo={!chat.apiKey} openGame={() => setGameOpen(true)} openStory={() => setStoryOpen(true)} openCall={() => setCallOpen(true)} openMoments={() => setMomentsOpen(true)} /></div>{reminders.due.length > 0 && !momentsOpen && !gameOpen && !storyOpen && <div className="reminder-chat-overlay"><SmartReminderBanner controller={reminders} disabled={replying} open={() => setRemindersOpen(true)} /></div>}{gameOpen && <RockPaperScissors characterName={character.name} onComplete={saveGameMemory} onClose={() => setGameOpen(false)} />}{storyOpen && (selected === 'lu' ? <SevenDayStory temporary={chat.temporary} onSaved={() => { void db.memories.toArray().then(chat.setMemories).catch(() => alert('故事已保存，回忆列表暂未刷新；重新打开应用可读取')) }} onClose={() => setStoryOpen(false)} /> : <InteractiveStory characterName={character.name} onComplete={saveGameMemory} onClose={() => setStoryOpen(false)} />)}{momentsOpen && <section className="character-moments-page" aria-label={t('角色朋友圈')}><header className="character-moments-header"><button className="icon-button" aria-label={t('返回聊天')} onClick={() => setMomentsOpen(false)}><ArrowLeft size={20} /></button><h1>{t('朋友圈')}</h1></header><MomentsScreen userName={userName} selected={selected} config={{ apiKey: chat.apiKey, endpoint: chat.endpoint, model: chat.model, onboardingProfile: chat.onboardingProfile }} onChat={(characterId, text) => { setSelected(characterId); setDraft(text); setMomentsOpen(false) }} /></section>}</>
   if (preferencesOpen) return <OnboardingEditor initial={chat.onboardingProfile || defaultOnboardingProfile(selected)} save={chat.updateOnboarding} close={() => setPreferencesOpen(false)} />
+  if (callOpen) return <CallScreen character={character} messages={chat.chatMessages} replying={replying} send={sendWithLocalActions} close={() => { if (!replying) setCallOpen(false) }} />
+  if (chatOpen) return <><div inert={momentsOpen}><ChatPanel isPrimary={selected === primaryId} setPrimary={setPrimary} replyMode={chat.replyMode} setReplyMode={chat.setReplyMode} modeSaving={chat.modeSaving} character={character} messages={chat.chatMessages} summaries={chat.summaries.filter(summary => summary.characterId === selected)} temporary={chat.temporary} toggleTemporary={chat.toggleTemporary} pendingCount={chat.memories.filter(memory => memory.characterId === selected && memory.state === 'pending').length} draft={draft} setDraft={setDraft} send={sendWithLocalActions} close={() => { if (!replying) setChatOpen(false) }} saveMemory={chat.saveConfirmed} withdraw={chat.withdraw} stop={chat.stop} replying={replying} error={chatError} demo={!chat.apiKey} openGame={() => setGameOpen(true)} openStory={() => setStoryOpen(true)} openCall={() => setCallOpen(true)} openPreferences={() => setPreferencesOpen(true)} openMoments={() => setMomentsOpen(true)} /></div>{reminders.due.length > 0 && !momentsOpen && !gameOpen && !storyOpen && <div className="reminder-chat-overlay"><SmartReminderBanner controller={reminders} disabled={replying} open={() => setRemindersOpen(true)} /></div>}{gameOpen && <RockPaperScissors characterName={character.name} onComplete={saveGameMemory} onClose={() => setGameOpen(false)} />}{storyOpen && (selected === 'lu' ? <SevenDayStory temporary={chat.temporary} onSaved={() => { void db.memories.toArray().then(chat.setMemories).catch(() => alert('故事已保存，回忆列表暂未刷新；重新打开应用可读取')) }} onClose={() => setStoryOpen(false)} /> : <InteractiveStory characterName={character.name} onComplete={saveGameMemory} onClose={() => setStoryOpen(false)} />)}{momentsOpen && <section className="character-moments-page" aria-label={t('角色朋友圈')}><header className="character-moments-header"><button className="icon-button" aria-label={t('返回聊天')} onClick={() => setMomentsOpen(false)}><ArrowLeft size={20} /></button><h1>{t('朋友圈')}</h1></header><MomentsScreen userName={userName} selected={selected} config={{ apiKey: chat.apiKey, endpoint: chat.endpoint, model: chat.model, onboardingProfile: chat.onboardingProfile }} onChat={(characterId, text) => { setSelected(characterId); setDraft(text); setMomentsOpen(false) }} /></section>}</>
 
   return <main className="app-shell">
     <div className="ambient ambient-one" /><div className="ambient ambient-two" />
     {chat.loadError && <div className="chat-error" role="alert">{chat.loadError}<button onClick={() => void chat.reload()}>{t('重试读取')}</button></div>}
     <header className="topbar"><div><p className="eyebrow">{t(greetingAt(new Date().getHours()), { name: chat.onboardingProfile?.userName && chat.onboardingProfile.userName !== '你' ? chat.onboardingProfile.userName : t('欢迎回来') })}</p><h1>{tab === 'home' ? t("有人一直记得你") : tab === 'reminders' ? t("提醒") : tab === 'memories' ? t("我们的回忆")  : t("我的 Aily")}</h1></div></header>
     <SmartReminderBanner controller={reminders} disabled={memoryBusy} open={() => setRemindersOpen(true)} />
-    {tab === 'home' && <HomeScreen selected={selected} primaryId={chat.onboardingProfile?.characterId || selected} primaryName={chat.onboardingProfile?.characterName || undefined} conversations={conversations} openChat={id => { setSelected(id); setChatOpen(true) }} />}
-    {tab === 'reminders' && !proactiveOpen && <RemindersScreen selected={selected} openSmartReminders={() => setRemindersOpen(true)} dueCount={reminders.due.length} onChat={(characterId, text) => { setSelected(characterId); setDraft(text); setChatOpen(true) }} openSettings={() => setProactiveOpen(true)} />}
+    {tab === 'home' && <HomeScreen selected={selected} primaryId={chat.onboardingProfile?.characterId || selected} primaryName={chat.onboardingProfile?.characterName || undefined} conversations={conversations} modelConfig={{ apiKey: chat.apiKey, endpoint: chat.endpoint, model: chat.model }} openChat={id => { setSelected(id); setChatOpen(true) }} />}
+    {tab === 'reminders' && !proactiveOpen && <RemindersScreen openSmartReminders={() => setRemindersOpen(true)} reminders={reminders.state?.reminders} dueCount={reminders.due.length} />}
     {tab === 'memories' && <MemoryPanel privateNames={[chat.onboardingProfile?.userName || '', chat.onboardingProfile?.characterName || '']} profile={chat.onboardingProfile} onProfile={chat.updateOnboarding} onBusyChange={setMemoryBusy} memories={chat.memories} selected={selected} onSave={chat.saveConfirmed} onUpdate={chat.editMemory} onDelete={chat.removeMemory} onClear={chat.clearMemories} summaries={chat.summaries} policies={chat.policies} onPolicy={chat.changePolicy} onConfirm={chat.approveProposal} conversations={chat.conversations} />}
     {(tab === 'profile' || tab === 'reminders') && proactiveOpen && <ProactiveSettingsPanel selected={selected} closeLabel={tab === 'reminders' ? '← 返回提醒' : undefined} close={() => setProactiveOpen(false)} />}
-    {tab === 'profile' && !proactiveOpen && <ProfileScreen userName={userName} primaryName={primaryName} primaryId={primaryId} setPrimary={chat.setPrimary} openPreferences={() => setPreferencesOpen(true)} openProactive={() => setProactiveOpen(true)} openReminders={() => setRemindersOpen(true)} openInvite={() => setInviteOpen(true)} openPrivacy={() => setPrivacyOpen(true)} beforeDataChange={chat.beforeDataChange} apiKey={chat.apiKey} endpoint={chat.endpoint} model={chat.model} setApiKey={chat.setApiKey} setEndpoint={chat.setEndpoint} setModel={chat.setModel} onImported={() => { void chat.reload() }} onCleared={() => { void chat.reload() }} />}
+    {tab === 'profile' && !proactiveOpen && <ProfileScreen userName={userName} primaryName={primaryName} primaryId={primaryId} setPrimary={chat.setPrimary} policies={chat.policies} onPolicy={chat.changePolicy} openPreferences={() => setPreferencesOpen(true)} openProactive={() => setProactiveOpen(true)} openReminders={() => setRemindersOpen(true)} openInvite={() => setInviteOpen(true)} openPrivacy={() => setPrivacyOpen(true)} beforeDataChange={chat.beforeDataChange} apiKey={chat.apiKey} endpoint={chat.endpoint} model={chat.model} setApiKey={chat.setApiKey} setEndpoint={chat.setEndpoint} setModel={chat.setModel} onImported={() => { void chat.reload() }} onCleared={() => { void chat.reload() }} />}
     {!((tab === 'profile' || tab === 'reminders') && proactiveOpen) && <nav className="bottom-nav glass">
       <NavButton disabled={memoryBusy} active={tab==='home'} icon={<MessageCircle/>} label={t("消息")} onClick={()=>setTab('home')}/>
       <NavButton disabled={memoryBusy} active={tab==='memories'} icon={<BookHeart/>} label={t("记忆")} onClick={()=>setTab('memories')}/>
@@ -119,3 +137,20 @@ function AilyApp({ onDelete }: { onDelete: () => Promise<void> }) {
 }
 
 function NavButton({active,icon,label,onClick,disabled = false}:{active:boolean;icon:React.ReactNode;label:string;onClick:()=>void;disabled?:boolean}){return <button disabled={disabled} className={active?'active':''} onClick={onClick}>{icon}<span>{label}</span></button>}
+
+function parseReminder(text: string) {
+  if (!/(提醒我|提醒一下|设个提醒)/.test(text)) return null
+  const match = text.match(/(\d{1,2})(?:点|[:：])(\d{1,2})?分?/) 
+  if (!match) return null
+  const hour = Number(match[1]), minute = Number(match[2] || 0)
+  if (hour > 23 || minute > 59) return null
+  const at = new Date(); at.setHours(hour, minute, 0, 0)
+  if (at.getTime() <= Date.now()) at.setDate(at.getDate() + 1)
+  const title = text.replace(/提醒我|提醒一下|设个提醒/g, '').replace(match[0], '').replace(/[，,。.!！]/g, '').trim() || '提醒'
+  return { title, at }
+}
+
+function parseExplicitMemory(text: string) {
+  const match = text.match(/^(?:请|麻烦)?(?:帮我)?(?:记住|记下|记一下|记一笔)(?:我说的)?[：:，,]?\s*(.+)$/)
+  return match?.[1]?.trim() || null
+}

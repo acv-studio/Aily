@@ -1,15 +1,15 @@
 .message-home.screen { padding-bottom: calc(124px + env(safe-area-inset-bottom)); }
 .desktop-home { padding-top: 9px; }
-.desktop-widgets { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: stretch; }
-.clock-widget { min-width: 0; min-height: 180px; border-radius: 26px; padding: 20px 16px; display: flex; flex-direction: column; justify-content: center; background: radial-gradient(ellipse at 5% 5%, #bea1ff1f, transparent 75%), #ffffff08; }
+.desktop-widgets { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: start; }
+.clock-widget { min-width: 0; height: 190px; min-height: 190px; max-height: 190px; border-radius: 24px; padding: 15px 14px; display: flex; flex-direction: column; justify-content: center; background: radial-gradient(ellipse at 5% 5%, #bea1ff1f, transparent 75%), #ffffff08; }
 .clock-widget-label { display: flex; align-items: center; gap: 7px; font-size: 10px; letter-spacing: .12em; color: #c7bddb; }
 .clock-live-dot { margin-left: auto; width: 5px; height: 5px; border-radius: 50%; background: #a8e6cf; box-shadow: 0 0 8px #a8e6cf50; }
-.clock-widget time { display: block; margin-top: 15px; font-size: clamp(32px, 9vw, 47px); font-weight: 300; letter-spacing: -.055em; font-variant-numeric: tabular-nums; line-height: 1.2; }
+.clock-widget time { display: block; margin-top: 9px; font-size: clamp(30px, 8vw, 42px); font-weight: 300; letter-spacing: -.055em; font-variant-numeric: tabular-nums; line-height: 1.2; }
 .clock-widget p { font-size: 11px; color: #ded7e9; margin: 7px 0 0; line-height: 1.6; }
-.clock-widget > small { font-size: 9px; margin-top: 12px; color: #9ba0b5; }
-.desktop-section-heading { display: flex; align-items: center; gap: 14px; margin: 25px 4px 12px; font-size: 10px; letter-spacing: .12em; color: #a8a6bd; }
+.clock-widget > small { font-size: 9px; margin-top: 7px; color: #9ba0b5; }
+.desktop-section-heading { display: flex; align-items: center; gap: 14px; margin: 18px 4px 9px; font-size: 10px; letter-spacing: .12em; color: #a8a6bd; }
 .desktop-section-line { height: 1px; background: linear-gradient(90deg, #ffffff13, transparent); flex: 1; }
-.desktop-bot { position: relative; display: flex; align-items: center; gap: 15px; padding: 20px 17px; width: 100%; min-height: 120px; border-radius: 25px; text-align: left; overflow: hidden; background: radial-gradient(ellipse at 0 50%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 80%), #ffffff06; }
+.desktop-bot { position: relative; display: flex; align-items: center; gap: 15px; padding: 20px 17px; width: 100%; min-height: 104px; border-radius: 23px; text-align: left; overflow: hidden; background: radial-gradient(ellipse at 0 50%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 80%), #ffffff06; }
 .desktop-bot > .avatar { width: 64px; height: 64px; flex: none; border-radius: 21px; font-size: 27px; box-shadow: 0 8px 24px #00000024; }
 .desktop-bot-copy { flex: 1; min-width: 0; }
 .desktop-bot-title { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
@@ -18,10 +18,13 @@
 .desktop-bot-copy p { font-size: 11px; color: #b1b8c9; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; margin: 9px 0; }
 .desktop-bot-copy > small { color: var(--accent); display: flex; align-items: center; gap: 5px; font-size: 9px; }
 .desktop-bot-chevron { color: #b5bfcc; flex: none; }
-.desktop-tools-heading { margin-top: 29px; margin-bottom: 19px; }
-.desktop-app-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px 16px; padding: 1px 5px; }
+.desktop-tools-heading { margin-top: 20px; margin-bottom: 12px; }
+.desktop-app-pages { display:flex; width:100%; overflow-x:auto; overscroll-behavior-x:contain; scroll-snap-type:x mandatory; scrollbar-width:none; -webkit-overflow-scrolling:touch; }
+.desktop-app-pages::-webkit-scrollbar { display:none; }
+.desktop-app-grid { flex:0 0 100%; min-width:100%; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-content:start; gap: 17px 14px; padding: 1px 5px; scroll-snap-align:start; }
 .desktop-app { display: flex; align-items: center; flex-direction: column; gap: 10px; min-width: 0; background: transparent; padding: 2px 0; font-size: 11px; color: #dad9e5; }
-.desktop-app-icon { width: 65px; height: 65px; display: grid; place-items: center; border-radius: 21px; color: var(--tool-color); border: 1px solid color-mix(in srgb, var(--tool-color) 24%, transparent); background: linear-gradient(145deg, color-mix(in srgb, var(--tool-color) 17%, #222638), color-mix(in srgb, var(--tool-color) 4%, #171b2b)); box-shadow: inset 0 1px #ffffff0d, 0 8px 20px #00000026; transition: transform .18s ease, border-color .18s ease; }
+.desktop-app-icon { width: 57px; height: 57px; display: grid; place-items: center; border-radius: 21px; color: var(--tool-color); border: 1px solid color-mix(in srgb, var(--tool-color) 24%, transparent); background: linear-gradient(145deg, color-mix(in srgb, var(--tool-color) 17%, #222638), color-mix(in srgb, var(--tool-color) 4%, #171b2b)); box-shadow: inset 0 1px #ffffff0d, 0 8px 20px #00000026; transition: transform .18s ease, border-color .18s ease; }
+.extension-installed-icon { font-size:27px; line-height:1; }
 .desktop-app:hover .desktop-app-icon { transform: translateY(-3px); border-color: color-mix(in srgb, var(--tool-color) 60%, transparent); }
 .desktop-app:active .desktop-app-icon { transform: scale(.96); }
 .desktop-partners-toggle { display: flex; align-items: center; justify-content: center; gap: 5px; margin: 29px auto 14px; padding: 8px 12px; min-height: 36px; background: transparent; color: #a6a5bc; font-size: 10px; }

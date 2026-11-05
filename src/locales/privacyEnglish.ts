@@ -1,6 +1,8 @@
 export const privacyEnglish: Record<string, string> = {
   '年龄与 AI 身份确认': 'Age and AI identity confirmation',
   '先了解彼此的边界': 'Understand our boundaries first',
+  'Aily 是虚构的 AI 角色，不是真人或专业诊疗服务；本原型仅限 18 周岁及以上使用。': 'Aily provides fictional AI characters, not real people or professional care. This prototype is for people aged 18 and over.',
+  '记录优先保存在本机；配置模型后，文字和相关上下文会发送给所选服务，附件不发送。外部服务的数据政策由其提供方负责。': 'Records stay on this device first. When a model is configured, text and relevant context are sent to that service; attachments are not sent. The provider controls its data policy.',
   'Aily 是虚构的 AI 角色，不是真人，也不提供专业诊疗。请保持现实中的关系与支持；不付费也不会影响基本回应。': 'Aily offers fictional AI characters, not real people or professional care. Keep your real-world relationships and support. Basic replies never depend on payment.',
   '本原型仅限 18 周岁及以上使用，不开放露骨色情内容。年龄为自我声明，不是身份核验。': 'This prototype is for adults aged 18 and over only. Explicit sexual content is not available. Age is self-declared, not identity-verified.',
   '聊天与附件保存在本机，未加密的本机记录依赖设备保护。配置模型后，文字、近期上下文及相关确认记忆会发送给你选择的服务；临时会话文字也会发送。附件不发送。': 'Chats and attachments stay on this device. Unencrypted local records rely on device protection. When you configure a model, text, recent context and relevant confirmed memories go to your chosen service, including temporary-chat text. Attachments are not sent.',

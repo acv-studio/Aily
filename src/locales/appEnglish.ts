@@ -12,6 +12,7 @@ export const appEnglish: Record<string, string> = {
   '角色朋友圈': 'Companion moments', '返回聊天': 'Back to chat',
   '{name}的朋友圈': '{name}’s moments', '朋友圈角色': 'Moments companion',
   '{name}还没有动态，生成一条吧。': '{name} has no moments yet. Generate one to get started.',
+  '{name}还没有动态，刷新看看吧。': '{name} has no moments yet. Try refreshing.',
   '今日提醒': 'Today’s reminders', '节日与日常小事，想聊的时候再聊。': 'Holidays and everyday moments — talk about them whenever you feel like it.',
   '主动提醒设置': 'Proactive reminder settings',
   '按角色设置问候频率与免打扰时段': 'Set greeting frequency and quiet hours for each companion',

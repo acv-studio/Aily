@@ -47,9 +47,38 @@
 .desktop-entertainment { color: #e3d4ad; background: #b98c2620; border: 1px solid #c9a45944; border-radius: 14px; padding: 14px; line-height: 1.8; margin-top: 0; }
 .desktop-divination-result { padding: 20px; border: 1px solid #ffffff1c; border-radius: 18px; background: #ffffff05; line-height: 1.8; }
 .desktop-divination-result h3 { margin-top: 0; font-size: 22px; }
+.desktop-divination-reading { margin: 20px 0; padding: 16px; border: 1px solid #c9a45935; border-radius: 15px; background: #c9a4590d; }
+.desktop-divination-reading h4 { margin: 0 0 10px; color: #ead7a3; font-size: 16px; }
+.desktop-divination-reading p { margin: 9px 0; color: #d8ddec; font-size: 12px; line-height: 1.75; }
+.desktop-divination-reading strong { color: #f2e4bd; }
+.desktop-model-reading { margin: 18px 0; padding: 17px; border: 1px solid #a889ff45; border-radius: 15px; background: linear-gradient(135deg,#a889ff13,#62d8e80a); }
+.desktop-model-reading h4 { margin: 0 0 10px; color: #d8c9ff; font-size: 16px; }
+.desktop-model-reading p { margin: 0; color: #e4e7f0; font-size: 13px; line-height: 1.85; white-space: pre-wrap; }
+.desktop-hexagram-set { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin:18px 0 22px; }
+.desktop-hexagram-set>section { min-width:0; padding:13px 8px; border:1px solid #ffffff14; border-radius:14px; background:#ffffff05; text-align:center; }
+.desktop-hexagram-set>section>small { color:#aeb5c8; font-size:9px; }
+.desktop-hexagram-set>section>h3 { margin:5px 0 10px; font-size:14px; line-height:1.4; }
+.desktop-hexagram-set .desktop-hexagram { margin:0; }
+.desktop-hexagram-set .desktop-hexagram>div { justify-content:center; gap:7px; min-height:22px; font-size:9px; }
+.desktop-hexagram-set .hexagram-line { width:min(72px,65%); height:10px; }
+.desktop-hexagram-set .hexagram-line i { height:5px; }
+.desktop-hexagram-set .desktop-hexagram small { display:none; }
 .desktop-hexagram { display: grid; gap: 6px; margin: 20px 0; }
 .desktop-hexagram > div { display: flex; align-items: center; gap: 16px; min-height: 30px; color: #d4daf0; }
-.desktop-hexagram b { white-space: pre; font-family: monospace; font-size: 22px; letter-spacing: 2px; }
+.desktop-hexagram .hexagram-line { display:flex; align-items:center; justify-content:space-between; width:150px; height:14px; }
+.desktop-hexagram .hexagram-line i { display:block; height:7px; border-radius:1px; background:currentColor; }
+.desktop-hexagram .hexagram-line.yang i:first-child { width:100%; }
+.desktop-hexagram .hexagram-line.yang i:last-child { display:none; }
+.desktop-hexagram .hexagram-line.yin i { width:43%; }
+.extension-grid { display:grid; gap:12px; }
+.extension-grid article { display:grid; grid-template-columns:auto minmax(0,1fr) auto; gap:14px; align-items:center; padding:16px; border:1px solid #ffffff18; border-radius:18px; background:#ffffff06; }
+.extension-icon { --extension-color:#b8a6ff; width:52px; height:52px; display:grid; place-items:center; border-radius:16px; color:var(--extension-color); background:color-mix(in srgb,var(--extension-color) 14%,#1b2030); font-size:25px; }
+.extension-grid h3 { margin:0 0 5px; font-size:15px; }.extension-grid p { margin:0; color:#abb3c8; font-size:11px; line-height:1.55; }
+.extension-actions { display:flex; gap:7px; flex-wrap:wrap; justify-content:flex-end; }.extension-actions button { display:flex; align-items:center; gap:5px; padding:8px 10px; min-height:38px; }
+.extension-actions .extension-install { color:#d8ceff; border-color:#9c89df66; }.extension-actions .extension-remove { color:#ffb9c1; border-color:#d6727d55; }
+.extension-app-view { padding:32px 12px; text-align:center; }
+.extension-functional { display:grid; gap:16px; }.focus-extension{text-align:center}.focus-dial{width:190px;height:190px;margin:10px auto;display:grid;place-content:center;border-radius:50%;border:8px solid #a889ff35;box-shadow:inset 0 0 35px #a889ff18}.focus-dial time{font-size:42px;font-variant-numeric:tabular-nums}.focus-dial small{color:#aeb5c8}.extension-functional-actions,.focus-presets{display:flex;justify-content:center;gap:9px}.extension-functional-actions button,.focus-presets button,.extension-add-form button,.extension-inline-form button{display:flex;align-items:center;justify-content:center;gap:6px}.extension-add-form{display:grid;gap:10px}.extension-add-form textarea{min-height:100px}.extension-inline-form{display:grid;grid-template-columns:1fr auto;gap:8px}.extension-item-list,.habit-list{display:grid;gap:9px}.extension-item-list article,.habit-list article{position:relative;display:flex;align-items:center;gap:12px;padding:14px;border:1px solid #ffffff16;border-radius:14px;background:#ffffff05}.extension-item-list article p{flex:1;margin:0;white-space:pre-wrap;overflow-wrap:anywhere}.extension-item-list article small{color:#929bb0;font-size:9px}.extension-item-list article>button,.habit-list article>button:last-child{flex:none}.habit-list article>div{flex:1;min-width:0}.habit-list strong,.habit-list small{display:block}.habit-list small{margin-top:4px;color:#929bb0}.habit-check{width:38px;height:38px;padding:0!important;border-radius:50%!important;font-size:20px!important}.habit-check.done{color:#9ee7c6!important;border-color:#9ee7c655!important;background:#9ee7c612!important}.extension-icon.large { width:78px; height:78px; margin:auto; border-radius:24px; font-size:38px; }.extension-app-view h2 { margin:18px 0 8px; }.extension-app-view>p { color:#c3cadc; }
+@media(max-width:520px){.extension-grid article{grid-template-columns:auto minmax(0,1fr)}.extension-actions{grid-column:1/-1;justify-content:stretch}.extension-actions button{flex:1;justify-content:center}}
 .desktop-hexagram .moving { color: #e3c879; }
 .desktop-hexagram small { font-size: 12px; }
 @media (max-width: 520px) { .desktop-tools-overlay { padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left)); } .desktop-tools-dialog { max-height: calc(100dvh - 24px); border-radius: 20px; } .desktop-tools-header { padding: 18px 16px 14px; } .desktop-tools-content { padding: 16px; } .desktop-form fieldset { grid-template-columns: minmax(0, 1fr); } .desktop-album-grid { grid-template-columns: minmax(0, 1fr); } .desktop-totals { gap: 6px; } .desktop-totals > div { padding: 12px 8px; } .desktop-list li { gap: 8px; flex-wrap: wrap; } }

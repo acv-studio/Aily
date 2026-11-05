@@ -2,6 +2,11 @@ import { storyGiftEnglish } from './storyGiftEnglish'
 
 export const panelEnglish: Record<string, string> = {
   ...storyGiftEnglish,
+  '记忆设置': 'Memory settings',
+  '选择哪些信息可以被记住和在聊天中引用': 'Choose what can be remembered and recalled in chat',
+  '本机聊天与记忆': 'Local chats and memories',
+  '收起': 'Collapse',
+  '已隐藏': 'Hidden',
   '本机操作未全部完成，部分更改可能已保存，请检查当前状态后重试。': 'The operation did not fully complete. Some changes may have been saved; check the current state before retrying.',
   '我的记忆': 'My memories',
   '所有记忆放在一起，直接查看和搜索，不用切换角色。已确认且允许引用的内容，会在聊天相关时读取；敏感内容仍需你确认。': 'View and search all your memories together, without switching characters. Confirmed memories with recall enabled are read when relevant in chat; sensitive information still needs your confirmation.',
@@ -65,6 +70,7 @@ export const panelEnglish: Record<string, string> = {
   '搜索记忆': 'Search memories',
   '搜索这位角色的记忆': 'Search memories for this character',
   '{count} 条记忆 · {pending} 条待确认': '{count} memories · {pending} awaiting confirmation',
+  '{count} 条记忆': '{count} memories',
   '＋ 添加记忆': '＋ Add memory',
   '手动添加保存到当前主角色：{name}': 'Manually added memories are saved for your main character: {name}',
   '本机存储操作失败，数据未更新，请重试': 'Local storage failed. Your data was not updated. Please try again.',

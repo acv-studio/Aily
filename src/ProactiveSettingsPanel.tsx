@@ -35,7 +35,7 @@ export default function ProactiveSettingsPanel({ selected, close, closeLabel = '
   }
   return <section className="screen proactive-settings">
     <button className="text-button" onClick={close} disabled={saving}>{t(closeLabel)}</button>
-    <h2>{t('角色主动消息')}</h2>
+    <h2>{t('主动提醒设置')}</h2>
     <p>{t('由角色主动向本机聊天发送问候，默认关闭。仅在应用打开且页面可见时检查，不提供关闭应用后的推送；不会补发错过的消息。')}</p>
     <label>{t('设置角色')}<select aria-label={t('设置角色')} value={role} disabled={saving} onChange={event => setRole(event.target.value as CharacterId)}>{characters.map(character => <option key={character.id} value={character.id}>{t(character.name)}</option>)}</select></label>
     {loading ? <p role="status">{t(error || '正在读取设置…')}{error && <button onClick={() => setRevision(value => value + 1)}>{t('重试')}</button>}</p> : <>

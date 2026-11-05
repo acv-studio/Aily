@@ -1,6 +1,6 @@
 import { useI18n } from './i18n'
 import { useEffect, useRef, useState } from 'react'
-import { ArrowLeft, Search, Send, Square, Image as ImageIcon, Mic, Quote, X, ChevronDown, ShieldCheck, Plus, Video, Phone, Smile, Ellipsis, Star, Sparkles, Check, CalendarHeart, Gift } from 'lucide-react'
+import { ArrowLeft, Search, Send, Square, Image as ImageIcon, Mic, Quote, X, ChevronDown, ShieldCheck, Plus, Video, Phone, Smile, Ellipsis, Star, Sparkles, Check, CalendarHeart, Gift, Settings2 } from 'lucide-react'
 import GiftStorePanel from './GiftStorePanel'
 import PeriodRecordPanel from './PeriodRecordPanel'
 import './chatExtras.css'
@@ -9,15 +9,17 @@ import { MAX_LOCAL_VIDEO_BYTES, LOCAL_VIDEO_MIME_TYPES, type ChatMessage, type C
 import VoicePlayer from './VoicePlayer'
 import VideoPlayer from './VideoPlayer'
 import { REPLY_MODES, REPLY_MODE_LABELS, REPLY_MODE_DESCRIPTIONS, type ReplyMode } from './replyModes'
+import { displaySummary, type ConversationSummary } from './longMemory'
 import './replyModes.css'
 
 export type MemoryDraft = { text: string; category: NonNullable<ConfirmedMemory['category']>; sourceMessageId?: number }
 export interface ChatPanelProps {
   character: Character
   messages: ChatMessage[]
+  summaries?: ConversationSummary[]
   draft: string
   setDraft: (text: string) => void
-  send: (options?: { retryId?: number; replyToId?: number; attachment?: ChatMessage['attachment']; kind?: ChatMessage['kind']; text?: string }) => Promise<void>
+  send: (options?: { retryId?: number; replyToId?: number; attachment?: ChatMessage['attachment']; kind?: ChatMessage['kind']; text?: string; localActionNote?: string }) => Promise<void>
   saveMemory: (memory: MemoryDraft) => Promise<void>
   withdraw: (id: number) => Promise<void>
   close: () => void
@@ -35,6 +37,7 @@ export interface ChatPanelProps {
   openStory: () => void
   openMoments?: () => void
   openCall?: () => void
+  openPreferences?: () => void
   isPrimary?: boolean
   setPrimary?: () => Promise<void>
 }
@@ -45,8 +48,8 @@ export default function ChatPanel(props: ChatPanelProps) {
   const [search, setSearch] = useState('')
   const [searchOpen, setSearchOpen] = useState(false)
   const [modeOpen, setModeOpen] = useState(false)
-  const [privacyOpen, setPrivacyOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [historyOpen, setHistoryOpen] = useState(false)
   const [primarySaving, setPrimarySaving] = useState(false)
   const settingsMenu = useRef<HTMLDivElement>(null)
   const settingsTrigger = useRef<HTMLButtonElement>(null)
@@ -74,7 +77,7 @@ export default function ChatPanel(props: ChatPanelProps) {
   const extraTrigger = useRef<HTMLElement | null>(null)
   const openExtra = (panel: 'period' | 'gift', trigger: HTMLElement) => {
     extraTrigger.current = trigger
-    setSettingsOpen(false); setModeOpen(false); setPrivacyOpen(false); setExtraPanel(panel)
+    setSettingsOpen(false); setModeOpen(false); setExtraPanel(panel)
   }
   useEffect(() => {
     if (!extraPanel) return
@@ -139,16 +142,16 @@ export default function ChatPanel(props: ChatPanelProps) {
     }
   }, [])
   useEffect(() => {
-    if (!modeOpen && !privacyOpen) return
+    if (!modeOpen) return
     const dismiss = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        setModeOpen(false); setPrivacyOpen(false)
+        setModeOpen(false)
         screen.current?.querySelector<HTMLButtonElement>('[aria-expanded="true"]')?.focus()
       }
     }
     document.addEventListener('keydown', dismiss)
     return () => document.removeEventListener('keydown', dismiss)
-  }, [modeOpen, privacyOpen])
+  }, [modeOpen])
   const [quote, setQuote] = useState<number>()
   const [memory, setMemory] = useState<MemoryDraft>()
   const [notice, setNotice] = useState('')
@@ -163,7 +166,7 @@ export default function ChatPanel(props: ChatPanelProps) {
     // quote or attachment into the new conversation. Returning to the same role
     // leaves the draft and attachments intact.
     setQuote(undefined); setMemory(undefined); setAttachment(undefined)
-    setSettingsOpen(false); setSearch(''); setSearchOpen(false); setModeOpen(false); setPrivacyOpen(false); setNotice('')
+    setSettingsOpen(false); setSearch(''); setSearchOpen(false); setModeOpen(false); setNotice('')
     playingAudio.current?.pause(); playingAudio.current = null
   }, [character.id])
   const playAudio = (audio: HTMLMediaElement) => {
@@ -290,7 +293,7 @@ export default function ChatPanel(props: ChatPanelProps) {
       <span className="avatar" style={{ '--accent': character.accent } as React.CSSProperties}>{t(character.avatar)}</span>
       <div className="chat-identity"><strong>{t(character.name)}</strong><small>{t('AI 角色')} · {props.demo ? t('演示模式') : 'DeepSeek'}{replying && <span> · {t('正在回复…')}</span>}</small></div>
       <div ref={settingsMenu} className="chat-settings">
-        <button ref={settingsTrigger} className="icon-button" aria-label={t('聊天设置')} aria-expanded={settingsOpen} aria-controls="chat-settings-options" onClick={() => { setSettingsOpen(!settingsOpen); setModeOpen(false); setPrivacyOpen(false); closeMore() }}><Ellipsis /></button>
+        <button ref={settingsTrigger} className="icon-button" aria-label={t('聊天设置')} aria-expanded={settingsOpen} aria-controls="chat-settings-options" onClick={() => { setSettingsOpen(!settingsOpen); setModeOpen(false); closeMore() }}><Ellipsis /></button>
         {settingsOpen && <section id="chat-settings-options" className="chat-settings-options" aria-label={t('聊天设置')}>
           <div className="chat-primary-status"><Star size={15} /><span>{props.isPrimary ? t('当前是主 Bot') : t('当前不是主 Bot')}</span></div>
           {props.setPrimary && <button disabled={props.isPrimary || replying || primarySaving} onClick={async () => {
@@ -301,23 +304,20 @@ export default function ChatPanel(props: ChatPanelProps) {
             finally { setPrimarySaving(false) }
           }}>{props.isPrimary ? <Check size={17} /> : <Star size={17} />}<span>{primarySaving ? t('正在保存…') : props.isPrimary ? t('已设为主 Bot') : t('设为主 Bot')}</span></button>}
           {props.openMoments && <button disabled={replying || primarySaving || recording || readingFile} onClick={() => { setSettingsOpen(false); props.openMoments?.() }}><Sparkles size={17} /><span>{t('查看朋友圈')}</span></button>}
+          {props.openPreferences && <button disabled={replying || recording || readingFile} onClick={() => { setSettingsOpen(false); props.openPreferences?.() }}><Settings2 size={17} /><span>{t('修改称呼与互动偏好')}</span></button>}
+          <button disabled={replying || recording || readingFile} onClick={() => { setSettingsOpen(false); setHistoryOpen(true) }}><CalendarHeart size={17} /><span>{t('对话历史')}</span></button>
+          {props.toggleTemporary && <button disabled={replying || recording || readingFile} onClick={() => { setMemory(undefined); setQuote(undefined); setSearch(''); setAttachment(undefined); setSettingsOpen(false); props.toggleTemporary?.() }}><ShieldCheck size={17} /><span>{props.temporary ? t('结束临时会话') : t('临时会话')}</span></button>}
           <button onClick={() => { toggleSearch(); setSettingsOpen(false); settingsTrigger.current?.focus() }}><Search size={17} /><span>{t('搜索消息')}</span></button>
         </section>}
       </div>
     </header>
-    {(props.toggleTemporary || props.setReplyMode) && <div className="chat-controls">
+    {props.setReplyMode && <div className="chat-controls">
       <div className="chat-toolbar">
-        {props.setReplyMode && <button className="chat-mode-trigger" aria-label={t('回复模式：{mode}', { mode: t(REPLY_MODE_LABELS[props.replyMode || 'brief']) })} aria-expanded={modeOpen} aria-controls="chat-reply-modes" onClick={() => { setModeOpen(!modeOpen); setPrivacyOpen(false) }}>{t(REPLY_MODE_LABELS[props.replyMode || 'brief'])}<ChevronDown size={14} /></button>}
-        {props.toggleTemporary && <button className="chat-privacy-trigger" aria-label={t('会话与隐私')} aria-expanded={privacyOpen} aria-controls="chat-privacy" onClick={() => { setPrivacyOpen(!privacyOpen); setModeOpen(false) }}><ShieldCheck size={13} /><span>{props.temporary ? t('临时会话') : props.pendingCount ? t('{count} 条记忆待确认', { count: props.pendingCount }) : t('记忆需确认')}</span><ChevronDown size={12} /></button>}
+        <button className="chat-mode-trigger" aria-label={t('回复模式：{mode}', { mode: t(REPLY_MODE_LABELS[props.replyMode || 'brief']) })} aria-expanded={modeOpen} aria-controls="chat-reply-modes" onClick={() => { setModeOpen(!modeOpen) }}>{t(REPLY_MODE_LABELS[props.replyMode || 'brief'])}<ChevronDown size={14} /></button>
       </div>
       {modeOpen && <section id="chat-reply-modes" className="reply-mode-picker chat-popover" aria-label={t('回复模式')}>
         <div className="reply-mode-options" role="group" aria-label={t('选择回复模式')}>{REPLY_MODES.map(mode => <button key={mode} type="button" aria-pressed={(props.replyMode || 'brief') === mode} disabled={replying || props.modeSaving} onClick={async () => { try { await props.setReplyMode?.(mode); setModeOpen(false) } catch { setNotice('回复模式未切换，请停止回复或检查本机存储后重试。') } }}>{t(REPLY_MODE_LABELS[mode])}</button>)}</div>
         <p>{props.modeSaving ? t('正在保存回复模式…') : t(REPLY_MODE_DESCRIPTIONS[props.replyMode || 'brief'])}<span>{t('仅影响下一次回复')}{props.temporary ? t(' · 本次临时会话有效') : ''}</span></p>
-      </section>}
-      {privacyOpen && <section id="chat-privacy" className="chat-privacy-panel chat-popover" aria-label={t('会话与隐私')}>
-        <p>{props.temporary ? t('临时会话：不落盘、不提取或引用记忆；退出模式后清除。请求仍发送到所配置的模型服务。') : t('聊天与记忆仅存本机')}</p>
-        {!props.temporary && <><p>{t('自动提议记忆需你确认')}{props.pendingCount ? t(' · {count} 条待确认，请到回忆页查看', { count: props.pendingCount }) : ''}</p><p>{t('文字消息仍会发送到所配置的模型服务。')}</p></>}
-        <button disabled={replying} onClick={() => { setMemory(undefined); setQuote(undefined); setSearch(''); setAttachment(undefined); props.toggleTemporary?.() }}>{props.temporary ? t('结束临时会话') : t('临时会话')}</button>
       </section>}
     </div>}
     {searchOpen && <div className="chat-search"><input aria-label={t('搜索聊天记录')} placeholder={t('搜索当前角色的聊天记录')} value={search} onChange={event => setSearch(event.target.value)} /><button onClick={() => { setSearch(''); setSearchOpen(false) }}>{t('关闭')}</button></div>}
@@ -334,7 +334,7 @@ export default function ChatPanel(props: ChatPanelProps) {
         {message.from === 'character' && <span className="avatar" style={{ '--accent': character.accent } as React.CSSProperties}>{t(character.avatar)}</span>}
         <div className="message-content">
           {!message.withdrawn && message.replyToId !== undefined && <blockquote>{quoteText(messages.find(item => item.id === message.replyToId))}</blockquote>}
-          <div className={`bubble ${message.status === 'sending' ? 'streaming' : ''}`}>
+          <div className={`bubble ${message.status === 'sending' ? 'streaming' : ''} ${message.attachment && message.kind !== 'text' ? 'attachment-bubble' : ''}`}>
             {message.withdrawn ? <em>{t('你撤回了一条消息')}</em> : <>
               {message.kind === 'image' && message.attachment && <img className="chat-image" src={message.attachment.dataUrl} alt={message.attachment.name} />}
               {message.kind === 'video' && (message.attachment ? <VideoPlayer src={message.attachment.dataUrl} onPlay={playAudio} /> : <em>{t('视频附件不可用')}</em>)}
@@ -359,13 +359,13 @@ export default function ChatPanel(props: ChatPanelProps) {
       <div>{t('待发送：')}<span>{attachment.data.name}</span>{attachment.kind === 'image' && <img className="chat-image attachment-preview-image" src={attachment.data.dataUrl} alt={attachment.data.name} />}{attachment.kind === 'video' && <VideoPlayer src={attachment.data.dataUrl} preview onPlay={playAudio} />}{attachment.kind === 'audio' && <VoicePlayer src={attachment.data.dataUrl} preview onPlay={playAudio} />}</div>
       <button onClick={() => setAttachment(undefined)}>{t('移除')}</button>
     </div>}
-    <div className="quick-replies"><button onClick={props.openStory}>{t('⌁ 共同故事')}</button><button onClick={props.openGame}>{t('✊ 猜拳')}</button>{props.openMoments && <button disabled={replying || recording} onClick={props.openMoments}>{t('朋友圈')}</button>}</div>
+    <div className="quick-replies"><button onClick={props.openStory}>{t('📖 共同故事')}</button><button onClick={props.openGame}>{t('✊ 猜拳')}</button>{props.openMoments && <button disabled={replying || recording} onClick={props.openMoments}>{t('✨ 朋友圈')}</button>}</div>
     <input hidden ref={imageInput} aria-label={t('选择照片文件')} type="file" accept="image/png,image/jpeg,image/webp,image/gif" disabled={replying || recording || readingFile} onChange={event => { void chooseFile('image', event.target.files?.[0]); event.target.value = '' }} />
     <input hidden ref={videoInput} aria-label={t('选择视频文件')} type="file" accept="video/mp4,video/webm,video/quicktime" disabled={replying || recording || readingFile} onChange={event => { void chooseFile('video', event.target.files?.[0]); event.target.value = '' }} />
     <footer className={`composer glass ${moreOpen ? 'composer-expanded' : ''}`}>
       <button aria-label={recording ? t('结束录音') : t('录制语音')} onClick={() => { closeMore(); void record() }} disabled={replying || readingFile}>{recording ? <Square color="#ff7e8b" /> : <Mic />}</button>
       <input ref={composerInput} aria-label={t('发消息')} value={draft} onChange={event => setDraft(event.target.value)} onFocus={closeMore} onKeyDown={event => { if (event.key === 'Enter' && !event.nativeEvent.isComposing) { event.preventDefault(); void submit() } }} placeholder={t('发消息…')} disabled={replying} />
-      <button ref={moreButton} className="chat-more-trigger" aria-label={t('更多发送选项')} aria-expanded={moreOpen} aria-controls="chat-more-panel" disabled={replying || recording || readingFile} onClick={() => { setMoreOpen(!moreOpen); setEmojiOpen(false); composerInput.current?.blur(); setModeOpen(false); setPrivacyOpen(false) }}><Plus size={22} /></button>
+      <button ref={moreButton} className="chat-more-trigger" aria-label={t('更多发送选项')} aria-expanded={moreOpen} aria-controls="chat-more-panel" disabled={replying || recording || readingFile} onClick={() => { setMoreOpen(!moreOpen); setEmojiOpen(false); composerInput.current?.blur(); setModeOpen(false) }}><Plus size={22} /></button>
       {replying ? <button className="send" aria-label={t('停止回复')} onClick={props.stop}><Square /></button> : <button className="send" aria-label={t('发送消息')} disabled={recording || readingFile || (!draft.trim() && !attachment)} onClick={submit}><Send /></button>}
     </footer>
     {moreOpen && <section id="chat-more-panel" className="chat-more-panel" aria-label={t('更多发送选项')}>
@@ -386,6 +386,11 @@ export default function ChatPanel(props: ChatPanelProps) {
       <div className="chat-extra-body">{extraPanel === 'period' ? <PeriodRecordPanel temporary={props.temporary} /> : <GiftStorePanel selected={character.id} />}</div>
     </div></div>}
     {readingFile && <div className="chat-notice" role="status">{t('正在读取附件…')}</div>}
+    {historyOpen && <div className="chat-history-overlay"><section className="chat-history-dialog" role="dialog" aria-modal="true" aria-labelledby="chat-history-title"><header><div><small>{t(character.name)} · AI</small><h2 id="chat-history-title">{t('对话历史')}</h2></div><button aria-label={t('关闭')} onClick={() => setHistoryOpen(false)}><X /></button></header><div className="chat-history-body">
+      {!!props.summaries?.length && <section className="chat-history-summaries"><h3>{t('对话摘要')}</h3>{[...props.summaries].sort((a,b)=>b.periodKey.localeCompare(a.periodKey)).map(summary=><article key={summary.id}><small>{t(({day:'日',week:'周',month:'月',year:'年'})[summary.period])} · {summary.periodKey}</small><p>{displaySummary(summary, locale)}</p></article>)}</section>}
+      <section><h3>{t('全部消息')} · {messages.filter(message=>!message.withdrawn).length}</h3>{messages.filter(message=>!message.withdrawn).map(message=><article className={`chat-history-message ${message.from==='user'?'mine':''}`} key={message.id}><small>{message.from==='user'?t('我'):t(character.name)} · {message.createdAt?new Date(message.createdAt).toLocaleString(locale):message.time}</small><p>{message.text||t(message.kind==='image'?'图片消息':message.kind==='video'?'视频消息':message.kind==='audio'?'语音消息':'消息')}</p></article>)}</section>
+      {!messages.some(message=>!message.withdrawn)&&<p className="chat-empty">{t('还没有对话记录')}</p>}
+    </div></section></div>}
     {memory && <div className="memory-modal-overlay"><form className="memory-modal glass" onSubmit={async event => { event.preventDefault(); try { await props.saveMemory(memory); setMemory(undefined); setNotice('已确认保存，可在回忆页编辑或删除') } catch { setNotice('记忆未保存，请重试') } }}>
       <h2>{t('这件事，要记住吗？')}</h2><p>{t('请确认内容和分类。未确认的内容不会作为长期记忆保存。')}</p>
       <textarea aria-label={t('记忆内容')} value={memory.text} maxLength={1000} required onChange={event => setMemory({ ...memory, text: event.target.value })} />

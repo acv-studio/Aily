@@ -156,7 +156,7 @@ export default function WeatherWidget() {
       <button type="submit" className="weather-icon-button" disabled={!city.trim() || busy !== null} aria-label={text.search}><Search size={14} aria-hidden="true" /></button>
     </form>}
     {places.length > 0 && <ul className="weather-results">{places.map((match, index) => <li key={`${match.latitude}:${match.longitude}:${index}`}><button type="button" onClick={() => void loadWeather(match)}>{match.name}<small>{[match.admin1, match.country].filter(value => typeof value === 'string').join(' · ')}</small></button></li>)}</ul>}
-    <div className="weather-actions"><button type="button" onClick={locate} disabled={busy !== null}><LocateFixed size={12} aria-hidden="true" />{text.locate}</button><button type="button" onClick={openSearch}>{weather ? text.change : text.city}</button></div>
+    <div className="weather-actions"><button type="button" onClick={locate} disabled={busy !== null}><LocateFixed size={12} aria-hidden="true" />{text.locate}</button>{!weather && <button type="button" onClick={openSearch}>{text.city}</button>}</div>
     {weather ? <time className="weather-updated" dateTime={weather.updatedAt}>{text.updated} {weather.updatedAt.slice(5, 16).replace('T', ' ')}</time> : <p className="weather-disclosure">{text.disclosure}</p>}
     {weather && <a className="weather-source" href="https://open-meteo.com/" target="_blank" rel="noreferrer">{text.source}</a>}
   </section>

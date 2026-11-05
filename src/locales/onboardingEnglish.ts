@@ -1,4 +1,6 @@
 export const onboardingEnglish: Record<string, string> = {
+  '选择语言': 'Choose your language',
+  '请选择界面语言，之后可以在“我的”中修改。': 'Choose the interface language. You can change it later in Profile.',
   '无法保护本机数据，请重新打开页面': 'Could not protect local data. Please reopen this page.',
   '删除未完成，部分资料可能已删除。请重试。': 'Deletion did not finish. Some data may already have been deleted. Please try again.',
   '本机使用资料已删除': 'Local app data has been deleted',
