@@ -1,0 +1,42 @@
+/* Capacitor iOS: one edge-to-edge model (viewport-fit=cover + contentInset=never). */
+html,body,#root{min-width:0;width:100%;height:100%;min-height:0;}
+body{height:100dvh;overflow:hidden;-webkit-text-size-adjust:100%;overscroll-behavior-y:contain;}
+/* WebKit zooms focused text controls below 16px, shifting the whole page sideways.
+   Use readable input sizing rather than disabling pinch zoom/accessibility. */
+@media (max-width:767px){html body :is(input:not([type=checkbox]):not([type=radio]):not([type=range]),textarea,select){font-size:16px!important;}}
+.screen,.memory-controls,.memory-toolbar,.managed-memory{min-width:0;max-width:100%;box-sizing:border-box;}
+.memory-page .memory-search{display:block;min-width:0;max-width:100%;box-sizing:border-box;}
+.memory-page .memory-toolbar>div{min-width:0;flex:1;}.memory-page .memory-toolbar>button{flex:0 0 auto;}
+.memory-page .memory-filters{grid-template-columns:repeat(2,minmax(0,1fr));}.memory-page .memory-filters label{min-width:0;}
+#root{height:100dvh;overflow:hidden;}
+/* Every full-screen non-chat route owns a real scroll container. iOS WKWebView
+   otherwise preserves the template's overflow:hidden and clips long forms. */
+.app-shell,.onboarding{height:100dvh;min-height:0;max-height:100dvh;overflow-x:hidden!important;overflow-y:scroll!important;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;touch-action:pan-y;}
+.onboarding{display:flex;flex-direction:column;}.onboarding>*{flex-shrink:0;}
+/* Hide the main-route scrollbar without changing touch scrolling. */
+.app-shell{scrollbar-width:none;-ms-overflow-style:none;}
+.app-shell::-webkit-scrollbar{display:none;width:0;height:0;}
+.screen{padding-left:max(20px,env(safe-area-inset-left));padding-right:max(20px,env(safe-area-inset-right));}
+.topbar{padding-left:max(22px,env(safe-area-inset-left));padding-right:max(22px,env(safe-area-inset-right));}
+/* Dialogs and sheets stay inside the Dynamic Island / home-indicator safe zones. */
+.game-overlay,.memory-modal-overlay,.chat-history-overlay{padding:max(12px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));align-items:flex-end;overflow-y:auto;overscroll-behavior:contain;}
+.game-sheet,.story-sheet{width:min(100%,480px);max-height:calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px);overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;flex-shrink:0;}
+.memory-modal{max-height:calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 32px);-webkit-overflow-scrolling:touch;}
+.chat-history-dialog{max-height:calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px);}
+/* Fixed mode menu must use the keyboard-aware chat viewport, not Safari's layout viewport. */
+.chat-screen .quick-mode-popover{position:absolute;left:max(12px,env(safe-area-inset-left));right:max(12px,env(safe-area-inset-right));bottom:calc(74px + env(safe-area-inset-bottom));width:auto;max-height:min(46dvh,300px);overflow-y:auto;transform:none;}
+/* Call layout must compact before a short visible viewport clips hang-up controls. */
+.call-screen{height:100dvh;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding-left:max(18px,env(safe-area-inset-left));padding-right:max(18px,env(safe-area-inset-right));}
+/* Keep the tab bar attached to the home indicator; its glass background fills the
+   former black gap and the safe-area padding remains touchable. */
+.bottom-nav{left:0!important;right:0!important;bottom:0!important;transform:none!important;width:100vw!important;max-width:none!important;padding:1px max(10px,env(safe-area-inset-right)) max(8px,calc(env(safe-area-inset-bottom) - 10px)) max(10px,env(safe-area-inset-left))!important;border-radius:0!important;background:linear-gradient(180deg,rgba(25,21,29,.32),rgba(25,21,29,.66))!important;border:0!important;box-shadow:none!important;backdrop-filter:blur(30px) saturate(145%)!important;-webkit-backdrop-filter:blur(30px) saturate(145%)!important;}
+.bottom-nav button,.bottom-nav button.active{height:44px!important;background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important;color:#96909c!important;}
+.bottom-nav button.active svg{color:var(--cc-primary,#b99bcf);}
+.bottom-nav button span,.bottom-nav button.active span{color:#96909c!important;}
+@media (max-height:700px){.call-person{margin-top:52px}.call-avatar{width:102px;height:102px;border-radius:32px;font-size:42px}.call-person p{margin-top:15px}.call-person h1{font-size:31px}.call-caption{min-height:82px;margin-top:20px}.call-controls{margin-top:22px;padding-top:12px}.hangup{margin-top:16px}.call-disclosure{margin-top:10px}}
+/* Never let a wide desktop card move the entire iPhone WebView sideways. */
+.app-shell,.onboarding,#root{width:100vw;max-width:100vw;overflow-x:hidden!important;}
+.desktop-home,.desktop-home>div,.desktop-widgets{min-width:0;max-width:100%;}
+.desktop-app-pages{touch-action:pan-x pan-y;overscroll-behavior-x:contain;}
+@media (max-width:480px){.desktop-widgets{grid-template-columns:minmax(0,1fr);}.clock-widget,.weather-widget{width:100%;max-width:100%;}.desktop-home{overflow-x:hidden;}.desktop-bot{min-width:0;}}
+@media (max-width:340px){.screen{padding-left:max(16px,env(safe-area-inset-left));padding-right:max(16px,env(safe-area-inset-right));}.topbar{padding-left:max(18px,env(safe-area-inset-left));padding-right:max(18px,env(safe-area-inset-right));}}

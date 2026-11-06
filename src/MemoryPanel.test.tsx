@@ -155,6 +155,15 @@ describe('confirmed memory controls', () => {
     fireEvent.click(screen.getByRole('button', { name: '确认记住' }))
     await waitFor(() => expect(onConfirm).toHaveBeenCalledWith('m1'))
   })
+  it('closes the memory editor from its always-visible header control', () => {
+    render(<MemoryPanel memories={memories} selected="lu" onSave={vi.fn()} onUpdate={vi.fn()} onDelete={vi.fn()} onClear={vi.fn()} />)
+    fireEvent.click(screen.getAllByText('管理这条记忆')[0])
+    fireEvent.click(within(screen.getByRole('heading', { name: '不吃辣' }).closest('article')!).getByRole('button', { name: '编辑' }))
+    expect(screen.getByRole('heading', { name: '纠正长期记忆' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '保存记忆' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '关闭编辑' }))
+    expect(screen.queryByRole('heading', { name: '纠正长期记忆' })).toBeNull()
+  })
   it('edits the content and category only after explicit save', async () => {
     const { onUpdate } = setup(); fireEvent.click(within(screen.getByRole('heading', { name: '不吃辣' }).closest('article')!).getByRole('button', { name: '编辑' }))
     fireEvent.change(screen.getByLabelText('编辑记忆内容'), { target: { value: '可以微辣' } })

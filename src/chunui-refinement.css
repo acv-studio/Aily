@@ -1,0 +1,58 @@
+/* ChunUI refinement: a quieter, more deliberate mobile system layered on top of
+   the existing product palette.  It keeps each feature's personality while
+   unifying touch targets, spacing, surfaces, and feedback. */
+:root{
+  --cu-space-1:6px;--cu-space-2:10px;--cu-space-3:14px;--cu-space-4:18px;--cu-space-5:24px;
+  --cu-radius-control:14px;--cu-radius-card:22px;--cu-radius-sheet:28px;
+  --cu-surface-1:rgba(255,255,255,.055);--cu-surface-2:rgba(255,255,255,.082);
+  --cu-focus:0 0 0 3px color-mix(in srgb,var(--cc-primary) 28%,transparent);
+}
+body{letter-spacing:-.012em;text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased}
+/* Rhythm and persistent chrome */
+.topbar{min-height:112px;padding-bottom:18px}.topbar h1{font-weight:500;letter-spacing:-.045em}
+.screen{padding-bottom:calc(132px + env(safe-area-inset-bottom))}
+.bottom-nav{border-top:0!important;border-radius:0!important}.bottom-nav button{position:relative;min-height:44px}.bottom-nav button.active:before{display:none!important;content:none!important}
+/* Cards should feel grouped, never like floating rectangles. */
+.glass,.profile-card,.plan-card,.relation,.memory-controls,.managed-memory,.reminder-settings-card,.reminder-time-item,.desktop-bot,.moment{border-radius:var(--cu-radius-card)!important}
+.profile-card,.plan-card,.relation,.memory-controls,.managed-memory,.reminder-settings-card,.reminder-time-item{box-shadow:var(--cc-shadow-1),0 1px 0 rgba(255,255,255,.035) inset!important}
+.profile-group{gap:var(--cu-space-2)}.profile-group>h3{margin:4px 4px 0;font-weight:700}
+.profile-setting-row{padding-left:16px!important;padding-right:16px!important;min-height:60px!important}.profile-setting-row:active{background:var(--cc-primary-soft)}
+.profile-card{padding:18px!important}.profile-card .profile-avatar{box-shadow:0 6px 16px rgba(0,0,0,.18)}
+/* Inputs and fields share a calm, tactile affordance. */
+:is(input:not([type=checkbox]):not([type=radio]),textarea,select){min-height:46px;border-radius:var(--cu-radius-control)!important;box-shadow:inset 0 1px rgba(255,255,255,.035)}
+:is(input,textarea,select):focus-visible,button:focus-visible{outline:0;box-shadow:var(--cu-focus)!important}
+textarea{line-height:1.55}.memory-page label,.proactive-settings label,.smart-reminders label{margin-top:18px}
+/* Buttons: clear hierarchy with generous mobile targets. */
+.primary{min-height:50px;border-radius:16px!important;font-weight:700;letter-spacing:.005em}.secondary,.text-button{min-height:42px;border-radius:13px!important;font-weight:650}
+.memory-actions{gap:8px!important}.memory-actions button{min-height:38px!important;border-radius:11px!important}
+/* Conversation density and readability. */
+.messages{padding:20px 14px 24px}.message-row{margin:14px 0}.bubble{line-height:1.58;box-shadow:0 5px 14px rgba(0,0,0,.1)}
+.quick-replies{padding:10px 14px;gap:8px}.quick-replies button{min-height:36px!important}.composer{padding-top:11px!important}.composer input{border-radius:15px!important}
+.chat-opening{border-radius:18px!important}.chat-header{box-shadow:0 1px rgba(255,255,255,.04)}
+/* Memory: make metadata quiet and management actions easy to scan. */
+.memory-page .memory-toolbar{margin:16px 2px 12px}.memory-page .memory-toolbar button{border-radius:12px;box-shadow:0 5px 14px rgba(0,0,0,.16)}
+.memory-page .managed-memory{padding:16px!important}.memory-entry-meta{gap:8px}.memory-category-tag{border-radius:8px!important}.memory-details>summary{padding:10px 0!important}.memory-modal{border-radius:var(--cu-radius-sheet)!important}.memory-modal-header{border-bottom:1px solid var(--cc-hairline)}.memory-modal-actions{border-top:1px solid var(--cc-hairline)}
+/* Secondary pages and tool sheets retain orientation while scrolling. */
+.screen>.text-button:first-child,.screen>.secondary:first-child{backdrop-filter:blur(16px)}
+.desktop-tools-dialog{border-radius:var(--cu-radius-sheet)!important}.desktop-tools-header{padding:18px 20px!important}.desktop-tools-content{padding:18px!important}.desktop-file-label{border-radius:14px!important;min-height:48px!important}
+/* Alerts communicate status without becoming visual noise. */
+:is(.chat-error,.feed-error,.desktop-error,[role=alert]){border-radius:14px!important;line-height:1.55}.reminder-banner{border-radius:16px!important;box-shadow:0 10px 28px rgba(0,0,0,.22)}
+/* Light theme preserves the same elevation and contrast language. */
+html[data-theme=light]{--cu-surface-1:rgba(255,255,255,.72);--cu-surface-2:rgba(255,255,255,.9)}
+html[data-theme=light] .bottom-nav button.active:before{display:none!important;content:none!important}
+html[data-theme=light] :is(.memory-modal-header,.memory-modal-actions){background:#f7f1f4!important}
+html[data-theme=light] :is(.profile-setting-row:active,.desktop-tools-dialog button:active){background:rgba(140,93,176,.08)}
+/* One sheet language, including chat extras that previously retained a separate palette. */
+.chat-extra-dialog{background:linear-gradient(160deg,#2c2430,#17131b);border-color:var(--cc-border);border-radius:var(--cu-radius-sheet) var(--cu-radius-sheet) 0 0}.chat-extra-dialog>header{min-height:56px;padding:8px 16px;border-bottom:1px solid var(--cc-hairline)}
+.chat-more-options>button,.chat-settings-options>button,.message-actions button{min-width:44px;min-height:44px!important}.chat-history-dialog header button{width:44px;height:44px}
+/* Joined time/weather dashboard intentionally has one outer radius only. */
+.dashboard-widget :is(.clock-widget,.weather-widget){border-radius:0!important}
+/* Home app grid keeps a full touch target and avoids clipped labels in compact widths. */
+.desktop-app{min-height:88px;justify-content:center}.companion-tile{min-height:94px}.dashboard-widget .clock-widget,.dashboard-widget .weather-widget{height:clamp(156px,32vw,172px);min-height:clamp(156px,32vw,172px);max-height:none}
+@media (max-width:380px){.memory-page .memory-toolbar{align-items:stretch;flex-wrap:wrap}.memory-page .memory-toolbar>div{flex-basis:100%}.memory-page .memory-toolbar>button{width:100%;min-height:44px}.memory-page .memory-filters,.proactive-times{grid-template-columns:1fr}.profile-setting-row{grid-template-columns:20px minmax(0,1fr) 16px!important}.profile-setting-row>small{grid-column:2;grid-row:2;max-width:none!important}.profile-setting-row>.profile-chevron{grid-column:3!important;grid-row:1/3}.profile-setting-row>span{font-size:15px!important}}
+html[data-theme=light] .chat-extra-dialog{background:linear-gradient(160deg,#fff,#f2ecef);border-color:rgba(61,43,58,.12);color:#211b22}
+@media (prefers-reduced-transparency:reduce){.glass,.topbar,.bottom-nav,.composer,.chat-header{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}}
+@media (forced-colors:active){button,input,textarea,select{forced-color-adjust:auto}.glass{border:1px solid CanvasText}}
+@media (prefers-reduced-motion:reduce){.bottom-nav button.active:before{box-shadow:none}}
+/* Tab bar is page chrome, never an Apple-card surface. */
+.bottom-nav.glass{border-radius:0!important;box-shadow:none!important}

@@ -5,6 +5,8 @@ dist/
 coverage/
 .mobile-tools/
 .mobile-build/
+.npm-cache/
+.toolchains/
 # Native build outputs, local SDK paths, and signing material
 android/.gradle/
 android/.kotlin/

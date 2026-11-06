@@ -9,6 +9,7 @@ import { MAX_LOCAL_VIDEO_BYTES, LOCAL_VIDEO_MIME_TYPES, type ChatMessage, type C
 import VoicePlayer from './VoicePlayer'
 import VideoPlayer from './VideoPlayer'
 import { REPLY_MODES, REPLY_MODE_LABELS, REPLY_MODE_DESCRIPTIONS, type ReplyMode } from './replyModes'
+import type { CreditGiftId } from './creditGifts'
 import { displaySummary, type ConversationSummary } from './longMemory'
 import './replyModes.css'
 
@@ -19,7 +20,7 @@ export interface ChatPanelProps {
   summaries?: ConversationSummary[]
   draft: string
   setDraft: (text: string) => void
-  send: (options?: { retryId?: number; replyToId?: number; attachment?: ChatMessage['attachment']; kind?: ChatMessage['kind']; text?: string; localActionNote?: string }) => Promise<void>
+  send: (options?: { retryId?: number; replyToId?: number; attachment?: ChatMessage['attachment']; kind?: ChatMessage['kind']; text?: string; localActionNote?: string; giftId?: CreditGiftId; rejectOnFailure?: boolean }) => Promise<void>
   saveMemory: (memory: MemoryDraft) => Promise<void>
   withdraw: (id: number) => Promise<void>
   close: () => void
@@ -38,7 +39,9 @@ export interface ChatPanelProps {
   openMoments?: () => void
   openCall?: () => void
   openPreferences?: () => void
-  recordActivity?: (text: string) => Promise<void>
+  openBilling?: () => void
+  recordActivity?: (text: string, localOnly?: boolean) => Promise<void>
+  recordActivityFor?: (characterId: Character['id'], text: string, localOnly?: boolean) => Promise<void>
   relationshipStage?: string
   isPrimary?: boolean
   setPrimary?: () => Promise<void>
@@ -294,7 +297,7 @@ export default function ChatPanel(props: ChatPanelProps) {
     <header className="chat-header glass">
       <button className="icon-button" aria-label={t('返回消息')} onClick={props.close}><ArrowLeft /></button>
       <span className="avatar" style={{ '--accent': character.accent } as React.CSSProperties}>{t(character.avatar)}</span>
-      <div className="chat-identity"><strong>{t(character.name)}</strong><small>{t('AI 角色')} · {props.demo ? t('演示模式') : 'DeepSeek'}{replying && <span> · {t('正在回复…')}</span>}</small></div>
+      <div className="chat-identity"><strong>{t(character.name)}</strong></div>
       <div ref={settingsMenu} className="chat-settings">
         <button ref={settingsTrigger} className="icon-button" aria-label={t('聊天设置')} aria-expanded={settingsOpen} aria-controls="chat-settings-options" onClick={() => { setSettingsOpen(!settingsOpen); setModeOpen(false); closeMore() }}><Ellipsis /></button>
         {settingsOpen && <section id="chat-settings-options" className="chat-settings-options" aria-label={t('聊天设置')}>
@@ -339,7 +342,7 @@ export default function ChatPanel(props: ChatPanelProps) {
           <time>{message.createdAt ? new Date(message.createdAt).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' }) : message.time}</time>
           {!message.withdrawn && message.status !== 'sending' && activeActions === message.id && <div className="message-actions">
             <button aria-label={t('引用消息 {id}', { id: message.id })} onClick={() => setQuote(message.id)}><Quote size={12} />{t('引用')}</button>
-            {message.text && !props.temporary && <button onClick={() => setMemory({ text: message.text, category: 'profile', sourceMessageId: message.id })}>{t('记住这条')}</button>}
+            {message.text && !message.localOnly && !props.temporary && <button onClick={() => setMemory({ text: message.text, category: 'profile', sourceMessageId: message.id })}>{t('记住这条')}</button>}
             {message.from === 'user' && <button disabled={replying} onClick={() => props.withdraw(message.id)}>{t('撤回')}</button>}
           </div>}
           {!message.withdrawn && message.status === 'failed' && message.from === 'user' && <button disabled={replying} className="retry" onClick={() => props.send({ retryId: message.id })}>{t('回复未完成 · 重试')}</button>}
@@ -378,7 +381,7 @@ export default function ChatPanel(props: ChatPanelProps) {
     </section>}
     {extraPanel && <div className="chat-extra-overlay"><div ref={extraDialog} className="chat-extra-dialog" role="dialog" aria-modal="true" aria-labelledby="chat-extra-heading">
       <header><h2 id="chat-extra-heading">{t(extraPanel === 'period' ? '经期记录' : '送礼物')}</h2><button aria-label={t('返回聊天')} onClick={() => setExtraPanel(null)}><X /></button></header>
-      <div className="chat-extra-body">{extraPanel === 'period' ? <PeriodRecordPanel temporary={props.temporary} /> : <GiftStorePanel selected={character.id} />}</div>
+      <div className="chat-extra-body">{extraPanel === 'period' ? <PeriodRecordPanel temporary={props.temporary} onSaved={record => void props.recordActivity?.(`🌸 已记录经期：${record.startDate}${record.endDate ? ` 至 ${record.endDate}` : ''}${record.note ? ` · ${record.note}` : ''}`, true)} /> : <GiftStorePanel selected={character.id} sending={replying} onOpenBilling={props.openBilling} onSendGift={giftId => props.send({ giftId, rejectOnFailure: true })} />}</div>
     </div></div>}
     {readingFile && <div className="chat-notice" role="status">{t('正在读取附件…')}</div>}
     {historyOpen && <div className="chat-history-overlay"><section className="chat-history-dialog" role="dialog" aria-modal="true" aria-labelledby="chat-history-title"><header><div><small>{t(character.name)} · AI</small><h2 id="chat-history-title">{t('对话历史')}</h2></div><button aria-label={t('关闭')} onClick={() => setHistoryOpen(false)}><X /></button></header><div className="chat-history-body">

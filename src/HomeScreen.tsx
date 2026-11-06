@@ -23,8 +23,8 @@ const tools: { id: DesktopTool; label: string; english: string; icon: LucideIcon
   { id: 'contacts', label: '通讯录', english: 'Contacts', icon: ContactRound, color: '#abc8ff' },
   { id: 'music', label: '音乐', english: 'Music', icon: Music2, color: '#c2b1ff' },
   { id: 'diary', label: '日记', english: 'Journal', icon: BookOpen, color: '#f4d5a3' },
-  { id: 'divination', label: '梅花易数', english: 'Meihua', icon: Sparkles, color: '#e6b4fa' },
   { id: 'app-store', label: '应用商店', english: 'App Store', icon: ShoppingBag, color: '#b8a6ff' },
+  { id: 'divination', label: '梅花易数', english: 'Meihua', icon: Sparkles, color: '#e6b4fa' },
 ]
 function Avatar({ character }: { character: Character }) {
   const { t } = useI18n()
@@ -43,10 +43,10 @@ export default function HomeScreen({ selected, primaryId = selected, primaryName
   const preview = !latest ? (locale === 'en' ? 'Your everyday companion. Say hello.' : '日常的碎碎念，都可以说给我听。')
     : latest.kind === 'image' ? t('图片消息') : latest.kind === 'audio' ? t('语音消息') : latest.kind === 'video' ? (locale === 'en' ? 'Video message' : '视频消息') : latest.text
   const installedApps=extensionApps.filter(app=>installedExtensions.includes(app.id))
-  const appPages=Array.from({length:Math.ceil((tools.length+installedApps.length)/9)},(_,page)=>[...tools.map(item=>({kind:'built' as const,...item})),...installedApps.map(item=>({kind:'extension' as const,...item}))].slice(page*9,page*9+9))
+  const appPages=Array.from({length:Math.ceil((tools.length+installedApps.length)/6)},(_,page)=>[...tools.map(item=>({kind:'built' as const,...item})),...installedApps.map(item=>({kind:'extension' as const,...item}))].slice(page*6,page*6+6))
   return <section className="screen home-screen message-home desktop-home">
     <div inert={tool !== null}>
-      <div className="desktop-widgets"><ClockWidget /><WeatherWidget /></div>
+      <section className="dashboard-widget glass" aria-label={locale === 'en' ? 'Time and weather' : '时间与天气'}><div className="desktop-widgets"><ClockWidget /><WeatherWidget /></div></section>
       <div className="desktop-section-heading"><span>{locale === 'en' ? 'YOUR COMPANION' : '专属陪伴'}</span><span className="desktop-section-line" /></div>
       <button className="desktop-bot glass" style={{ '--accent': primary.accent } as CSSProperties} onClick={() => openChat(primary.id)} aria-label={t('与{name}聊天', { name })}>
         <Avatar character={primary} />

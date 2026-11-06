@@ -1,5 +1,5 @@
 import { useRef, useState, type CSSProperties, type ReactNode } from 'react'
-import { Bell, ChevronRight, Database, Globe2, Home, MemoryStick, MessageCircle, ShieldCheck, Sparkles, Users } from 'lucide-react'
+import { Bell, ChevronRight, Database, Globe2, Home, MemoryStick, MessageCircle, ShieldCheck, Sparkles, SunMoon, Users } from 'lucide-react'
 import { useI18n } from './i18n'
 import LanguageSettings from './LanguageSettings'
 import DataTransferPanel from './DataTransferPanel'
@@ -8,7 +8,10 @@ import type { MemoryPolicy } from './longMemory'
 import { testDeepSeekConnection } from './chatService'
 import type { loadLocalData } from './db'
 import { characters, type CharacterId } from './data'
+import { useTheme, type ThemePreference } from './theme'
 import './profile.css'
+import BillingPanel from './BillingPanel'
+import { useBilling } from './billing'
 
 type Props = {
   userName: string
@@ -43,7 +46,9 @@ function SettingRow({ icon, label, value, onClick, expanded, controls }: {
 
 export default function ProfileScreen(props: Props) {
   const { t, locale } = useI18n()
-  const { userName, primaryName, apiKey, endpoint, model, setApiKey, setEndpoint, setModel } = props
+  const theme = useTheme()
+  const billing = useBilling()
+  const { primaryName, apiKey, endpoint, model, setApiKey, setEndpoint, setModel } = props
   const [showPrimary, setShowPrimary] = useState(false)
   const [savingPrimary, setSavingPrimary] = useState(false)
   const primarySavePending = useRef(false)
@@ -66,6 +71,7 @@ export default function ProfileScreen(props: Props) {
   const [showApi, setShowApi] = useState(false)
   const [provider, setProvider] = useState<'magpie' | 'deepseek'>(() => endpoint.includes('magpie') ? 'magpie' : 'deepseek')
   const [showLanguage, setShowLanguage] = useState(false)
+  const [showAppearance, setShowAppearance] = useState(false)
   const [showLocalData, setShowLocalData] = useState(false)
   const [showMembership, setShowMembership] = useState(false)
   const [visible, setVisible] = useState(false)
@@ -78,17 +84,13 @@ export default function ProfileScreen(props: Props) {
     finally { setTesting(false) }
   }
 
+  if (showMembership) return <BillingPanel close={() => setShowMembership(false)} openPrivacy={props.openPrivacy} />
   return <section className="screen profile profile-screen">
-    <article className="profile-card glass" aria-label={t('本机陪伴档案')}>
-      <div className="profile-avatar">{Array.from(userName)[0]}</div>
-      <div><h2>{userName}</h2><p>{t('本机陪伴档案')}</p></div>
-    </article>
-
     <article className="plan-card">
-      <div className="profile-plan-top"><span><Sparkles aria-hidden="true" /> Aily Plus</span><small>{t('免费版')}</small></div>
+      <div className="profile-plan-top"><span><Sparkles aria-hidden="true" /> Aily Plus</span><small>{billing.entitlement.productId ? `${billing.entitlement.multiplier}× ${locale === 'en' ? 'Monthly pass' : '月卡'}` : t('免费版')}</small></div>
       <h3>{t('让每一段故事，都被好好记住')}</h3>
-      <button onClick={() => setShowMembership(!showMembership)} aria-expanded={showMembership} aria-controls="profile-membership">{t('了解会员')}<ChevronRight size={14} aria-hidden="true" /></button>
-      {showMembership && <p id="profile-membership" className="profile-membership-note">{t('会员功能尚未开放，当前可免费体验基础聊天与本机记忆。')}</p>}
+      <p className="profile-membership-note">{locale === 'en' ? `Available: ${billing.balance} points · Daily quota ${billing.dailyQuota}` : `可用 ${billing.balance} 积分 · 每日额度 ${billing.dailyQuota}`}</p>
+      <button onClick={() => setShowMembership(true)}>{locale === 'en' ? 'Check in & monthly passes' : '签到与月卡'}<ChevronRight size={14} aria-hidden="true" /></button>
     </article>
 
     <section className="profile-group" aria-labelledby="profile-companion-heading">
@@ -108,6 +110,7 @@ export default function ProfileScreen(props: Props) {
           {primaryResult === 'success' && <p className="profile-primary-feedback" role="status">{t('主角色已更新')}</p>}
           {primaryResult === 'error' && <p className="profile-primary-feedback profile-primary-error" role="alert">{t('主角色保存失败，请重新选择以重试。')}</p>}
         </div>}
+        <SettingRow icon={<Users />} label={t('修改称呼与互动偏好')} onClick={props.openPreferences} />
         {props.openReminders && <SettingRow icon={<Bell />} label={t('智能提醒')} onClick={props.openReminders} />}
         <SettingRow icon={<MessageCircle />} label={t('主动提醒设置')} onClick={props.openProactive} />
       </div>
@@ -127,6 +130,8 @@ export default function ProfileScreen(props: Props) {
           <div className="api-actions"><button className="test-api" onClick={() => void test()} disabled={testing || provider === 'deepseek' && !apiKey.trim()}>{testing ? t('正在测试…') : t('测试连接')}</button>{provider === 'deepseek' && <button onClick={() => { setApiKey(''); setResult('已删除本次会话中的 Key') }}>{t('删除 Key')}</button>}</div>
           {result && <p className="api-result" role="status">{t(result)}</p>}
         </div>}
+        <SettingRow icon={<SunMoon />} label={locale === 'en' ? 'Appearance' : '外观模式'} value={theme.preference === 'system' ? (locale === 'en' ? 'System' : '跟随系统') : theme.preference === 'light' ? (locale === 'en' ? 'Light' : '浅色') : (locale === 'en' ? 'Dark' : '深色')} onClick={() => setShowAppearance(!showAppearance)} expanded={showAppearance} controls="profile-appearance" />
+        {showAppearance && <div id="profile-appearance" className="profile-inline-panel appearance-settings" role="radiogroup" aria-label={locale === 'en' ? 'Appearance' : '外观模式'}>{([['system', locale === 'en' ? 'Follow system' : '跟随系统'], ['light', locale === 'en' ? 'Light' : '浅色'], ['dark', locale === 'en' ? 'Dark' : '深色']] as [ThemePreference,string][]).map(([value,label]) => <button key={value} role="radio" aria-checked={theme.preference === value} className={theme.preference === value ? 'selected' : ''} onClick={() => theme.setTheme(value)}>{label}</button>)}</div>}
         <SettingRow icon={<Globe2 />} label={t('语言设置')} value={locale === 'zh-CN' ? '简体中文' : 'English'} onClick={() => setShowLanguage(!showLanguage)} expanded={showLanguage} controls="profile-language" />
         {showLanguage && <div id="profile-language" className="profile-inline-panel"><LanguageSettings /></div>}
         <SettingRow icon={<Users />} label={t('邀请朋友')} onClick={props.openInvite} />

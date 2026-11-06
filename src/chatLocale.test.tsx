@@ -9,6 +9,12 @@ import { defaultProactiveSettings, deliverProactive, saveProactiveSettings } fro
 import { defaultOnboardingProfile, onboardingMemoryText, validateOnboardingProfile } from './onboarding'
 import { chapters, completeStoryChapter, localDate } from './sevenDayStory'
 
+// Model contracts must not depend on IndexedDB scheduling or the daily points quota.
+// Real reservation and settlement behavior is covered by the billing suites.
+vi.mock('./billing', () => ({
+  reservePoints: vi.fn(async () => ({ commit: vi.fn(async () => {}), release: vi.fn(async () => {}) })),
+}))
+
 const chineseMessages: ChatMessage[] = [{ id: 1, from: 'user', text: '今天胃不舒服，不想喝牛奶', time: '原始时间', createdAt: '2026-01-01T13:05:00Z' }]
 const chineseMemories: ConfirmedMemory[] = [{ id: 'memory', characterId: 'lu', text: '胃不舒服时不喝牛奶，请尊重我的边界', confirmedAt: '2026-01-01', enabled: true, state: 'confirmed' }]
 const originalScroll = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'scrollIntoView')

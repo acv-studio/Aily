@@ -8,6 +8,16 @@
 .safety-consent .primary { width: 100%; margin-top: 14px; }
 .safety-consent button:disabled, .safety-panel button:disabled { opacity: .45; cursor: not-allowed; }
 .safety-panel { padding-bottom: 32px; }
+/* Keep the escape route visible while long subpages are being read on iPhone. */
+.screen > .text-button:first-child,
+.screen > .secondary:first-child {
+  position: sticky;
+  top: calc(8px + env(safe-area-inset-top));
+  z-index: 10;
+  margin-top: calc(8px + env(safe-area-inset-top));
+  background: #24283a;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .28);
+}
 .safety-panel article { margin: 18px 0; padding: 20px; }
 .safety-panel h3 { font-size: 17px; }
 .safety-panel label { flex-direction: column; align-items: stretch; }

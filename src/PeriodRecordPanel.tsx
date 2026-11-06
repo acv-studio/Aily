@@ -4,7 +4,7 @@ import { addPeriodRecord, deletePeriodRecord, loadPeriodRecords, PeriodRecordErr
 import './periodRecords.css'
 
 /** Content only: the chat's parent owns the modal and its focus/close behavior. */
-export default function PeriodRecordPanel({ temporary = false }: { temporary?: boolean }) {
+export default function PeriodRecordPanel({ temporary = false, onSaved }: { temporary?: boolean; onSaved?: (record: PeriodRecord) => void | Promise<void> }) {
   const { t } = useI18n()
   const id = useId()
   const mounted = useRef(false)
@@ -49,7 +49,7 @@ export default function PeriodRecordPanel({ temporary = false }: { temporary?: b
       if (mounted.current) {
         setRecords(updated); setConfirmDelete(null)
         if (!remove) { setStartDate(''); setEndDate(''); setNote('') }
-        if (!temporaryRef.current) setResult(remove ? '记录已删除。' : '经期记录已保存在本机。')
+        if (!temporaryRef.current) { setResult(remove ? '记录已删除。' : '经期记录已保存在本机。'); if (!remove) void onSaved?.({ startDate, endDate: endDate || undefined, note: note.trim() || undefined }) }
       }
     } catch (failure) {
       if (mounted.current) setError(failure instanceof PeriodRecordError ? failure.translationKey : remove ? '删除未完成，请重试；记录仍保留。' : '经期记录未保存，请检查本机存储后重试。')

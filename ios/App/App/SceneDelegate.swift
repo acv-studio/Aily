@@ -1,5 +1,35 @@
 import UIKit
 import Capacitor
+import WebKit
+
+final class AilyBridgeViewController: CAPBridgeViewController {
+    override func capacitorDidLoad() {
+        super.capacitorDidLoad()
+        bridge?.registerPluginInstance(StoreKitBillingPlugin())
+    }
+
+    override var preferredStatusBarStyle: UIStatusBarStyle { statusBarStyle }
+    override var prefersStatusBarHidden: Bool { false }
+    override var preferredStatusBarUpdateAnimation: UIStatusBarAnimation { .fade }
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        configureScrollView(in: view)
+    }
+
+    private func configureScrollView(in root: UIView) {
+        if let webView = root as? WKWebView {
+            webView.scrollView.isScrollEnabled = true
+            webView.scrollView.alwaysBounceVertical = true
+            webView.scrollView.panGestureRecognizer.isEnabled = true
+            webView.scrollView.contentInsetAdjustmentBehavior = .never
+            webView.scrollView.showsVerticalScrollIndicator = false
+            webView.scrollView.showsHorizontalScrollIndicator = false
+            return
+        }
+        for child in root.subviews { configureScrollView(in: child) }
+    }
+}
 
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     var window: UIWindow?
@@ -8,7 +38,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         guard let windowScene = scene as? UIWindowScene else { return }
 
         window = UIWindow(windowScene: windowScene)
-        window?.rootViewController = CAPBridgeViewController()
+        window?.rootViewController = AilyBridgeViewController()
         window?.makeKeyAndVisible()
 
         SceneDelegateProxy.shared.scene(scene, willConnectTo: session, options: connectionOptions)

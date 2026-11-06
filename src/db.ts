@@ -1,6 +1,7 @@
 import { t } from './i18n'
 import Dexie, { type EntityTable, type Table } from 'dexie'
 import { characters, type CharacterId } from './data'
+import { getCreditGift } from './creditGifts'
 import { validLocalVideoAttachment, type ChatMessage, type ConfirmedMemory } from './chatService'
 import { defaultOnboardingProfile, normalizeOnboardingProfile, onboardingMemoryId, onboardingMemoryText, validateOnboardingProfile, withoutAdultAuthorization, type OnboardingProfile } from './onboarding'
 import { conflictMemoryIds, defaultMemoryPolicy, type ConversationSummary, type MemoryPolicy } from './longMemory'
@@ -82,7 +83,7 @@ function orderedMessages(messages: StoredMessage[]): ChatMessage[] {
 
 function validateMessage(value: unknown): ChatMessage {
   check(isRecord(value))
-  keys(value, ['id', 'from', 'text', 'time', 'memory', 'status', 'replyToId', 'withdrawn', 'kind', 'attachment', 'createdAt'])
+  keys(value, ['id', 'from', 'text', 'time', 'memory', 'status', 'replyToId', 'withdrawn', 'kind', 'attachment', 'createdAt', 'giftId'])
   check(messageId(value.id) && (value.from === 'user' || value.from === 'character'))
   check(string(value.text, 100_000) && string(value.time, 128))
   optional(value, 'memory', item => typeof item === 'boolean')
@@ -92,6 +93,7 @@ function validateMessage(value: unknown): ChatMessage {
   optional(value, 'createdAt', timestamp)
   optional(value, 'kind', item => ['text', 'image', 'audio', 'video'].includes(item as string))
   optional(value, 'attachment', validAttachment)
+  optional(value, 'giftId', item => typeof item === 'string' && !!getCreditGift(item) && value.from === 'user')
   // Withdrawals deliberately retain the kind while removing the attachment.
   if (value.kind === 'video') check(validLocalVideoAttachment(value.attachment) || value.withdrawn === true && !Object.hasOwn(value, 'attachment'))
   if (isRecord(value.attachment) && typeof value.attachment.mimeType === 'string' && value.attachment.mimeType.startsWith('video/')) check(value.kind === 'video')

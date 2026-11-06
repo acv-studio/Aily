@@ -1,6 +1,8 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import type { ChangeEvent, FormEvent } from 'react'
 import { createPortal } from 'react-dom'
+import { Camera, MediaTypeSelection } from '@capacitor/camera'
+import { Capacitor } from '@capacitor/core'
 import { useI18n } from './i18n'
 import { interpretDivination } from './chatService'
 import ExtensionStore, { ExtensionAppView } from './ExtensionStore'
@@ -128,8 +130,21 @@ function LocalMedia({ kind, copy }: { kind: 'album' | 'music'; copy: Copy }) {
     setError(rejected ? copy('部分文件无法打开，请选择有效的图片或音频文件。', 'Some files could not be opened. Choose valid image or audio files.') : '')
     event.target.value = ''
   }
-  const remove = (item: MediaItem) => { URL.revokeObjectURL(item.url); urls.current.delete(item.url); setItems(previous => previous.filter(row => row.id !== item.id)) }
-  return <><p className="desktop-note">{copy('选择你自己的本地文件，不上传、不永久保存。关闭此工具或切换工具后需重新选择。', 'Choose your own local files. Nothing is uploaded or permanently saved. Re-select files after closing or switching tools.')}</p><label className="desktop-file-label">{copy(kind === 'album' ? '选择图片' : '选择音频', kind === 'album' ? 'Choose images' : 'Choose audio')}<input type="file" multiple accept={kind === 'album' ? 'image/*' : 'audio/*'} onChange={choose} /></label>{error && <p role="alert" className="desktop-error">{error}</p>}<div className={kind === 'album' ? 'desktop-album-grid' : 'desktop-music-list'}>{items.map(item => <article key={item.id}>{kind === 'album' ? <img src={item.url} alt={item.name} onError={() => setError(copy('图片预览失败，文件可能损坏或格式不支持。', 'Image preview failed; the file may be damaged or unsupported.'))} /> : <audio controls preload="metadata" src={item.url} aria-label={item.name} onError={() => setError(copy('音频播放失败，文件可能损坏或格式不支持。', 'Audio playback failed; the file may be damaged or unsupported.'))} />}<div><span>{item.name}</span><button type="button" aria-label={copy(`移除：${item.name}`, `Remove: ${item.name}`)} onClick={() => remove(item)}>{copy('移除', 'Remove')}</button></div></article>)}</div>{!items.length && <p className="desktop-empty">{copy(kind === 'album' ? '没有预置照片，选择图片后即可预览。' : '没有预置歌曲，选择音频后即可播放。', kind === 'album' ? 'No sample photos. Choose an image to preview it.' : 'No sample tracks. Choose audio to play it.')}</p>}</>
+  const choosePhotos = async () => {
+    setError('')
+    try {
+      const result = await Camera.chooseFromGallery({ mediaType: MediaTypeSelection.Photo, allowMultipleSelection: true, limit: 20 })
+      const selected = result.results.flatMap((media, index) => media.webPath ? [{ id: newId(), name: copy(`照片 ${index + 1}`, `Photo ${index + 1}`), url: media.webPath }] : [])
+      if (!selected.length) { setError(copy('没有读取到可用照片，请重新选择。', 'No usable photos were selected. Please try again.')); return }
+      setItems(previous => [...previous, ...selected])
+    } catch { setError(copy('无法打开系统相册。请允许照片访问后重试。', 'Unable to open Photos. Allow photo access and try again.')) }
+  }
+  const remove = (item: MediaItem) => { if (urls.current.has(item.url)) URL.revokeObjectURL(item.url); urls.current.delete(item.url); setItems(previous => previous.filter(row => row.id !== item.id)) }
+  const nativeAlbum = kind === 'album' && Capacitor.isNativePlatform()
+  const note = nativeAlbum
+    ? copy('从系统相册选择照片，仅用于本次预览；不上传、不永久保存。', 'Choose photos from your system library for this preview only. Nothing is uploaded or permanently saved.')
+    : copy(kind === 'music' ? '从“文件”中选择可播放的本地音频，不上传、不永久保存。Apple Music 受保护歌曲不能作为文件读取。' : '选择你自己的本地文件，不上传、不永久保存。关闭此工具或切换工具后需重新选择。', kind === 'music' ? 'Choose playable local audio from Files. Protected Apple Music songs cannot be read as files.' : 'Choose your own local files. Nothing is uploaded or permanently saved. Re-select files after closing or switching tools.')
+  return <><p className="desktop-note">{note}</p>{nativeAlbum ? <button type="button" className="desktop-file-label" onClick={() => void choosePhotos()}>{copy('从系统相册选择', 'Choose from Photos')}</button> : <label className="desktop-file-label">{copy(kind === 'album' ? '选择图片' : '选择音频', kind === 'album' ? 'Choose images' : 'Choose audio from Files')}<input type="file" multiple accept={kind === 'album' ? 'image/*' : 'audio/*'} onChange={choose} /></label>}{error && <p role="alert" className="desktop-error">{error}</p>}<div className={kind === 'album' ? 'desktop-album-grid' : 'desktop-music-list'}>{items.map(item => <article key={item.id}>{kind === 'album' ? <img src={item.url} alt={item.name} onError={() => setError(copy('图片预览失败，文件可能损坏或格式不支持。', 'Image preview failed; the file may be damaged or unsupported.'))} /> : <audio controls preload="metadata" src={item.url} aria-label={item.name} onError={() => setError(copy('音频播放失败，文件可能损坏或格式不支持。', 'Audio playback failed; the file may be damaged or unsupported.'))} />}<div><span>{item.name}</span><button type="button" aria-label={copy(`移除：${item.name}`, `Remove: ${item.name}`)} onClick={() => remove(item)}>{copy('移除', 'Remove')}</button></div></article>)}</div>{!items.length && <p className="desktop-empty">{copy(kind === 'album' ? '尚未选择照片。' : '尚未选择音频文件。', kind === 'album' ? 'No photos selected yet.' : 'No audio files selected yet.')}</p>}</>
 }
 
 // Retained for backward-compatible local data/tests; the UI below uses the Yizhishu skill contract.

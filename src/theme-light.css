@@ -1,0 +1,158 @@
+/* High-contrast daylight appearance inspired by iOS system surfaces. */
+html[data-theme=light]{--cc-primary:#74549b;--cc-primary-soft:#74549b12;--cc-bg:#f5f5f7;--cc-card:#fff;--cc-panel:#eeeef2;--cc-raised:#fff;--cc-fg:#202124;--cc-muted:#686a72;--cc-border:rgba(30,35,45,.09);--cc-hairline:rgba(30,35,45,.07);--cc-shadow-1:0 3px 14px rgba(20,25,35,.035);--cc-shadow-2:0 8px 24px rgba(20,25,35,.06);--line:rgba(30,35,45,.09);--muted:#686a72;--coral:#74549b;--violet:#74549b;--cyan:#74549b}
+html[data-theme=light],html[data-theme=light] body,html[data-theme=light] #root{background:var(--cc-bg);color:var(--cc-fg)}
+html[data-theme=light] :is(.app-shell,.onboarding,.chat-screen){background:var(--cc-bg);color:var(--cc-fg)}
+html[data-theme=light] .ambient{display:none}
+html[data-theme=light] .glass{background:#fff;border-color:var(--cc-border);box-shadow:var(--cc-shadow-1);backdrop-filter:none;-webkit-backdrop-filter:none}
+html[data-theme=light] :is(.clock-widget,.weather-widget,.desktop-bot,.moment,.managed-memory,.profile-card,.profile-settings,.plan-card,.relation,.memory-controls,.reminder-settings-card,.reminder-time-item){background:#fff!important;border-color:var(--cc-border)!important;box-shadow:var(--cc-shadow-1)!important;color:var(--cc-fg)}
+html[data-theme=light] :is(.eyebrow,.lead,.hint,.desktop-section-heading,.desktop-home-note,.profile-group>h3,.memory-intro p,.memory-help,.managed-memory p,.managed-memory small,.reminders-note,.weather-widget,.clock-widget-label,.clock-widget>small){color:#766d76!important}
+html[data-theme=light] :is(h1,h2,h3,strong,.topbar h1,.profile-card h2,.managed-memory h3){color:#211b22}
+html[data-theme=light] .topbar{background:transparent}
+html[data-theme=light] .icon-button{background:rgba(255,255,255,.82);border-color:rgba(61,43,58,.12);color:#312731;box-shadow:0 1px #fff inset,0 5px 15px rgba(78,55,72,.08)}
+html[data-theme=light] :is(input,textarea,select){background:rgba(255,255,255,.86)!important;color:#241d24!important;border-color:rgba(61,43,58,.17)!important}
+html[data-theme=light] :is(input,textarea)::placeholder{color:#938a93}
+html[data-theme=light] .profile-setting-row{color:#2b232b;border-color:rgba(61,43,58,.08)}
+html[data-theme=light] .profile-inline-panel{background:rgba(82,60,78,.035)}
+html[data-theme=light] .bottom-nav{background:rgba(245,245,247,.84)!important;color:#69616b;box-shadow:0 -10px 30px rgba(72,52,68,.08)!important}
+html[data-theme=light] .bottom-nav button,html[data-theme=light] .bottom-nav button.active,html[data-theme=light] .bottom-nav button span,html[data-theme=light] .bottom-nav button.active span{color:#777079!important}
+html[data-theme=light] .bottom-nav button.active svg{color:#8c5db0!important}
+html[data-theme=light] .chat-header{background:rgba(250,247,249,.9)}
+html[data-theme=light] .messages{background:transparent}
+html[data-theme=light] .bubble{background:#fff;border-color:rgba(61,43,58,.1);color:#2b242b;box-shadow:0 5px 16px rgba(78,55,72,.07)}
+html[data-theme=light] .mine .bubble{background:#eee8f5;color:#24202c}
+html[data-theme=light] .bubble strong,html[data-theme=light] .mine .bubble strong{color:#171117}
+html[data-theme=light] .message-content time{color:#817781}
+html[data-theme=light] .quick-replies button,html[data-theme=light] .quick-replies .chat-mode-trigger{background:rgba(255,255,255,.7);border-color:rgba(61,43,58,.13);color:#5e5260}
+html[data-theme=light] .composer{background:rgba(245,240,244,.92);border-color:rgba(61,43,58,.1)}
+html[data-theme=light] .composer input{background:#fff!important;color:#241d24!important}
+html[data-theme=light] :is(.desktop-tools-dialog,.game-sheet,.story-sheet,.chat-history-dialog,.memory-modal){background:linear-gradient(160deg,#fff,#f2ecef);border-color:rgba(61,43,58,.12);color:#211b22;box-shadow:0 -20px 60px rgba(62,42,58,.2)}
+html[data-theme=light] :is(.desktop-tools-overlay,.memory-modal-overlay,.chat-history-overlay,.game-overlay){background:rgba(89,71,84,.28)}
+html[data-theme=light] .desktop-app-icon{background:linear-gradient(145deg,color-mix(in srgb,var(--tool-color) 13%,#fff),#f0eaee);box-shadow:inset 0 1px #fff,0 9px 20px rgba(78,55,72,.1)}
+html[data-theme=light] :is(.chat-settings-options,.quick-mode-popover,.chat-more-panel){background:#fffafc;border-color:rgba(61,43,58,.14);color:#211b22}
+html[data-theme=light] .chat-settings-options>button{color:#302630}
+html[data-theme=light] .chat-settings-options>button:hover{background:#eee5ed}
+html[data-theme=light] :is(.chat-error,.feed-error,.desktop-error){background:#f7e7e9;color:#8d3d49;border-color:#c7677433}
+html[data-theme=light] .memory-page .managed-memory{background:rgba(255,255,255,.8);border-color:rgba(61,43,58,.1)}
+html[data-theme=light] .memory-category-tag{color:#704a88;background:#8c5db012}
+html[data-theme=light] .memory-page .managed-memory .memory-actions button{color:#5d4c60;background:rgba(74,54,70,.035);border-color:rgba(61,43,58,.1)}
+html[data-theme=light] .weather-source,html[data-theme=light] .weather-updated{color:#665d66!important}
+/* Daylight contrast: keep decorative pastel icons, but all readable copy uses
+   WCAG-friendly dark values for outdoor use. */
+html[data-theme=light] :is(.desktop-section-heading,.desktop-home-note,.memory-help,.reminders-note,.ai-note){color:#625962!important}
+html[data-theme=light] .desktop-app{color:#352c35!important;font-weight:600}
+html[data-theme=light] .desktop-app>span:last-child{color:#352c35!important;text-shadow:none}
+html[data-theme=light] .desktop-app-icon{background:#fff!important;border:1px solid var(--cc-border)!important;box-shadow:0 3px 10px rgba(20,25,35,.045)!important;color:color-mix(in srgb,var(--tool-color) 52%,#162839)!important}
+html[data-theme=light] .desktop-app-icon svg{color:inherit!important}
+html[data-theme=light] .dashboard-widget .clock-widget,html[data-theme=light] .dashboard-widget .weather-widget{background:transparent!important;box-shadow:none!important}
+html[data-theme=light] .desktop-bot .avatar{box-shadow:none!important}
+html[data-theme=light] .desktop-section-line{background:var(--cc-border)!important}
+html[data-theme=light] .companion-manage-link{color:var(--cc-muted)!important}
+html[data-theme=light] .desktop-bot-copy>small,html[data-theme=light] .weather-retry{color:var(--cc-primary)!important}
+html[data-theme=light] .weather-retry{background:var(--cc-primary-soft)!important}
+html[data-theme=light] .desktop-bot-copy p{color:#5f555f!important}
+html[data-theme=light] .desktop-bot-copy>small{color:#654071!important;font-weight:600}
+html[data-theme=light] .desktop-bot-title>span{color:#685f68!important;border-color:rgba(61,43,58,.18)!important;background:#ffffff80}
+html[data-theme=light] .desktop-bot-chevron{color:#655b65!important}
+html[data-theme=light] .clock-widget-label{color:#514851!important}
+html[data-theme=light] .clock-widget p{color:#443b44!important}
+html[data-theme=light] .clock-widget time{color:#171217!important}
+html[data-theme=light] .weather-widget-header{color:#514851!important}
+html[data-theme=light] .weather-place{color:#332a33!important;font-weight:600}
+html[data-theme=light] .weather-temperature{color:#70458a!important}
+html[data-theme=light] .weather-condition{color:#4b424b!important}
+html[data-theme=light] .weather-metrics{color:#5f555f!important}
+html[data-theme=light] .weather-placeholder p{color:#544a54!important}
+html[data-theme=light] .weather-actions>button{color:#5b3c67!important;background:rgba(112,69,138,.07)!important}
+html[data-theme=light] .profile-setting-row>small{color:#716771!important}
+html[data-theme=light] .profile-chevron{color:#706670!important}
+html[data-theme=light] .bottom-nav button,html[data-theme=light] .bottom-nav button.active,html[data-theme=light] .bottom-nav button span,html[data-theme=light] .bottom-nav button.active span{color:#5d555d!important}
+html[data-theme=light] .bottom-nav button.active svg{color:#7c439e!important}
+html[data-theme=light] .memory-entry-meta time{color:#665b66!important}
+html[data-theme=light] .memory-page .memory-details>summary{color:#66566b!important}
+html[data-theme=light] .reminder-time-item small{color:#655c65!important}
+html[data-theme=light] .reminders-intro p{color:#5e555e!important}
+html[data-theme=light] .reminder-smart-entry small{color:#625862!important}
+html[data-theme=light] .reminder-count{background:#8c5db018!important;color:#70458a!important}
+html[data-theme=light] .reminder-empty-copy{color:#625862!important;border-color:rgba(61,43,58,.18)!important;background:rgba(255,255,255,.45)}
+html[data-theme=light] .reminders-note{color:#5e555e!important}
+html[data-theme=light] .bottom-nav{background:rgba(245,245,247,.74)!important;border-radius:0!important;box-shadow:none!important}
+/* Onboarding and preference forms must not inherit the dark form palette. */
+html[data-theme=light] .onboarding-flow{color-scheme:light;color:#211b22}
+html[data-theme=light] .onboarding-flow>h1{color:#211b22}
+html[data-theme=light] .onboarding-flow label{color:#514751!important}
+html[data-theme=light] .onboarding-flow .hint{color:#665c66!important}
+html[data-theme=light] .onboarding-flow .disclosure{color:#6d636d!important}
+html[data-theme=light] .onboarding-flow .check{color:#514751!important}
+html[data-theme=light] .onboarding-flow .check input,
+html[data-theme=light] .safety-consent input[type=checkbox]{color-scheme:light;accent-color:#8c5db0;background:#fff!important;border:1px solid #756a75!important}
+html[data-theme=light] .onboarding-flow :is(input:not([type=checkbox]),textarea,select){background:#fff!important;color:#211b22!important;border-color:rgba(61,43,58,.2)!important;box-shadow:0 1px 0 #fff inset}
+html[data-theme=light] .onboarding-flow :is(input,textarea)::placeholder{color:#8b818b!important}
+html[data-theme=light] .onboarding-flow .text-button{background:#fff!important;color:#3f343f!important;border-color:rgba(61,43,58,.17)!important;box-shadow:0 5px 15px rgba(78,55,72,.08)!important}
+html[data-theme=light] .onboarding-flow .secondary,
+html[data-theme=light] .onboarding-flow .consent-status button{background:#eee7ec!important;color:#4e3b55!important;border-color:rgba(61,43,58,.12)!important}
+html[data-theme=light] .onboarding-flow .intro-card{background:rgba(255,255,255,.76)!important;border-color:rgba(61,43,58,.13)!important}
+html[data-theme=light] .onboarding-flow .intro-card strong{color:#634276!important}
+html[data-theme=light] .onboarding-flow .intro-card p,
+html[data-theme=light] .onboarding-flow .consent-status p{color:#504750!important}
+html[data-theme=light] .onboarding-flow .trial-user{background:#ede4ed;color:#2d242d}
+html[data-theme=light] .onboarding-flow progress{accent-color:#8c5db0}
+html[data-theme=light] .provider-choice-stack button{background:#fff!important;color:#2e252e;border-color:rgba(61,43,58,.16)!important}
+html[data-theme=light] .provider-choice-stack button.selected{background:#8c5db018!important;border-color:#8c5db0!important}
+html[data-theme=light] .provider-choice-stack span,html[data-theme=light] .provider-choice-stack small{color:#625862!important}
+/* Profile and every subpage opened from Profile. */
+html[data-theme=light] .plan-card{color:var(--cc-fg)!important;background:#fff!important;border:1px solid var(--cc-border)!important;box-shadow:var(--cc-shadow-1)!important}
+html[data-theme=light] .plan-card :is(h3,span,small,button){color:#49374c!important}
+html[data-theme=light] .plan-card .profile-membership-note{color:#555862!important;opacity:1;font-weight:500;margin-bottom:14px}
+html[data-theme=light] .profile-primary-option{background:#fff!important;border-color:rgba(61,43,58,.13)!important;color:#302730!important}
+html[data-theme=light] .profile-primary-option:has(input:checked){background:#8c5db00c!important;border-color:#8c5db0!important}
+html[data-theme=light] .profile-primary-copy strong{color:#302730!important}
+html[data-theme=light] .profile-primary-copy small{color:#6a606a!important}
+html[data-theme=light] .profile-primary-avatar{background:#8c5db00c!important;color:#70458a!important}
+html[data-theme=light] .profile-primary-panel>p{color:#625862!important}
+html[data-theme=light] .provider-switch button{background:#fff!important;color:#514751!important;border-color:rgba(61,43,58,.16)!important}
+html[data-theme=light] .provider-switch button.selected{color:#603f75!important;background:#8c5db012!important;border-color:#8c5db0!important}
+html[data-theme=light] .api-provider-detail,html[data-theme=light] .api-settings p{color:#625862!important}
+html[data-theme=light] .appearance-settings button{background:#fff!important;color:#514751!important;border-color:rgba(61,43,58,.15)!important}
+html[data-theme=light] .appearance-settings button.selected{background:#8c5db014!important;color:#70458a!important;border-color:#8c5db0!important}
+html[data-theme=light] .proactive-settings{color:#211b22}
+html[data-theme=light] .proactive-settings :is(h2,h3,label){color:#403640!important}
+html[data-theme=light] .proactive-settings p{color:#625862!important}
+html[data-theme=light] .proactive-settings :is(select,input[type=time]){color-scheme:light;background:#fff!important;color:#211b22!important;border-color:rgba(61,43,58,.2)!important}
+html[data-theme=light] .proactive-check input{accent-color:#8c5db0;background:#fff!important}
+html[data-theme=light] .proactive-entry{background:#fff!important;color:#332a33!important;border-color:rgba(61,43,58,.12)!important}
+html[data-theme=light] .smart-reminders{color:#211b22}
+html[data-theme=light] .reminder-heading p,html[data-theme=light] .smart-reminders .reminder-hint{color:#625862!important}
+html[data-theme=light] .reminder-symbol{color:#70458a;background:#8c5db014;border-color:#8c5db030}
+html[data-theme=light] .reminder-disclosure{background:#5d879a0b;color:#554c55;border-color:#5d879a24}
+html[data-theme=light] .reminder-presets button{background:#fff;color:#5c525c;border-color:rgba(61,43,58,.13)}
+html[data-theme=light] .reminder-presets button.selected{background:#8c5db014;color:#67427d;border-color:#8c5db0}
+html[data-theme=light] .reminder-card h3,html[data-theme=light] .smart-reminders label{color:#403640!important}
+html[data-theme=light] .smart-reminders :is(input:not([type=checkbox]),select){color-scheme:light;background:#fff!important;color:#211b22!important;border-color:rgba(61,43,58,.2)!important}
+html[data-theme=light] :is(.reminder-inline button,.reminder-moods button,.reminder-steps button,.reminder-actions button){background:#fff;color:#5b4663;border-color:rgba(61,43,58,.14)}
+html[data-theme=light] .reminder-steps article{background:#fff;border-color:rgba(61,43,58,.1)}
+html[data-theme=light] .reminder-steps p,html[data-theme=light] .reminder-item>p{color:#625862!important}
+html[data-theme=light] .reminder-item-title strong{color:#322932!important}
+html[data-theme=light] .reminder-status{color:#675d67!important}
+html[data-theme=light] .safety-panel{color:#211b22}
+html[data-theme=light] .safety-panel article{background:#fff!important;border-color:rgba(61,43,58,.12)!important}
+html[data-theme=light] .safety-panel :is(h2,h3,label){color:#352c35!important}
+html[data-theme=light] .safety-panel p,html[data-theme=light] .safety-consent p{color:#5f555f!important}
+html[data-theme=light] .screen>.text-button:first-child,html[data-theme=light] .screen>.secondary:first-child{background:rgba(255,255,255,.92)!important;color:#3e343e!important;border-color:rgba(61,43,58,.15)!important;box-shadow:0 7px 20px rgba(78,55,72,.1)!important}
+html[data-theme=light] .safety-panel input{background:#fff!important;color:#211b22!important;border-color:rgba(61,43,58,.22)!important}
+html[data-theme=light] .danger-action{background:#f8e9eb!important;color:#8d3d49!important;border-color:#b65f6e55!important}
+html[data-theme=light] .data-transfer{background:#fff!important;color:#2f272f;border-color:rgba(61,43,58,.12)!important}
+html[data-theme=light] .data-transfer p,html[data-theme=light] .data-transfer .backup-scope{color:#625862!important}
+html[data-theme=light] .data-transfer input{background:#fff!important;color:#211b22!important;border-color:rgba(61,43,58,.2)!important}
+html[data-theme=light] .data-transfer input::file-selector-button{background:#eee7ec;color:#443844}
+html[data-theme=light] .data-transfer button{background:#eee7ec;color:#443844}
+html[data-theme=light] .data-transfer .backup-import{border-color:rgba(61,43,58,.1)}
+html[data-theme=light] .data-transfer .backup-clear{background:#f8e9eb;color:#8d3d49}
+html[data-theme=light] .data-transfer .backup-confirm{background:#fff5f6;border-color:#b65f6e44}
+html[data-theme=light] .sharing-box,html[data-theme=light] .sharing-dialog,html[data-theme=light] .sharing-landing{color:#211b22}
+html[data-theme=light] .sharing-box p,html[data-theme=light] .sharing-dialog p{color:#586059!important}
+html[data-theme=light] :is(.sharing-box input,.sharing-box select,.sharing-dialog textarea){background:#fff!important;color:#211b22!important;border-color:rgba(61,43,58,.2)!important}
+html[data-theme=light] .sharing-actions .secondary,html[data-theme=light] .sharing-landing .secondary{background:#eee7ec;color:#443844}
+/* Light controls must remain legible in disabled and focused states. */
+html[data-theme=light] :is(.secondary,.text-button){background:#fff!important;color:#4e405e!important;border-color:var(--cc-border)!important;box-shadow:var(--cc-shadow-1)!important}
+html[data-theme=light] :is(.primary,.secondary,.text-button):disabled{background:#e8e9ee!important;color:#60636d!important;border-color:#dbdde4!important;opacity:1!important;box-shadow:none!important;cursor:not-allowed}
+html[data-theme=light] .smart-reminders :is(input,select,button):focus-visible{outline:2px solid var(--cc-primary)!important;outline-offset:2px;box-shadow:none!important}

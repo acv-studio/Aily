@@ -1,0 +1,118 @@
+.credit-gift-store {
+  --cg-bg: #1c1923;
+  --cg-surface: #28232f;
+  --cg-selected: #3a2c47;
+  --cg-text: #f8f2fa;
+  --cg-muted: #c6bbcf;
+  --cg-line: #65536f;
+  --cg-accent: #e0baf5;
+  --cg-action-text: #2b1635;
+  --cg-error-bg: #41262d;
+  --cg-error-text: #ffd0d7;
+  --cg-success-bg: #203a31;
+  --cg-success-text: #c5f2dc;
+  color-scheme: dark;
+  color: var(--cg-text);
+  background: var(--cg-bg);
+  position: relative;
+  isolation: isolate;
+  font-size: 14px;
+  line-height: 1.6;
+  min-width: 0;
+}
+html[data-theme='light'] .credit-gift-store {
+  --cg-bg: #f5f5f7;
+  --cg-surface: #fff;
+  --cg-selected: #eeebf5;
+  --cg-text: #202124;
+  --cg-muted: #60636d;
+  --cg-line: #e0e1e7;
+  --cg-accent: #74549b;
+  --cg-action-text: #fff;
+  --cg-error-bg: #fcebed;
+  --cg-error-text: #8b293d;
+  --cg-success-bg: #e6f4ed;
+  --cg-success-text: #265e46;
+  color-scheme: light;
+}
+.credit-gift-store *, .credit-gift-store *::before, .credit-gift-store *::after { box-sizing: border-box; }
+.credit-gift-store :is(h2, h3, strong) { color: var(--cg-text); }
+.credit-gift-store :is(h2, h3, p) { margin: 0; }
+.credit-gift-store button {
+  appearance: none;
+  min-height: 44px;
+  font: inherit;
+  line-height: 1.4;
+  border: 1px solid var(--cg-line);
+  border-radius: 12px;
+  padding: 10px 14px;
+  color: var(--cg-text);
+  background: var(--cg-surface);
+  cursor: pointer;
+  box-shadow: none;
+  text-transform: none;
+}
+.credit-gift-store button:disabled { opacity: 1; color: var(--cg-muted); background: var(--cg-surface); cursor: not-allowed; }
+.credit-gift-store :is(button, summary):focus-visible { outline: 3px solid var(--cg-accent); outline-offset: 3px; }
+.credit-gift-store button:not(:disabled):hover { border-color: var(--cg-accent); }
+.cg-header { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; padding: 18px; border-bottom: 1px solid var(--cg-line); }
+.cg-recipient { display: flex; align-items: center; gap: 10px; flex: 1 1 150px; min-width: 0; }
+.cg-avatar { display: grid; place-items: center; width: 48px; height: 48px; flex-shrink: 0; border-radius: 18px; background: var(--cg-selected); border: 1px solid var(--cg-line); color: var(--cg-accent); font-size: 22px; font-weight: 700; }
+.cg-eyebrow { display: block; color: var(--cg-muted); font-size: 12px; }
+.credit-gift-store .cg-header h2 { font-size: 18px; line-height: 1.5; }
+.cg-wallet { display: flex; flex-direction: column; text-align: right; }
+.cg-wallet > span { font-size: 12px; color: var(--cg-muted); }
+.credit-gift-store .cg-wallet > strong { font-size: 23px; line-height: 1.3; color: var(--cg-accent); font-variant-numeric: tabular-nums; }
+.credit-gift-store .cg-checkin { background: var(--cg-selected); color: var(--cg-text); font-size: 13px; font-weight: 600; }
+.cg-content { padding: 18px; display: flex; flex-direction: column; gap: 14px; }
+.cg-intro h3 { font-size: 17px; }
+.cg-intro p, .cg-note { color: var(--cg-muted); font-size: 13px; line-height: 1.7; }
+.cg-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.credit-gift-store .cg-card { display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 4px; position: relative; min-height: 125px; padding: 17px 6px 12px; text-align: center; }
+.credit-gift-store .cg-card[aria-pressed='true'] { background: var(--cg-selected); border-color: var(--cg-accent); box-shadow: inset 0 0 0 1px var(--cg-accent); }
+.cg-card-mark { position: absolute; top: 4px; right: 8px; color: var(--cg-accent); font-weight: 700; font-size: 14px; }
+.cg-emoji { font-size: 31px; line-height: 1.3; }
+.cg-card strong { font-size: 14px; overflow-wrap: anywhere; }
+.cg-cost { color: var(--cg-muted); font-size: 13px; }
+.cg-description { border: 1px solid var(--cg-line); border-radius: 14px; padding: 14px; background: var(--cg-selected); }
+.cg-description p { margin: 4px 0 8px; }
+.cg-description > span { color: var(--cg-muted); font-size: 12px; line-height: 1.7; display: block; }
+.cg-error, .cg-success { padding: 12px 14px; border-radius: 12px; overflow-wrap: anywhere; font-size: 13px; }
+.cg-error { color: var(--cg-error-text); background: var(--cg-error-bg); }
+.cg-error button { margin-top: 8px; }
+.cg-success { color: var(--cg-success-text); background: var(--cg-success-bg); }
+.cg-history { border-top: 1px solid var(--cg-line); padding-top: 10px; }
+.credit-gift-store summary { min-height: 44px; padding: 10px 0; cursor: pointer; color: var(--cg-text); font-size: 13px; font-weight: 600; }
+.cg-history > p { margin: 8px 0; }
+.cg-ledger { padding: 0; margin: 12px 0; list-style: none; }
+.cg-ledger li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--cg-line); font-size: 13px; }
+.cg-ledger li > div { min-width: 0; overflow-wrap: anywhere; }
+.cg-ledger time { display: block; font-size: 12px; color: var(--cg-muted); }
+.cg-ledger li > span { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.cg-old-stories { margin-top: 18px; }
+.cg-old-stories h3 { font-size: 14px; }
+.cg-old-stories details { padding: 6px 12px; margin-top: 8px; border: 1px solid var(--cg-line); border-radius: 12px; }
+.cg-old-stories p { margin: 8px 0; }
+/* Bottom sticky lives in this section's flow and scrolls with chat-extra-body.
+   Its normal-flow height reserves space, unlike a fixed viewport overlay. */
+.cg-confirm { position: sticky; bottom: 0; z-index: 1; padding: 14px 18px; background: var(--cg-bg); border-top: 1px solid var(--cg-line); box-shadow: 0 -6px 20px #00000012; }
+.cg-confirm-row { display: flex; justify-content: space-between; align-items: center; gap: 14px; }
+.cg-confirm-row > div { min-width: 0; }
+.cg-confirm-row span, .cg-confirm-row strong { display: block; }
+.cg-confirm-row span { font-size: 12px; color: var(--cg-muted); overflow-wrap: anywhere; }
+.cg-confirm-row strong { font-size: 16px; }
+.credit-gift-store .cg-send { min-width: 124px; min-height: 48px; background: var(--cg-accent); color: var(--cg-action-text); border-color: var(--cg-accent); font-weight: 700; }
+.credit-gift-store .cg-send:disabled { background: var(--cg-surface); color: var(--cg-muted); border-color: var(--cg-line); }
+.cg-confirm > p { margin-top: 6px; font-size: 12px; color: var(--cg-muted); }
+.cg-shortfall { margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--cg-line); }
+.cg-shortfall > p { color: var(--cg-error-text); font-size: 14px; font-weight: 600; }
+.cg-shortfall > div { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.credit-gift-store .cg-billing-link { color: var(--cg-accent); font-size: 13px; background: var(--cg-surface); }
+@media (max-width: 360px) {
+  .cg-header, .cg-content, .cg-confirm { padding-left: 12px; padding-right: 12px; }
+  .cg-header { gap: 8px; }
+  .cg-grid { gap: 7px; }
+  .cg-card strong { font-size: 13px; }
+  .credit-gift-store .cg-send { min-width: 104px; }
+}
+@media (prefers-reduced-motion: reduce) { .credit-gift-store * { scroll-behavior: auto; transition: none; } }

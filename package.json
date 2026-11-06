@@ -16,10 +16,12 @@
   },
   "dependencies": {
     "@capacitor/android": "8.6.0",
+    "@capacitor/camera": "^8.2.6",
     "@capacitor/core": "8.6.0",
     "@capacitor/filesystem": "8.1.5",
     "@capacitor/ios": "8.6.0",
     "@capacitor/share": "8.0.3",
+    "@capacitor/status-bar": "^8.0.3",
     "@vitejs/plugin-react": "latest",
     "dexie": "^4.4.7",
     "lucide-react": "latest",

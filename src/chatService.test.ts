@@ -5,6 +5,12 @@ import { defaultOnboardingProfile } from './onboarding'
 import { REPLY_MODES, REPLY_MODE_PROMPTS, type ReplyMode } from './replyModes'
 import { translate } from './i18n'
 
+// Model contracts must not depend on IndexedDB scheduling or the daily points quota.
+// Real reservation and settlement behavior is covered by the billing suites.
+vi.mock('./billing', () => ({
+  reservePoints: vi.fn(async () => ({ commit: vi.fn(async () => {}), release: vi.fn(async () => {}) })),
+}))
+
 const messages: ChatMessage[] = [
   { id: 1, from: 'user', text: '今天胃有点不舒服', time: '现在' },
   { id: 2, from: 'character', text: '先歇会儿。', time: '现在' },
@@ -648,10 +654,14 @@ describe('streaming transport', () => {
   it('aborts a stalled reader, cancels it and emits no later deltas', async () => {
     const cancel = vi.fn()
     const controller = new AbortController()
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(new ReadableStream({ cancel })))
+    const response = new Response(new ReadableStream({ cancel }))
+    const getReader = vi.spyOn(response.body!, 'getReader')
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(response)
     const req = request({ signal: controller.signal })
     const pending = streamReply(req)
-    await Promise.resolve(); await Promise.resolve(); await Promise.resolve()
+    // Reservation adds an async boundary; abort only after the reader exists.
+    for (let tick = 0; tick < 20 && !getReader.mock.calls.length; tick++) await Promise.resolve()
+    expect(getReader).toHaveBeenCalledOnce()
     controller.abort()
     await expect(pending).rejects.toMatchObject({ name: 'AbortError' })
     expect(cancel).toHaveBeenCalled()

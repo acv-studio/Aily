@@ -7,6 +7,7 @@ import { clearCharacterMemories, deleteMemory, finishOnboarding as persistFinish
 import { defaultOnboardingProfile, normalizeOnboardingProfile, type OnboardingProfile } from './onboarding'
 import type { MemoryDraft } from './ChatPanel'
 import { normalizeReplyMode, type ReplyMode } from './replyModes'
+import { getCreditGift, giftMessage, giftResponseInstruction, type CreditGiftId } from './creditGifts'
 import { deliverProactive } from './proactiveMessages'
 import { archiveExpiredMemories, confirmProposal, db, forgottenSourceIds, loadMemoryPolicy, loadSummaries, saveMemoryPolicy, saveProposals, saveSummaries } from './db'
 import { categoriesFor, conflictMemoryIds, defaultMemoryPolicy, extractCandidates, isSensitive, summarizeConversation, topics, type ConversationSummary, type MemoryPolicy } from './longMemory'
@@ -119,14 +120,14 @@ export default function useLocalChat() {
     const records = await loadRoleConversation(role)
     const existing = await db.memories.toArray()
     const forgotten = new Set(await forgottenSourceIds(role))
-    await saveProposals(extractCandidates(role, records.filter(message => !forgotten.has(message.id)), existing, policy))
+    await saveProposals(extractCandidates(role, records.filter(message => !message.localOnly && !forgotten.has(message.id)), existing, policy))
     const current = await db.memories.toArray()
     // Never turn a pending, corrected, paused or deleted fact into a summary bypass.
     const excluded = new Set(current.filter(memory => memory.characterId === role && (memory.state === 'pending' || memory.state === 'rejected' || memory.state === 'archived' || memory.enabled === false || !!memory.expiresAt && Date.parse(memory.expiresAt) <= Date.now())).map(memory => memory.sourceMessageId))
     let excludedTurn = false
     const safeHistory = records.filter(message => {
-      if (message.from === 'user') excludedTurn = !!message.withdrawn || forgotten.has(message.id) || excluded.has(message.id) || isSensitive(message.text) || categoriesFor(message.text).some(category => policy.disabledCategories.includes(category))
-      return !excludedTurn && !forgotten.has(message.id) && !excluded.has(message.id)
+      if (message.from === 'user') excludedTurn = !!message.localOnly || !!message.withdrawn || forgotten.has(message.id) || excluded.has(message.id) || isSensitive(message.text) || categoriesFor(message.text).some(category => policy.disabledCategories.includes(category))
+      return !message.localOnly && !excludedTurn && !forgotten.has(message.id) && !excluded.has(message.id)
     })
     const digest = summarizeConversation(role, safeHistory, policy)
     await saveSummaries(role, digest, policy)
@@ -232,10 +233,9 @@ export default function useLocalChat() {
     window.addEventListener('aily-proactive-settings', wake)
     return () => { disposed = true; window.clearInterval(timer); document.removeEventListener('visibilitychange', wake); window.removeEventListener('aily-proactive-settings', wake) }
   }, [ready, onboarded])
-  const recordActivity = async (text: string) => {
+  const recordActivityFor = async (role: CharacterId, text: string, localOnly = false) => {
     if (!ready || !text.trim() || active.current || mutationCount.current) return
-    const role = selectedRef.current
-    const activity: ChatMessage = { id: nextId(), from: 'user', text: text.trim(), time: new Date().toLocaleTimeString(getLocale()), createdAt: new Date().toISOString(), status: 'sent' }
+    const activity: ChatMessage = { id: nextId(), from: 'user', text: text.trim(), time: new Date().toLocaleTimeString(getLocale()), createdAt: new Date().toISOString(), status: 'sent', localOnly }
     if (temporaryRef.current) {
       const records = [...temporaryConversationsRef.current[role], activity]
       temporaryConversationsRef.current = { ...temporaryConversationsRef.current, [role]: records }
@@ -245,8 +245,9 @@ export default function useLocalChat() {
     const records = await persistChatChanges(role, [activity])
     apply(role, records)
   }
-  const send = async (options: { retryId?: number; replyToId?: number; attachment?: ChatMessage['attachment']; kind?: ChatMessage['kind']; text?: string; localActionNote?: string } = {}) => {
-    if (deleting.current || !ready || active.current || mutationCount.current) return
+  const recordActivity = async (text: string, localOnly = false) => recordActivityFor(selectedRef.current, text, localOnly)
+  const send = async (options: { retryId?: number; replyToId?: number; attachment?: ChatMessage['attachment']; kind?: ChatMessage['kind']; text?: string; localActionNote?: string; billingCost?: 1 | 5; giftId?: CreditGiftId; rejectOnFailure?: boolean } = {}) => {
+    if (deleting.current || !ready || active.current || mutationCount.current) { if(options.rejectOnFailure) throw new Error('请等待当前操作完成后再赠送礼物'); return }
     const role = selectedRef.current
     const isTemporary = temporaryRef.current
     const replyMode = currentReplyMode(role)
@@ -258,10 +259,14 @@ export default function useLocalChat() {
     }
     const target = options.retryId === undefined ? undefined : original.find(message => message.id === options.retryId && message.from === 'user' && !message.withdrawn)
     if (options.retryId !== undefined && !target) return
-    const inputText = options.text?.trim() ?? draft.trim()
+    const creditGiftId = target?.giftId ?? options.giftId
+    const creditGift = creditGiftId ? getCreditGift(creditGiftId) : undefined
+    if (creditGiftId && !creditGift) { const message='礼物无效，请重新选择';setError(message);if(options.rejectOnFailure)throw new Error(message);return }
+    if (creditGift && !apiKey.trim()) { const message='请先在“我的”配置可用的模型服务，礼物包含一次 AI 回应';setError(message);if(options.rejectOnFailure)throw new Error(message);return }
+    const inputText = creditGift ? giftMessage(creditGift.id, getLocale()) : options.text?.trim() ?? draft.trim()
     if (!target && !inputText && !options.attachment) return
     const replyToId = original.find(message => message.id === options.replyToId && !message.withdrawn && message.status !== 'sending')?.id
-    const user: ChatMessage = target ? { ...target, status: 'sent' } : { id: nextId(original.reduce((maximum, message) => Math.max(maximum, message.id), 0)), from: 'user', text: inputText, time: new Date().toLocaleTimeString('zh-CN'), createdAt: new Date().toISOString(), status: 'sent', replyToId, kind: options.kind || 'text', attachment: options.attachment }
+    const user: ChatMessage = target ? { ...target, status: 'sent' } : { id: nextId(original.reduce((maximum, message) => Math.max(maximum, message.id), 0)), from: 'user', text: inputText, time: new Date().toLocaleTimeString('zh-CN'), createdAt: new Date().toISOString(), status: 'sent', replyToId, kind: options.kind || 'text', attachment: options.attachment, ...(creditGift ? { giftId: creditGift.id } : {}) }
     // Check videos before any write, including temporary sends that bypass the DB.
     if (user.kind === 'video' || user.attachment?.mimeType.startsWith('video/')) {
       if (!validLocalVideoAttachment(user.attachment)) { setError('请选择 20MB 以内的 MP4、WebM 或 MOV 视频'); return }
@@ -273,7 +278,7 @@ export default function useLocalChat() {
     let content = ''; let persisted = false
     const assistant: ChatMessage = { id: nextId(), from: 'character', text: '', time: new Date().toLocaleTimeString(getLocale()), createdAt: new Date().toISOString(), status: 'sending' }
     try {
-      records = await persist(role, [user]); persisted = true; apply(role, records); if (!target) setDraft('')
+      records = await persist(role, [user]); persisted = true; apply(role, records); if (!target && !creditGift) setDraft('')
       if (controller.signal.aborted) throw new DOMException('Aborted', 'AbortError')
       // Attachments are local-only: no false claim that a text model can hear or see them.
       if (user.attachment || user.kind === 'image' || user.kind === 'audio' || user.kind === 'video') { setError(isTemporary ? '附件仅保留在临时会话内，未落盘；文字模型不会读取图片、语音或视频。' : '附件已保存在本机；文字模型不会读取图片、语音或视频。请另发文字描述。'); return }
@@ -283,8 +288,8 @@ export default function useLocalChat() {
       const forgotten = new Set(isTemporary ? [] : await forgottenSourceIds(role))
       let lastUserForgotten = false
       const context = history.filter(message => {
-        if (message.from === 'user') lastUserForgotten = !!message.withdrawn || forgotten.has(message.id)
-        return !forgotten.has(message.id) && !lastUserForgotten
+        if (message.from === 'user') lastUserForgotten = !!message.localOnly || !!message.withdrawn || forgotten.has(message.id)
+        return !message.localOnly && !forgotten.has(message.id) && !lastUserForgotten
       }).map(message => message.id === user.id && options.localActionNote ? { ...message, text: `${message.text}\n[本机操作结果：${options.localActionNote}。请准确确认已经完成，不要声称无法执行。]` } : message)
       const recallMemories = isTemporary ? [] : await db.memories.toArray()
       const memorySources: MemoryRecallSources = {}
@@ -305,7 +310,8 @@ export default function useLocalChat() {
           }
         }))
       }
-      await streamReply({ locale: resolveChatLocale(user.text), characterId: role, replyMode, onboardingProfile: onboardingProfileRef.current, messages: context, memories: recallMemories, memorySources, summaries: isTemporary ? [] : await loadSummaries(role), memoryPolicy: await loadMemoryPolicy(role), apiKey, endpoint, model, signal: controller.signal, onDelta: delta => { content += delta; apply(role, [...records, { ...assistant, text: content }]) } })
+      const replyContext = creditGift ? context.map(message => message.id === user.id ? { ...message, text: `${message.text}\n${giftResponseInstruction(creditGift.id, getLocale())}` } : message) : context
+      await streamReply({ billingCost: creditGift?.cost ?? options.billingCost ?? 1, requireCompletion: !!creditGift, locale: resolveChatLocale(user.text), characterId: role, replyMode, onboardingProfile: onboardingProfileRef.current, messages: replyContext, memories: recallMemories, memorySources, summaries: isTemporary ? [] : await loadSummaries(role), memoryPolicy: await loadMemoryPolicy(role), apiKey, endpoint, model, signal: controller.signal, onDelta: delta => { content += delta; apply(role, [...records, { ...assistant, text: content }]) } })
       const completed = await persist(role, [{ ...user, status: 'sent' }, { ...assistant, text: content, status: 'sent' }]); apply(role, completed)
     } catch (failure) {
       const cancelled = controller.signal.aborted
@@ -316,6 +322,7 @@ export default function useLocalChat() {
         try { const saved = await persist(role, [{ ...user, status: 'failed' }, ...(content ? [{ ...assistant, text: content, status: 'failed' as const }] : [{ ...assistant, text: '', status: 'failed' as const }])]); apply(role, saved); setError(cancelled ? '已停止回复，消息和已生成内容已保存；可重试。' : '回复未完成，消息已保存在本机；可重试。') }
         catch { apply(role, retained); setError('本机保存失败：当前内容仅暂留界面，请勿关闭页面并检查存储空间。') }
       } else { setError('消息未保存、未发送：请检查本机存储权限或空间。'); if (failure) return Promise.reject(failure) }
+      if (options.rejectOnFailure) throw failure instanceof Error ? failure : new Error('礼物未送出，请重试')
     } finally { if (!isTemporary && persisted) queueOrganization(role); if (active.current === controller) { active.current = null; if (mounted.current) setReplying(false) } }
   }
   const saveConfirmed = async (memory: MemoryDraft) => {
@@ -377,7 +384,7 @@ export default function useLocalChat() {
     try { if (value) window[storage].setItem(key, value); else window[storage].removeItem(key) }
     catch { setError('浏览器无法保存配置，本次配置仅暂留内存。') }
   }
-  return { prepareForDeletion: async () => { if (active.current || mutationCount.current || memoryLock.current) throw new Error('请先停止回复或等待保存'); deleting.current = true; try { await proactiveTask.current; await mutations.current; await Promise.all([...pendingWrites.current]); await organization.current } catch (failure) { deleting.current = false; throw failure } }, beforeDataChange: async () => { if (active.current || mutationCount.current) throw new Error('请先停止回复或等待保存'); await organization.current }, summaries, policies, changePolicy: tracked(changePolicy), approveProposal: tracked(approveProposal), temporary, toggleTemporary, recordActivity, chatMessages: temporary ? temporaryConversations[selected] : conversations[selected], ready, loadError, reload: load, onboarded, finishOnboarding, selected, setSelected, conversations, setConversations, memories, setMemories, draft, setDraft, replying, error, apiKey, endpoint, model,
+  return { prepareForDeletion: async () => { if (active.current || mutationCount.current || memoryLock.current) throw new Error('请先停止回复或等待保存'); deleting.current = true; try { await proactiveTask.current; await mutations.current; await Promise.all([...pendingWrites.current]); await organization.current } catch (failure) { deleting.current = false; throw failure } }, beforeDataChange: async () => { if (active.current || mutationCount.current) throw new Error('请先停止回复或等待保存'); await organization.current }, summaries, policies, changePolicy: tracked(changePolicy), approveProposal: tracked(approveProposal), temporary, toggleTemporary, recordActivity, recordActivityFor, chatMessages: temporary ? temporaryConversations[selected] : conversations[selected], ready, loadError, reload: load, onboarded, finishOnboarding, selected, setSelected, conversations, setConversations, memories, setMemories, draft, setDraft, replying, error, apiKey, endpoint, model,
     onboardingProfile, updateOnboarding, setPrimary: (id: CharacterId) => observeWrite(changePrimary(id)),
     setApiKey: (value: string) => { setKey(value); writePreference('sessionStorage', 'aily-api-key', value) },
     setEndpoint: (value: string) => { setEndpointState(value); writePreference('localStorage', 'aily-api-endpoint', value) }, setModel: (value: string) => { setModelState(value); writePreference('localStorage', 'aily-api-model', value) },

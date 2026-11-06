@@ -1,0 +1,50 @@
+/* Complete light appearance for chat controls, attachments and local gift demos.
+   Loaded after visual refinements; no payment or gift behavior is changed. */
+html[data-theme=light] .chat-screen .composer{background:rgba(245,245,247,.96)!important;border-color:var(--cc-border)!important}
+html[data-theme=light] .chat-screen .composer .send{background:var(--cc-primary)!important;color:#fff!important;box-shadow:none!important}
+html[data-theme=light] .chat-screen .composer .send svg{color:inherit!important}
+html[data-theme=light] .chat-screen .chat-more-trigger,
+html[data-theme=light] .chat-screen .chat-more-trigger[aria-expanded=true]{background:#fff!important;color:var(--cc-primary)!important;border-color:var(--cc-border)!important;box-shadow:none!important}
+html[data-theme=light] .chat-screen .composer button:disabled{opacity:1!important;color:#737680!important;background:#e9eaf0!important;box-shadow:none!important}
+html[data-theme=light] .chat-more-panel{background:#f5f5f7!important;border-color:var(--cc-border)!important;color:var(--cc-fg)!important}
+html[data-theme=light] .chat-more-options>button{color:#535661!important}
+html[data-theme=light] .chat-more-options>button>span{background:#fff!important;color:var(--cc-primary)!important;border-color:var(--cc-border)!important;box-shadow:0 2px 8px #20253006}
+html[data-theme=light] .chat-more-options>button:hover>span{background:var(--cc-primary-soft)!important;border-color:#74549b55!important}
+html[data-theme=light] .chat-more-heading,
+html[data-theme=light] .chat-more-heading button{color:#5b5e69!important}
+html[data-theme=light] .chat-emoji-grid button:hover,
+html[data-theme=light] .chat-emoji-grid button:focus-visible{background:var(--cc-primary-soft)!important}
+html[data-theme=light] .chat-extra-overlay{background:rgba(22,27,37,.3)!important}
+html[data-theme=light] .chat-extra-dialog{background:#f5f5f7!important;color:var(--cc-fg)!important;border-color:var(--cc-border)!important;box-shadow:0 -10px 36px #20253022!important}
+html[data-theme=light] .chat-extra-dialog>header{background:#fff!important;border-color:var(--cc-border)!important}
+html[data-theme=light] .chat-extra-dialog>header>button{background:#f0eef5!important;color:var(--cc-primary)!important;border:1px solid var(--cc-border)}
+html[data-theme=light] .gift-store{color:var(--cc-fg)!important}
+html[data-theme=light] .demo-banner{background:#eeebf5!important;border-color:#74549b24!important}
+html[data-theme=light] .demo-banner strong{color:#40364e!important}
+html[data-theme=light] :is(.demo-banner p,.gift-description,.demo-ledger>p,.demo-wallet>span,.demo-wallet small){color:#5f626c!important}
+html[data-theme=light] .demo-wallet strong{color:var(--cc-fg)!important}
+html[data-theme=light] :is(.recharge-packs button,.gift-catalog button){background:#fff!important;color:var(--cc-fg)!important;border-color:var(--cc-border)!important;box-shadow:none!important}
+html[data-theme=light] .recharge-packs button strong{color:var(--cc-primary)!important}
+html[data-theme=light] :is(.recharge-packs button span,.gift-catalog button>span:last-child){color:#626570!important}
+html[data-theme=light] .gift-catalog button[aria-pressed=true]{background:#eeebf5!important;border-color:var(--cc-primary)!important;box-shadow:inset 0 0 0 1px var(--cc-primary)!important}
+html[data-theme=light] .gift-store button:disabled{opacity:1!important;background:#e8e9ee!important;color:#60636d!important;border-color:#dbdde4!important;box-shadow:none!important}
+html[data-theme=light] .gift-store button:disabled strong,
+html[data-theme=light] .gift-store button:disabled span{color:#60636d!important}
+html[data-theme=light] :is(.gift-quantity,.recipient-label,.store-confirm){color:var(--cc-fg)!important}
+html[data-theme=light] :is(.store-confirm button,.store-error button,.demo-ledger>button,.story-gift-card button,.story-gift-choices button){background:#fff!important;color:#4f405e!important;border-color:var(--cc-border)!important}
+html[data-theme=light] .store-confirm button:last-child{background:var(--cc-primary)!important;color:#fff!important}
+html[data-theme=light] .store-error{background:#f8e9eb!important;color:#8d3d49!important}
+html[data-theme=light] .gift-feedback{background:#eaf3ef!important;border-color:#4b806331!important;color:#365d48!important}
+html[data-theme=light] .gift-feedback small{color:#4c6858!important}
+html[data-theme=light] .demo-ledger li{border-color:var(--cc-border)!important}
+html[data-theme=light] .demo-ledger li time{color:#666974!important}
+html[data-theme=light] .demo-ledger li>span{color:#3b6852!important}
+html[data-theme=light] .story-gift-card p{color:#626570!important}
+html[data-theme=light] .story-gift-choices button[aria-pressed=true]{background:var(--cc-primary-soft)!important;border-color:var(--cc-primary)!important}
+html[data-theme=light] .period-record-panel{--text:#202124;color:#202124!important;color-scheme:light}
+html[data-theme=light] .period-record-panel :is(p,label,button){color:#535661!important}
+html[data-theme=light] .period-record-panel :is(input,textarea){color-scheme:light;background:#fff!important;color:var(--cc-fg)!important}
+html[data-theme=light] .period-record-panel fieldset{border-color:var(--cc-border);background:transparent}
+html[data-theme=light] .period-record-panel form button{background:#eeebf5!important;color:#624a7b!important;border:1px solid #74549b24;box-shadow:none!important;border-radius:12px;min-height:44px;font-weight:600}
+html[data-theme=light] .period-record-panel form button:disabled{background:#e8e9ee!important;color:#666974!important;border-color:#dbdde4!important;opacity:1!important;cursor:not-allowed}
+html[data-theme=light] .custom-voice .voice-toggle{background:#eeebf5!important;color:var(--cc-primary)!important}

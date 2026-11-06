@@ -1,4 +1,7 @@
 import { t, translate, getLocale, resolveChatLocale, type Locale } from './i18n'
+import { Capacitor, CapacitorHttp } from '@capacitor/core'
+import { reservePoints, type PointCost } from './billing'
+import type { CreditGiftId } from './creditGifts'
 import { getRelationship } from './relationship'
 import type { CharacterId } from './data'
 import { assessAssistantOutput, assessUserInput, localSafeReply, MAX_SAFETY_TEXT, SAFETY_SYSTEM_BOUNDARIES } from './safety'
@@ -16,8 +19,12 @@ export type ChatMessage = {
   createdAt?: string
   replyToId?: number
   withdrawn?: boolean
+  /** Visible in the local conversation but never sent to the model, summarized, or recalled. */
+  localOnly?: boolean
   kind?: 'text' | 'image' | 'audio' | 'video'
   attachment?: { dataUrl: string; mimeType: string; name: string }
+  /** Persist the gift identity so retries use its gift price, not text-message pricing. */
+  giftId?: CreditGiftId
 }
 
 export const MAX_LOCAL_VIDEO_BYTES = 20 * 1024 * 1024
@@ -90,6 +97,8 @@ export type StreamRequest = {
   timeoutMs?: number
   /** Opt in when callers persist only fully completed model output. */
   requireCompletion?: boolean
+  /** One spoken user/AI round costs five points; all other AI results cost one. */
+  billingCost?: PointCost
   /** Notify callers when guardrails replace model output with local copy. */
   onLocalSafety?: () => void
   onDelta: (text: string) => void
@@ -235,18 +244,36 @@ function endpointUrl(endpoint?: string) {
   let url: URL
   try {
     const value = endpoint || 'https://api.deepseek.com/chat/completions'
-    url = value.startsWith('/') ? new URL(value, window.location.origin) : new URL(value)
+    url = Capacitor.isNativePlatform() && value === '/api/magpie/v1/messages'
+      ? new URL('http://127.0.0.1:3425/v1/messages')
+      : value.startsWith('/') ? new URL(value, window.location.origin) : new URL(value)
   } catch { throw new Error(t('API 地址无效')) }
   const local = ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)
   // Existing users may still have the direct Magpie URL saved. Route it through
   // the same-origin app proxy so browser CORS does not turn a healthy gateway into “Failed to fetch”.
-  if (local && url.port === '3425' && url.pathname.replace(/\/$/, '') === '/v1/messages' && window.location.port !== '3425') {
+  if (!Capacitor.isNativePlatform() && local && url.port === '3425' && url.pathname.replace(/\/$/, '') === '/v1/messages' && window.location.port !== '3425') {
     url = new URL('/api/magpie/v1/messages', window.location.origin)
   }
   if (url.username || url.password || (url.protocol !== 'https:' && !(url.protocol === 'http:' && local))) {
     throw new Error(t('API 地址只允许 HTTPS 或本机 HTTP，且不能包含账号密码'))
   }
   return url.href
+}
+
+async function fetchModel(endpoint: string, options: RequestInit): Promise<Response> {
+  // Bundled Capacitor assets have no Vite proxy. JSON-based Messages requests
+  // use URLSession on iOS, avoiding WKWebView CORS and custom-scheme routing.
+  if (!Capacitor.isNativePlatform() || !usesAnthropicMessages(endpoint)) return fetch(endpoint, options)
+  if (options.signal?.aborted) throw options.signal.reason
+  const result = await CapacitorHttp.request({
+    url: endpoint, method: 'POST', headers: Object.fromEntries(new Headers(options.headers).entries()),
+    data: typeof options.body === 'string' ? JSON.parse(options.body) : undefined,
+    responseType: 'json', connectTimeout: 15000, readTimeout: 45000,
+  })
+  if (options.signal?.aborted) throw options.signal.reason
+  return new Response(typeof result.data === 'string' ? result.data : JSON.stringify(result.data), {
+    status: result.status, headers: { 'Content-Type': 'application/json' },
+  })
 }
 
 function anthropicRequest(endpoint: string, apiKey: string, model: string, messages: { role: string; content: string }[], stream: boolean) {
@@ -291,7 +318,7 @@ export async function testDeepSeekConnection(config: { apiKey: string; endpoint?
     const provider = usesAnthropicMessages(endpoint)
       ? anthropicRequest(endpoint, config.apiKey.trim(), config.model || 'group/auto-mimo-v2-6-flash-free', testMessages, false)
       : { headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${config.apiKey.trim()}` }, body: JSON.stringify({ model: config.model || 'deepseek-chat', stream: false, max_tokens: 1, messages: testMessages }) }
-    const response = await abortable(fetch(endpoint, { method: 'POST', ...provider, signal: run.signal }), run.signal)
+    const response = await abortable(fetchModel(endpoint, { method: 'POST', ...provider, signal: run.signal }), run.signal)
     if (!response.ok) throw new Error(response.status === 401 ? t('API Key 无效') : t('连接失败（{status}）', { status: response.status }))
     const payload = await abortable(response.json(), run.signal)
     const valid = usesAnthropicMessages(endpoint)
@@ -305,6 +332,7 @@ export async function testDeepSeekConnection(config: { apiKey: string; endpoint?
 export async function interpretDivination(config: { apiKey: string; endpoint: string; model: string; question: string; original: string; nuclear: string; changed: string; movingLine: number; signal?: AbortSignal }) {
   if (!config.apiKey.trim()) throw new Error('请先在“我的”中配置模型网关')
   const endpoint = endpointUrl(config.endpoint)
+  const points = await reservePoints(1)
   const run = lifecycle(config.signal, 45000)
   const messages = [
     { role: 'system' as const, content: '你是易经文化解读助手。卦象已经由本机严格完成，不得重新起卦、修改卦名或动爻。先复述本卦、互卦、变卦和动爻，再结合用户问题用简体中文解释当前处境、内在因素、变化趋势和可供反思的行动建议。不得把随机卦象描述成确定事实，不提供医疗、法律、投资等专业结论。控制在500字以内。' },
@@ -314,18 +342,19 @@ export async function interpretDivination(config: { apiKey: string; endpoint: st
     const provider = usesAnthropicMessages(endpoint)
       ? anthropicRequest(endpoint, config.apiKey.trim(), config.model || 'group/auto-mimo-v2-6-flash-free', messages, false)
       : { headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${config.apiKey.trim()}` }, body: JSON.stringify({ model: config.model || 'deepseek-chat', stream: false, max_tokens: 900, messages }) }
-    const response = await abortable(fetch(endpoint, { method: 'POST', ...provider, signal: run.signal }), run.signal)
+    const response = await abortable(fetchModel(endpoint, { method: 'POST', ...provider, signal: run.signal }), run.signal)
     if (!response.ok) throw new Error(response.status === 401 ? 'API Key 无效' : `模型解卦失败（${response.status}）`)
     const payload = await abortable(response.json(), run.signal)
     const text = usesAnthropicMessages(endpoint)
       ? payload?.content?.filter((item: { type?: string; text?: string }) => item?.type === 'text').map((item: { text: string }) => item.text).join('')
       : payload?.choices?.[0]?.message?.content
     if (typeof text !== 'string' || !text.trim()) throw new Error('模型未返回解卦内容')
+    await points.commit()
     return text.trim()
   } catch (error) {
     if (error instanceof TypeError && /fetch/i.test(error.message)) throw new Error('无法连接模型网关，请确认本地 Magpie 服务已启动并刷新页面')
     throw error
-  } finally { run.close() }
+  } finally { await points.release(); run.close() }
 }
 
 export async function streamReply(request: StreamRequest) {
@@ -338,6 +367,7 @@ export async function streamReply(request: StreamRequest) {
   if (inputSafety) { request.onLocalSafety?.(); request.onDelta(localSafeReply(inputSafety, latest, request.locale)); return }
   if (!request.apiKey?.trim()) return demoReply(request)
   const endpoint = endpointUrl(request.endpoint)
+  const points = await reservePoints(request.billingCost || 1)
   const run = lifecycle(request.signal, request.timeoutMs)
   let reader: ReadableStreamDefaultReader<Uint8Array> | undefined
   let cancel: (() => void) | undefined
@@ -346,17 +376,18 @@ export async function streamReply(request: StreamRequest) {
     const context = buildContext(request.characterId, request.messages, request.memories, request.summaries, request.memoryPolicy, request.onboardingProfile, request.locale, request.replyMode, request.memorySources)
     if (usesAnthropicMessages(endpoint)) {
       const provider = anthropicRequest(endpoint, request.apiKey.trim(), request.model || 'group/auto-mimo-v2-6-flash-free', context, false)
-      const response = await abortable(fetch(endpoint, { method: 'POST', ...provider, signal: run.signal }), run.signal)
+      const response = await abortable(fetchModel(endpoint, { method: 'POST', ...provider, signal: run.signal }), run.signal)
       if (!response.ok) throw new Error(response.status === 401 ? t('API Key 无效') : t('DeepSeek 请求失败（{status}）', { status: response.status }))
       const payload = await abortable(response.json(), run.signal)
       const output = payload?.content?.filter((item: { type?: string; text?: string }) => item?.type === 'text').map((item: { text: string }) => item.text).join('')
       if (!output?.trim()) throw new Error(t('DeepSeek 返回空响应，请重试'))
       const outputSafety = assessAssistantOutput(output)
       if (outputSafety) request.onLocalSafety?.()
+      await points.commit()
       request.onDelta(outputSafety ? localSafeReply(outputSafety, latest, request.locale) : output)
       return
     }
-    const response = await abortable(fetch(endpoint, {
+    const response = await abortable(fetchModel(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${request.apiKey.trim()}` },
       body: JSON.stringify({ model: request.model || 'deepseek-chat', stream: true, messages: context }),
@@ -429,8 +460,10 @@ export async function streamReply(request: StreamRequest) {
     // This intentionally trades live token rendering for no unchecked partial output.
     const outputSafety = assessAssistantOutput(output)
     if (outputSafety) request.onLocalSafety?.()
+    await points.commit()
     request.onDelta(outputSafety ? localSafeReply(outputSafety, latest, request.locale) : output)
   } finally {
+    await points.release()
     if (cancel) run.signal.removeEventListener('abort', cancel)
     // Do not wait on a provider's potentially stalled cancellation promise.
     if (reader) { void reader.cancel().catch(() => {}); reader.releaseLock() }

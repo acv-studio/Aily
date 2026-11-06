@@ -4,6 +4,12 @@ import { getChatLocale, getLocale, setChatLocale, setLocale } from './i18n'
 import { assessAssistantOutput, localSafeReply, type SafetyKind } from './safety'
 import { deleteLocalProfile } from './privacy'
 
+// Model contracts must not depend on IndexedDB scheduling or the daily points quota.
+// Real reservation and settlement behavior is covered by the billing suites.
+vi.mock('./billing', () => ({
+  reservePoints: vi.fn(async () => ({ commit: vi.fn(async () => {}), release: vi.fn(async () => {}) })),
+}))
+
 let previousLocale: ReturnType<typeof getLocale>
 let previousChatLocale: ReturnType<typeof getChatLocale>
 beforeEach(() => {
