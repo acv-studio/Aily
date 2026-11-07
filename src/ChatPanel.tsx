@@ -197,6 +197,9 @@ export default function ChatPanel(props: ChatPanelProps) {
     document.addEventListener('pointerdown', outside, true); document.addEventListener('keydown', dismiss)
     return () => { document.removeEventListener('pointerdown', outside, true); document.removeEventListener('keydown', dismiss) }
   }, [activeActions, messages])
+  useEffect(() => {
+    if (activeActions !== undefined) screen.current?.querySelector<HTMLElement>(`[data-message-id="${activeActions}"] .message-actions`)?.scrollIntoView?.({ block: 'nearest' })
+  }, [activeActions])
   const [recording, setRecording] = useState(false)
   const [attachment, setAttachment] = useState<{ kind: ChatMessage['kind']; data: NonNullable<ChatMessage['attachment']> }>()
   const bottom = useRef<HTMLDivElement>(null)
@@ -404,7 +407,7 @@ export default function ChatPanel(props: ChatPanelProps) {
       </div>)}<div ref={bottom} />
     </section>
     {props.error && <p className="chat-error" role="alert">{t(props.error)}</p>}
-    {notice && <div className="chat-notice">{t(notice)}<button aria-label={t('关闭提示')} onClick={() => setNotice('')}><X size={14} /></button></div>}
+    {notice && <div className="chat-notice" role="status">{t(notice)}<button aria-label={t('关闭提示')} onClick={() => setNotice('')}><X size={14} /></button></div>}
     {quoted && <div className="quoted-preview">{t('引用：')}{quoteText(quoted)}<button onClick={() => setQuote(undefined)}>{t('取消')}</button></div>}
     {attachment && <div className={`quoted-preview ${attachment.kind === 'audio' ? 'voice-preview' : ''}`}>
       <div>{t('待发送：')}<span>{attachment.data.name}</span>{attachment.kind === 'image' && <img className="chat-image attachment-preview-image" src={attachment.data.dataUrl} alt={attachment.data.name} />}{attachment.kind === 'video' && <VideoPlayer src={attachment.data.dataUrl} preview onPlay={playAudio} />}{attachment.kind === 'audio' && <VoicePlayer src={attachment.data.dataUrl} preview onPlay={playAudio} />}</div>

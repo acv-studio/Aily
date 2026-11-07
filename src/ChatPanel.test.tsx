@@ -258,6 +258,7 @@ describe('chat visual viewport', () => {
 
 it('clears a quote when switching companions even when message IDs overlap', () => {
   const view = panel({ messages: [{ id: 1, from: 'user', text: '旧角色消息', time: '' }] })
+  fireEvent.keyDown(screen.getByRole('button', { name: '消息操作' }), { key: 'Enter' })
   fireEvent.click(screen.getByRole('button', { name: '引用消息 1' }))
   expect(screen.getByRole('button', { name: '取消' })).toBeInTheDocument()
   view.rerender(<ChatPanel {...view.props} character={characters[1]} messages={[{ id: 1, from: 'user', text: '新角色消息', time: '' }]} />)

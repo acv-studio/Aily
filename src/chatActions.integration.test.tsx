@@ -145,6 +145,7 @@ describe('chat withdrawal integration', () => {
     await waitFor(() => expect(panelChat.ready).toBe(true))
     await act(() => panelChat.changePolicy('lu', defaultMemoryPolicy))
     expect(view.container.querySelector('blockquote')).toHaveTextContent(source.text)
+    fireEvent.keyDown(view.container.querySelector(`[data-message-id="${source.id}"] .bubble`)!, { key: 'Enter' })
     fireEvent.click(screen.getByRole('button', { name: `引用消息 ${source.id}` }))
     expect(view.container.querySelector('.quoted-preview')).toHaveTextContent(source.text)
     await act(() => panelChat.withdraw(source.id))

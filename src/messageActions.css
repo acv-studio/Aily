@@ -1,0 +1,17 @@
+.chat-screen .bubble[role="button"] {
+  touch-action: pan-y;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.chat-screen .bubble[role="button"] img {
+  -webkit-user-drag: none;
+  -webkit-touch-callout: none;
+}
+.chat-screen .message-actions button {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  min-height: 44px;
+}
+.chat-screen .message-actions button:disabled { opacity: .5; }
