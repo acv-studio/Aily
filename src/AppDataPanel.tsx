@@ -13,6 +13,8 @@ type Props = {
   send: (options: { text: string; appDataTicket: AppDataTicket; rejectOnFailure: true }) => Promise<void>
   stop: () => void
   close: () => void
+  /** Explicit host handoff to the main chat after resume; already-approved sends continue. */
+  keepSendOnUnmount?: boolean
 }
 const selectionKey = (selection: AppDataSelection) => `${selection.appId}/${selection.scope}`
 export function appDataServiceLabel(endpoint: string) {
@@ -31,12 +33,17 @@ export default function AppDataPanel(props: Props) {
   const [from, setFrom] = useState(''), [to, setTo] = useState('')
   const [preview, setPreview] = useState<AppDataPreview>()
   const [confirmed, setConfirmed] = useState(false)
+  const previewElement = useRef<HTMLDivElement>(null)
+  const errorElement = useRef<HTMLParagraphElement>(null)
+  useEffect(() => { if (preview) previewElement.current?.scrollIntoView?.({ block: 'start' }) }, [preview])
   const [busy, setBusy] = useState<'reading' | 'sending' | null>(null)
   const [error, setError] = useState('')
+  useEffect(() => { if (error) errorElement.current?.scrollIntoView?.({ block: 'nearest' }) }, [error])
   const controller = useRef<AbortController | null>(null)
   const previewRef = useRef<AppDataPreview | undefined>(undefined)
   const ticketRef = useRef<AppDataTicket | undefined>(undefined)
   const sendingRef = useRef(false)
+  const keepSendRef = useRef(props.keepSendOnUnmount); keepSendRef.current = props.keepSendOnUnmount
   const disposed = useRef(false)
   const invalidate = () => {
     if (previewRef.current) discardAppDataPreview(previewRef.current)
@@ -62,9 +69,10 @@ export default function AppDataPanel(props: Props) {
     const unsubscribe = subscribeAppDataChanges(refresh)
     return () => {
       disposed.current = true; unsubscribe(); controller.current?.abort()
-      if (sendingRef.current) props.stop()
+      const handedOff = sendingRef.current && keepSendRef.current === true
+      if (sendingRef.current && !handedOff) props.stop()
       if (previewRef.current) discardAppDataPreview(previewRef.current)
-      if (ticketRef.current) discardAppDataTicket(ticketRef.current)
+      if (ticketRef.current && !handedOff) discardAppDataTicket(ticketRef.current)
     }
   }, [])
   useEffect(() => { controller.current?.abort(); invalidate() }, [identityKey])
@@ -106,6 +114,10 @@ export default function AppDataPanel(props: Props) {
   const status = (value: string) => ({ ok: copy('已读取', 'Read'), empty: copy('没有已保存记录', 'No saved records'), unsupported: copy('暂无持久数据接口', 'No persistent data interface'), unavailable: copy('读取不可用，已跳过', 'Unavailable, skipped'), 'invalid-data': copy('数据格式异常，已跳过', 'Invalid data, skipped') })[value] || value
   return <section className="app-data-panel" aria-label={copy('主 Bot 应用数据', 'Main Bot app data')}>
     <p className="app-data-notice">{copy('只读取你勾选的已保存数据。点击预览仅在本机读取；再次确认才会发送给模型。新安装应用不会自动获权，未保存草稿、图片和音频内容不会发送。', 'Read only selected saved data. Preview stays on this device; a second confirmation sends it to the model. New apps are never auto-authorized. Unsaved drafts, image and audio contents are excluded.')}</p>
+    <div className="app-data-toolbar">
+      <p className="app-data-selection-status" role="status" aria-live="polite">{selection.length ? copy(`已选 ${selection.length} 个数据范围 · 点击预览后再确认发送`, `${selection.length} data scopes selected · Preview, then confirm to send`) : copy('尚未选择数据范围 · 勾选不会自动读取或发送', 'No data scopes selected · Selecting does not read or send data')}</p>
+      <div className="app-data-actions"><button type="button" disabled={!!busy || !allowed || !selection.length} onClick={() => void read()}>{busy === 'reading' ? copy('正在本机读取…', 'Reading locally…') : copy('本机读取并预览', 'Read and preview locally')}</button><button type="button" onClick={cancel}>{busy === 'sending' ? copy('停止并关闭', 'Stop and close') : copy('取消并关闭', 'Cancel and close')}</button></div>
+    </div>
     {!allowed && <p role="alert">{copy('仅主 Bot 的普通会话可读取应用数据；临时会话不会读取。', 'Only the main Bot in regular chat can read app data. Temporary chat never reads it.')}</p>}
     <label>{copy('要问主 Bot 的问题', 'Question for the main Bot')}<textarea maxLength={300} value={text} disabled={!!busy} onChange={event => change(() => setText(event.target.value))} placeholder={copy('例如：帮我整理本月收支和冰箱库存', 'For example: summarize my monthly spending and pantry')} /></label>
     <label>{copy('记录关键词筛选（可选，不填则读取范围内全部记录）', 'Record keyword filter (optional; blank includes all records in range)')}<input type="text" maxLength={100} value={search} disabled={!!busy} onChange={event => change(() => setSearch(event.target.value))} /></label>
@@ -115,8 +127,7 @@ export default function AppDataPanel(props: Props) {
       <legend>{locale === 'en' ? app.english : app.name}</legend>
       {app.scopes.length ? app.scopes.map(scope => <label className="app-data-scope" key={scope.id}><input type="checkbox" checked={selection.some(value => value.appId === app.id && value.scope === scope.id)} onChange={() => toggle(app.id, scope.id)} /><span>{locale === 'en' ? scope.english : scope.name}{scope.sensitive && <small>{copy('含个人信息 · 仅本次许可', 'Personal data · this turn only')}</small>}</span></label>) : <p className="app-data-muted">{copy('当前没有可读取的持久业务记录。', 'No readable persistent business records yet.')}</p>}
     </fieldset>)}</div>
-    <div className="app-data-actions"><button type="button" disabled={!!busy || !allowed || !selection.length} onClick={() => void read()}>{busy === 'reading' ? copy('正在本机读取…', 'Reading locally…') : copy('本机读取并预览', 'Read and preview locally')}</button><button type="button" onClick={cancel}>{busy === 'sending' ? copy('停止并关闭', 'Stop and close') : copy('取消并关闭', 'Cancel and close')}</button></div>
-    {preview && <div className="app-data-preview" aria-label={copy('应用数据预览', 'App data preview')}>
+    {preview && <div ref={previewElement} className="app-data-preview" aria-label={copy('应用数据预览', 'App data preview')}>
       <h3>{copy('将发送的数据', 'Data to send')}</h3>
       {preview.views.map(view => <article key={`${view.appId}/${view.scope}`}><h4>{locale === 'en' ? view.english : view.name} · {view.scope}</h4><p>{status(view.result.status)} · {new Date(view.readAt).toLocaleString(locale)}{view.result.truncated && ` · ${copy('结果有截断，不代表全部明细', 'Truncated, not all details')}`}</p><pre>{JSON.stringify({ summary: view.result.summary, records: view.result.records }, null, 2)}</pre></article>)}
       <p>{copy('发送到：', 'Send to: ')}<strong>{appDataServiceLabel(currentIdentity.endpoint)}</strong> · {currentIdentity.model}</p>
@@ -125,6 +136,6 @@ export default function AppDataPanel(props: Props) {
       {!props.modelAvailable && <p role="status">{copy('当前是演示模式。预览保留在本机，请先配置模型连接再重新预览。', 'Demo mode: preview stays local. Configure a model connection, then preview again.')}</p>}
       <button type="button" disabled={!confirmed || !!busy || !allowed || !props.modelAvailable} onClick={() => void send()}>{busy === 'sending' ? copy('正在发送并生成回答…', 'Sending and generating…') : copy('仅本次授权并询问主 Bot', 'Authorize this turn and ask the main Bot')}</button>
     </div>}
-    {error && <p role="alert" className="app-data-error">{error}</p>}
+    {error && <p ref={errorElement} role="alert" className="app-data-error">{error}</p>}
   </section>
 }

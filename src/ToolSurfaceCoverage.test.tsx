@@ -8,7 +8,8 @@ import { Camera } from '@capacitor/camera'
 import DesktopTools, { type DesktopTool } from './DesktopTools'
 import { extensionApps } from './extensionApps'
 import { defaultSettings } from './mealPlanner'
-import { mediaDb, type LibraryMedia, type PhotoDecision } from './mediaLibrary'
+import { mediaDb, type LibraryMedia, type PhotoDecision, type MediaSetting } from './mediaLibrary'
+import { DEFAULT_MUSIC_SETTING_KEY } from './defaultMusic'
 import { laughterDb, type LaughterRecording } from './laughterStorage'
 import { getLocale, setLocale } from './i18n'
 
@@ -43,6 +44,7 @@ const previousLocale = getLocale()
 let storageSnapshot: [string, string][] = []
 let mediaSnapshot: LibraryMedia[] = []
 let photoDecisionSnapshot: PhotoDecision[] = []
+let mediaSettingSnapshot: MediaSetting[] = []
 let laughterSnapshot: LaughterRecording[] = []
 let bodyStyle: string | null
 let htmlTheme: string | null
@@ -60,6 +62,10 @@ beforeEach(async () => {
   // test-setup installs fake-indexeddb; this never opens a user's physical database.
   mediaSnapshot = await mediaDb.items.toArray()
   photoDecisionSnapshot = await mediaDb.photoDecisions.toArray()
+  mediaSettingSnapshot = await mediaDb.settings.toArray()
+  await mediaDb.settings.clear()
+  // These fixtures test empty/seeded imports; first-open default seeding has separate dedicated tests.
+  await mediaDb.settings.put({ key: DEFAULT_MUSIC_SETTING_KEY, value: { version: 1, initialized: true } })
   laughterSnapshot = await laughterDb.recordings.toArray()
   await mediaDb.items.clear()
   await mediaDb.photoDecisions.clear()
@@ -110,6 +116,8 @@ afterEach(async () => {
   if (mediaSnapshot.length) await mediaDb.items.bulkPut(mediaSnapshot)
   await mediaDb.photoDecisions.clear()
   if (photoDecisionSnapshot.length) await mediaDb.photoDecisions.bulkPut(photoDecisionSnapshot)
+  await mediaDb.settings.clear()
+  if (mediaSettingSnapshot.length) await mediaDb.settings.bulkPut(mediaSettingSnapshot)
   await laughterDb.recordings.clear()
   if (laughterSnapshot.length) await laughterDb.recordings.bulkPut(laughterSnapshot)
   expect(picker).not.toHaveBeenCalled()
@@ -123,7 +131,8 @@ function mount(tool: DesktopTool) {
   expect(screen.getByRole('dialog')).toHaveAttribute('aria-modal', 'true')
   expect(screen.getByRole('dialog')).toHaveClass('tools-surface')
   expect(document.querySelector('.desktop-tools-overlay > .desktop-tools-dialog > .desktop-tools-header h2')).toHaveTextContent(/\S/)
-  expect(screen.getByRole('button', { name: '返回' })).toBeEnabled()
+  if (tool === 'music') fireEvent.click(screen.getByRole('button', { name: '收起播放器' }))
+  expect(screen.getByRole('button', { name: tool === 'ledger' || tool === 'wardrobe' || tool === 'music' ? '返回 Aily' : '返回' })).toBeEnabled()
   return { ...view, onClose }
 }
 const change = (label: string, value: string) => fireEvent.change(screen.getByLabelText(label), { target: { value } })
@@ -201,10 +210,12 @@ function assertActionableButtonNames(tool: DesktopTool, populated: boolean) {
 function populateTransient(tool: DesktopTool) {
   if (tool === 'album' || tool === 'music') {
     const image = tool === 'album'
-    expect(screen.getByRole('button', { name: image ? '移除 测试旅行照片.png' : '移除 测试轻音乐.wav' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: image ? '照片操作 测试旅行照片.png' : '移除 测试轻音乐.wav' })).toBeInTheDocument()
+    if (image) expect(screen.queryByRole('button', { name: '移除 测试旅行照片.png' })).toBeNull()
     if (!image) {
       fireEvent.click(screen.getByRole('button', { name: '打开 测试轻音乐.wav' }))
-      expect(screen.getByLabelText('测试轻音乐.wav')).toHaveAttribute('controls')
+      expect(screen.getByRole('heading', { name: '测试轻音乐.wav' })).toBeInTheDocument()
+      expect(document.querySelectorAll('.music-vinyl-app audio')).toHaveLength(1)
     }
   }
   if (tool === 'divination') {
@@ -287,7 +298,8 @@ describe('real DesktopTools surface coverage and static fixtures', () => {
           expect(screen.getByRole('button', { name: '打开 吃什么' })).toBeInTheDocument()
         }
         saveFixture(tool, populated ? 'populated' : 'empty')
-        fireEvent.click(screen.getByRole('button', { name: '返回' }))
+        if (tool === 'music' && document.querySelector('.music-page-player')) fireEvent.click(screen.getByRole('button', { name: '收起播放器' }))
+        fireEvent.click(screen.getByRole('button', { name: tool === 'ledger' || tool === 'wardrobe' || tool === 'music' ? '返回 Aily' : '返回' }))
         expect(view.onClose).toHaveBeenCalledOnce()
         view.unmount()
         expect(document.querySelector('.desktop-tools-overlay')).toBeNull()
@@ -300,11 +312,13 @@ describe('meaningful create/add workflows preserve existing test-only records', 
   it('ledger adds income and expense and remounts with correct totals', async () => {
     await seed('ledger', true)
     let view = mount('ledger')
+    fireEvent.click(screen.getByRole('button', { name: '记下一笔' }))
     change('金额（元）', '25.50'); change('备注', '测试晚餐')
     fireEvent.click(screen.getByRole('button', { name: '添加记录' }))
+    fireEvent.click(screen.getByRole('button', { name: '记下一笔' }))
     change('收支类型', 'income'); change('金额（元）', '100'); change('备注', '测试报销')
     fireEvent.click(screen.getByRole('button', { name: '添加记录' }))
-    expect(screen.getByText('¥1312.20')).toBeInTheDocument()
+    expect(screen.getByText('结余 ¥1312.20')).toBeInTheDocument()
     expect(JSON.parse(localStorage.getItem('aily-desktop-ledger')!)).toHaveLength(4)
     saveFixture('ledger', 'created')
     view.unmount(); view = mount('ledger')
@@ -346,17 +360,22 @@ describe('meaningful create/add workflows preserve existing test-only records', 
     view.unmount(); mount('skincare-diary')
     expect(screen.getByText('测试：及时补涂')).toBeInTheDocument()
   })
-  it('wardrobe adds real clothes and generates one item from each available outfit category', () => {
+  it('wardrobe adds real clothes and generates one item from each available outfit category', async () => {
     const view = mount('wardrobe')
     expect(screen.getByRole('button', { name: '随机生成穿搭' })).toBeDisabled()
+    fireEvent.click(screen.getAllByRole('button', { name: '添加衣物' })[0])
     change('衣物名称', '测试衬衫'); change('颜色', '白色')
     fireEvent.click(screen.getByRole('button', { name: '加入衣橱' }))
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: '添加衣物' })).toBeNull())
+    fireEvent.click(screen.getByRole('button', { name: '添加衣物' }))
     change('衣物名称', '测试长裤'); change('分类', '下装'); change('颜色', '深蓝')
     fireEvent.click(screen.getByRole('button', { name: '加入衣橱' }))
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: '添加衣物' })).toBeNull())
+    fireEvent.click(within(screen.getByRole('navigation', { name: '衣橱导航' })).getByRole('button', { name: '穿搭' }))
     fireEvent.click(screen.getByRole('button', { name: '随机生成穿搭' }))
-    const outfit = document.querySelector('.outfit-result') as HTMLElement
-    expect(within(outfit).getByText('上装：测试衬衫 · 白色')).toBeInTheDocument()
-    expect(within(outfit).getByText('下装：测试长裤 · 深蓝')).toBeInTheDocument()
+    const outfit = screen.getByRole('region', { name: '当前搭配预览' })
+    expect(within(outfit).getByRole('button', { name: '更换 测试衬衫' })).toBeInTheDocument()
+    expect(within(outfit).getByRole('button', { name: '更换 测试长裤' })).toBeInTheDocument()
     expect(JSON.parse(localStorage.getItem('aily.ext.wardrobe')!)).toHaveLength(2)
     saveFixture('wardrobe', 'created')
     view.unmount(); mount('wardrobe')
@@ -412,10 +431,16 @@ describe('real error, confirmation, viewer, player and timer state fixtures', ()
     localStorage.setItem(key, malformed)
     mount(tool)
     expect(screen.getByRole('alert')).toHaveTextContent('本地数据读取失败')
-    expect(screen.getByRole('button', { name: submitName })).toBeDisabled()
+    if (tool === 'ledger') {
+      fireEvent.click(within(screen.getByRole('navigation', { name: '手账导航' })).getByRole('button', { name: '我的' }))
+      expect(screen.getByRole('button', { name: '导出 JSON' })).toBeDisabled()
+      fireEvent.click(screen.getByRole('button', { name: '记下一笔' }))
+    }
+    const activeSurface = tool === 'ledger' ? within(screen.getByRole('dialog', { name: '记下一笔' })) : screen
+    expect(activeSurface.getByRole('button', { name: submitName })).toBeDisabled()
     const fieldset = document.querySelector('form fieldset')
     expect(fieldset).toBeDisabled()
-    expect(screen.getByRole('button', { name: '重试读取' })).toBeEnabled()
+    expect(activeSurface.getByRole('button', { name: '重试读取' })).toBeEnabled()
     if (tool !== 'contacts') expect(screen.getByRole('button', { name: '导出 JSON' })).toBeDisabled()
     assertActionableButtonNames(tool, false)
     saveFixture(tool, 'read-error')
@@ -450,6 +475,8 @@ describe('real error, confirmation, viewer, player and timer state fixtures', ()
 
   it('album: opens the actual photo viewer with labeled navigation and retains seeded media', async () => {
     await seed('album', true)
+    const first = (await mediaDb.items.toArray())[0]
+    await mediaDb.items.add({ ...first, id: 'fixture-album-second', name: '测试第二照片.png' })
     const before = await mediaDb.items.toArray()
     mount('album')
     await waitFor(() => expect(screen.queryByText('正在读取媒体库…')).toBeNull())
@@ -468,25 +495,28 @@ describe('real error, confirmation, viewer, player and timer state fixtures', ()
 
   it('music: opens the real player with stubbed playback, repeats and closes without deleting media', async () => {
     await seed('music', true)
+    const firstTrack = (await mediaDb.items.toArray())[0]
+    await mediaDb.items.add({ ...firstTrack, id: 'fixture-music-second', name: '测试第二首.wav', favorite: false })
     mount('music')
     await waitFor(() => expect(screen.queryByText('正在读取媒体库…')).toBeNull())
     fireEvent.click(screen.getByRole('button', { name: '打开 测试轻音乐.wav' }))
-    const player = screen.getByRole('region', { name: '正在播放' })
-    expect(within(player).getByLabelText('测试轻音乐.wav')).toHaveAttribute('controls')
+    const player = screen.getByRole('region', { name: '黑胶音乐播放器' })
+    expect(player.querySelectorAll('audio')).toHaveLength(1)
+    expect(within(player).getByRole('heading', { name: '测试轻音乐.wav' })).toBeInTheDocument()
     // Production runs its playback effect, but no physical media playback occurs.
     expect(HTMLMediaElement.prototype.play).toHaveBeenCalledOnce()
-    expect(HTMLMediaElement.prototype.load).toHaveBeenCalledOnce()
+    expect(HTMLMediaElement.prototype.load).toHaveBeenCalled()
     expect(within(player).getByRole('button', { name: '上一首' })).toBeEnabled()
     expect(within(player).getByRole('button', { name: '下一首' })).toBeEnabled()
     assertActionableButtonNames('music', true)
     saveFixture('music', 'music-player')
-    fireEvent.click(within(player).getByRole('button', { name: '顺序播放' }))
-    expect(within(player).getByRole('button', { name: '列表循环' })).toBeEnabled()
+    fireEvent.click(within(player).getByRole('button', { name: '切换播放方式' }))
+    expect(within(player).getByText('列表循环')).toBeInTheDocument()
     saveFixture('music', 'player-repeat')
     fireEvent.click(within(player).getByRole('button', { name: '收起播放器' }))
-    expect(screen.queryByRole('region', { name: '正在播放' })).toBeNull()
+    expect(document.querySelector('.music-page-player')).toBeNull()
     expect(HTMLMediaElement.prototype.pause).toHaveBeenCalled()
-    expect(await mediaDb.items.count()).toBe(1)
+    expect(await mediaDb.items.count()).toBe(2)
     expect(await mediaDb.items.get('fixture-music')).toMatchObject({ name: '测试轻音乐.wav', favorite: true })
   })
 
@@ -577,8 +607,9 @@ describe('targeted accessible icon/input label regressions', () => {
   it.each(['skincare-diary', 'wardrobe', 'anniversary'] as const)('%s: populated icon-only delete buttons have record-specific labels', async tool => {
     await seed(tool, true)
     mount(tool)
+    if (tool === 'wardrobe') fireEvent.click(screen.getByRole('button', { name: '上衣 · 1' }))
     expect(unnamedButtons()).toHaveLength(0)
-    const buttons = Array.from(document.querySelectorAll('.extension-item-list button, .wardrobe-grid button, .anniversary-list button'))
+    const buttons = Array.from(document.querySelectorAll('.extension-item-list button, .wardrobe-item-actions button[aria-label^="移除衣物"], .anniversary-list button'))
     expect(buttons.length).toBeGreaterThan(0)
     buttons.forEach(button => expect(button.getAttribute('aria-label')).toMatch(/(删除护肤记录：|移除衣物：|删除纪念日：).+/))
     if (tool === 'anniversary') {

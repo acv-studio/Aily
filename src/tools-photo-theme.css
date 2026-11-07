@@ -1,4 +1,29 @@
 /* Photo organizer keeps its cream/forest identity, with explicit readable states. */
+html[data-theme=light] .desktop-tools-dialog.photo-organizer-shell .photo-organizer {
+  --organizer-muted:#62695e; --text-secondary:#62695e; --cc-muted:#62695e;
+  --cu-focus:0 0 0 3px rgba(71,105,56,.25); color-scheme:light;
+}
+/* Pin semantic paint above global light-mode, high-contrast and touch overrides. */
+html[data-theme=light] .desktop-tools-dialog.photo-organizer-shell .photo-organizer.photo-organizer .pending-photo-list h3 span { color:var(--organizer-muted)!important; opacity:1; }
+
+html[data-theme=light] .desktop-tools-dialog.photo-organizer-shell .photo-organizer.photo-organizer :is(.organizer-total,.organizer-review-caption,.organizer-working,.organizer-list-note,.organizer-profile-card p,.organizer-section-header p,.pending-photo-list header p,.pending-list-tools,.pending-list-tools label,.pending-list-tools span,.pending-photo-keep) { color:var(--organizer-muted)!important; }
+html[data-theme=light] .desktop-tools-dialog.photo-organizer-shell .photo-organizer.photo-organizer .organizer-hero>span { color:#d6e99d!important; }
+html[data-theme=light] .desktop-tools-dialog.photo-organizer-shell .photo-organizer.photo-organizer .organizer-hero p { color:#dce5d8!important; }
+html[data-theme=light] .desktop-tools-dialog.photo-organizer-shell .photo-organizer.photo-organizer :is(.organizer-tray>span,.organizer-loading,.organizer-swipe-label) { color:#fffefb!important; }
+html[data-theme=light] .desktop-tools-dialog.photo-organizer-shell .photo-organizer.photo-organizer :is(.organizer-error,.organizer-round-flag>span) { color:#914631!important; }
+html[data-theme=light] .desktop-tools-dialog.photo-organizer-shell .photo-organizer.photo-organizer :is(.pending-delete-all,.pending-list-tools>button,.organizer-delete-confirm button.organizer-confirm-delete) { background:#f0e6df!important; color:#914631!important; }
+html[data-theme=light] .desktop-tools-dialog.photo-organizer-shell .photo-organizer.photo-organizer .organizer-delete-confirm p { color:var(--organizer-muted)!important; }
+html[data-theme=light] .desktop-tools-dialog.photo-organizer-shell .photo-organizer.photo-organizer :is(button,input):focus-visible { outline:3px solid #537741!important; outline-offset:3px; box-shadow:var(--cu-focus)!important; }
+html[data-theme=light] .desktop-tools-dialog.photo-organizer-shell .photo-organizer.photo-organizer .organizer-start-actions button:active:not(:disabled) { background:#c6df90!important; color:#294c3b!important; }
+html[data-theme=light] .desktop-tools-dialog.photo-organizer-shell .photo-organizer.photo-organizer :is(.organizer-icon-button,.organizer-source-chips button,.organizer-profile-actions button,.organizer-bottom-nav button):active:not(:disabled) { background:#e7eddd!important; color:#294c3b!important; }
+html[data-theme=light] .desktop-tools-dialog.photo-organizer-shell .photo-organizer.photo-organizer .organizer-round-flag>button:active:not(:disabled) { background:#e9d8cb!important; color:#914631!important; }
+html[data-theme=light] .desktop-tools-dialog.photo-organizer-shell .photo-organizer.photo-organizer .organizer-round-keep>button:active:not(:disabled) { background:#d3dfc7!important; color:#294c3b!important; }
+html[data-theme=light] .desktop-tools-dialog.photo-organizer-shell .photo-organizer.photo-organizer :is(.organizer-start-actions button,.organizer-round-action>button,.organizer-profile-actions button,.organizer-source-chips button,.organizer-delete-confirm button,.pending-delete-all,.pending-list-tools button,.pending-photo-keep):disabled { background:#ecece4!important; color:#62695e!important; border-color:#d9dfd2!important; cursor:not-allowed; }
+html[data-theme=light] .desktop-tools-dialog.photo-organizer-shell .photo-organizer.photo-organizer .organizer-icon-button:disabled { color:#62695e!important; }
+@media(prefers-contrast:more) {
+  html[data-theme=light] .desktop-tools-dialog.photo-organizer-shell .photo-organizer { --organizer-muted:#46513f; --text-secondary:#46513f; --cc-muted:#46513f; }
+}
+
 .desktop-tools-dialog.photo-organizer-shell .photo-organizer {
   --organizer-muted:#62695e; --po-bg:#f8f5ee; --po-card:#fffefb; --po-ink:#294c3b; --po-soft:#f2f0e8; --po-line:#d9dfd2;
   color:var(--po-ink)!important; background:var(--po-bg)!important;
@@ -27,3 +52,38 @@ html[data-theme=dark] .desktop-tools-dialog.photo-organizer-shell :is(.organizer
 html[data-theme=dark] .desktop-tools-dialog.photo-organizer-shell .organizer-source-chips button[aria-pressed=true] { background:var(--po-soft)!important; color:#d6e99d!important; }
 html[data-theme=dark] .desktop-tools-dialog.photo-organizer-shell .organizer-round-flag>span { color:#efb4a1!important; }
 html[data-theme=dark] .desktop-tools-dialog.photo-organizer-shell .organizer-status.has-message { background:var(--po-card)!important; color:var(--po-ink)!important; }
+
+/* Pair every card/button foreground with its own surface, never the page background. */
+.desktop-tools-dialog.photo-organizer-shell .photo-organizer.photo-organizer .organizer-profile-card>svg { color:var(--po-ink)!important; }
+.desktop-tools-dialog.photo-organizer-shell .photo-organizer {
+  --po-button-bg:#eff2e5; --po-button-hover:#e7eddd; --po-disabled-bg:#ecece4;
+  --po-danger:#914631; --po-danger-bg:#f0e6df;
+}
+html[data-theme=dark] .desktop-tools-dialog.photo-organizer-shell .photo-organizer {
+  --po-button-bg:#314835; --po-button-hover:#3c5642; --po-disabled-bg:#2d4032;
+  --po-danger:#f3b9a6; --po-danger-bg:#4b332b;
+}
+.desktop-tools-dialog.photo-organizer-shell .photo-organizer :is(.organizer-profile-card,.organizer-stat,.pending-photo-list>header,.pending-photo-grid article,.organizer-delete-confirm) {
+  background:var(--po-card)!important; color:var(--po-ink)!important; border-color:var(--po-line)!important;
+}
+.desktop-tools-dialog.photo-organizer-shell .photo-organizer.photo-organizer :is(.organizer-profile-card,.pending-photo-list,.organizer-delete-confirm) :is(h1,h2,h3,h4,strong) {
+  color:var(--po-ink)!important; -webkit-text-fill-color:var(--po-ink);
+}
+.desktop-tools-dialog.photo-organizer-shell .photo-organizer.photo-organizer :is(.organizer-profile-card p,.organizer-list-note,.organizer-delete-confirm p,.pending-photo-list header p,.pending-list-tools,.pending-list-tools label,.pending-list-tools span,.pending-photo-keep) {
+  color:var(--organizer-muted)!important; -webkit-text-fill-color:var(--organizer-muted);
+}
+.desktop-tools-dialog.photo-organizer-shell .photo-organizer.photo-organizer :is(.organizer-profile-actions button,.organizer-photo-retry,.organizer-delete-confirm button) {
+  background:var(--po-button-bg)!important; color:var(--po-ink)!important;
+  -webkit-text-fill-color:var(--po-ink); border-color:var(--po-line)!important;
+}
+.desktop-tools-dialog.photo-organizer-shell .photo-organizer.photo-organizer .organizer-profile-actions button:hover:not(:disabled) {
+  background:var(--po-button-hover)!important;
+}
+.desktop-tools-dialog.photo-organizer-shell .photo-organizer.photo-organizer :is(.pending-delete-all,.pending-list-tools>button,.organizer-confirm-delete,.organizer-error) {
+  background:var(--po-danger-bg)!important; color:var(--po-danger)!important;
+  -webkit-text-fill-color:var(--po-danger); border-color:var(--po-line)!important;
+}
+.desktop-tools-dialog.photo-organizer-shell .photo-organizer.photo-organizer :is(.organizer-start-actions button,.organizer-round-action>button,.organizer-profile-actions button,.organizer-source-chips button,.organizer-delete-confirm button,.pending-delete-all,.pending-list-tools button,.pending-photo-keep):disabled {
+  opacity:1!important; background:var(--po-disabled-bg)!important; color:var(--organizer-muted)!important;
+  -webkit-text-fill-color:var(--organizer-muted); border-color:var(--po-line)!important;
+}

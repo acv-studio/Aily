@@ -131,8 +131,8 @@ function ledgerTotals(items: Row[]): Fields {
 }
 const ledger = builtin('ledger', '记账', 'Ledger', [
   scope('totals', '收支汇总（不含备注）', 'Income and expense totals (no notes)', ledgerSummary),
-  scope('entries', '收支明细（不含备注）', 'Ledger entries (no notes)', [...ledgerFields, ...ledgerSummary], true),
-  scope('notes', '收支明细与备注', 'Ledger entries with notes', [...ledgerFields, 'note', ...ledgerSummary], true),
+  { ...scope('entries', '收支明细（不含备注）', 'Ledger entries (no notes)', [...ledgerFields, ...ledgerSummary], true), includesScopes: ['totals'] },
+  { ...scope('notes', '收支明细与备注', 'Ledger entries with notes', [...ledgerFields, 'note', ...ledgerSummary], true), includesScopes: ['totals', 'entries'] },
 ], local('aily-desktop-ledger'), (data, id) => {
   const items = checkedList(data, isLedgerEntry)
   const projected = rows(items, id === 'notes' ? [...ledgerFields, 'note'] : ledgerFields)
@@ -149,11 +149,11 @@ ledger.read = async (...args) => {
 const contactDirectory = ['name', 'group', 'favorite']
 const contacts = builtin('contacts', '通讯录', 'Contacts', [
   currentScope('directory', '姓名、分组与收藏', 'Names, groups and favorites', contactDirectory, true),
-  currentScope('details', '联系详情（含电话与邮箱）', 'Contact details (phone and email)', [...contactDirectory, 'phone', 'email'], true),
+  { ...currentScope('details', '联系详情（含电话与邮箱）', 'Contact details (phone and email)', [...contactDirectory, 'phone', 'email'], true), includesScopes: ['directory'] },
 ], local('aily-desktop-contacts'), (data, id) => ({ rows: rows(checkedList(data, v => object(v) && texts(v, ['name', 'phone', 'email']) && optional(v.group, string) && optional(v.favorite, v => typeof v === 'boolean')), id === 'details' ? [...contactDirectory, 'phone', 'email'] : contactDirectory) }))
 const diary = builtin('diary', '日记', 'Diary', [
   scope('index', '日记日期与已记录心情（不含正文）', 'Diary dates and recorded mood (no text)', ['date', 'mood'], true),
-  scope('entries', '日记正文与已记录心情', 'Diary text and recorded mood', ['date', 'mood', 'text'], true),
+  { ...scope('entries', '日记正文与已记录心情', 'Diary text and recorded mood', ['date', 'mood', 'text'], true), includesScopes: ['index'] },
 ], local('aily-desktop-diary'), (data, id) => ({ rows: rows(checkedList(data, isDiaryEntry), id === 'entries' ? ['date', 'mood', 'text'] : ['date', 'mood']), dateField: 'date' }))
 
 const catalog = new Map(ingredients.map(item => [item.id, item]))
@@ -174,7 +174,7 @@ const meal = installed('meal-planner', '家庭餐桌', 'Meal planner', [
   currentScope('budget', '已保存预算与菜数', 'Saved budget and dish count', ['budgetRmb', 'dishCount', 'currency']),
   scope('wash-history', '洗碗完成记录（不是用餐历史）', 'Completed dishwashing (not meal history)', ['date', 'memberId', 'memberName', 'cookId', 'cookName'], true),
   currentScope('members', '成员姓名与食量（不含健康偏好）', 'Member names and portions (no health preferences)', ['name', 'portion'], true),
-  currentScope('member-health', '成员喜好、忌口、过敏与纯素设置', 'Member preferences, restrictions, allergies and vegan setting', ['name', 'portion', 'likes', 'avoids', 'allergies', 'vegetarian'], true),
+  { ...currentScope('member-health', '成员喜好、忌口、过敏与纯素设置', 'Member preferences, restrictions, allergies and vegan setting', ['name', 'portion', 'likes', 'avoids', 'allergies', 'vegetarian'], true), includesScopes: ['members'] },
 ], local('aily.ext.meal.v1'), (data, id) => {
   const { settings, members, pantry, history, prices } = mealData(data)
   if (id === 'pantry') return { rows: pantry.map((p, i) => {

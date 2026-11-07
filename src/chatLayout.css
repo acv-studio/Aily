@@ -28,6 +28,7 @@
 .chat-settings-options { position: absolute; top: calc(100% + 8px); right: 0; width: min(240px, calc(100vw - 28px)); padding: 8px; max-height: min(60dvh, 320px); overflow-y: auto; border: 1px solid #45405b; border-radius: 16px; background: #202537; box-shadow: 0 16px 32px #0007; }
 .chat-primary-status { display: flex; align-items: center; gap: 8px; padding: 10px; font-size: 11px; color: #aeb6cb; border-bottom: 1px solid var(--line); margin-bottom: 4px; }
 .chat-primary-status svg { color: var(--accent); }
+.chat-app-data-notice { margin: 4px 0; padding: 10px; font-size: 11px; line-height: 1.6; color: inherit; opacity: .8; }
 .chat-settings-options > button { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 10px; border-radius: 10px; background: transparent; text-align: left; font-size: 13px; color: #e2e5ef; }
 .chat-settings-options > button:hover:not(:disabled), .chat-settings-options > button:focus-visible { background: #302b48; outline: 2px solid var(--accent); outline-offset: -2px; }
 .chat-settings-options > button:disabled { opacity: .5; }
@@ -80,6 +81,7 @@
 .chat-emoji-grid button { display: grid; place-items: center; min-width: 0; min-height: 44px; font-size: 26px; border-radius: 12px; padding: 4px; background: transparent; }
 .chat-emoji-grid button:hover { background: #2f354b; }
 .bubble:not(.attachment-bubble),.mine .bubble:not(.attachment-bubble),.message-row:not(.mine) .bubble:not(.attachment-bubble) { border-radius:17px; }
+.app-data-answer-note { display:block; font-size:11px; color:var(--cc-muted,#aa9fa7); line-height:1.5; padding:5px 0; }
 .bubble strong{font-weight:700;color:#fff}.mine .bubble strong{color:#fffdfd}.bubble[role=button]{cursor:pointer}.bubble[role=button]:focus-visible{outline:2px solid var(--cc-primary,#b99bcf);outline-offset:3px}.bubble.actions-open{box-shadow:0 0 0 1px rgba(185,155,207,.35),0 8px 22px rgba(0,0,0,.18)}
 .bubble.attachment-bubble,.mine .bubble.attachment-bubble,.message-row:not(.mine) .bubble.attachment-bubble { padding:4px; border-radius:18px; }
 .attachment-bubble .chat-image,.attachment-bubble .chat-video,.attachment-bubble .chat-video-player { margin:0; border-radius:14px; overflow:hidden; }

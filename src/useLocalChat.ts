@@ -12,7 +12,8 @@ import { deliverProactive } from './proactiveMessages'
 import { archiveExpiredMemories, confirmProposal, db, forgottenSourceIds, loadMemoryPolicy, loadSummaries, saveMemoryPolicy, saveProposals, saveSummaries } from './db'
 import { categoriesFor, conflictMemoryIds, defaultMemoryPolicy, extractCandidates, isSensitive, summarizeConversation, topics, type ConversationSummary, type MemoryPolicy } from './longMemory'
 import type { AppDataIdentity, AppDataTicket } from './appDataTypes'
-import { appDataTicketSources, invalidateAppDataAccess } from './appDataGateway'
+import { appDataTicketSources, discardAppDataTicket, invalidateAppDataAccess } from './appDataGateway'
+import { automaticAppDataTicket } from './automaticAppData'
 import { installedAppsLocalReply } from './appDataIntent'
 import { appDataLocalReply } from './appDataLocalQuery'
 
@@ -169,9 +170,10 @@ export default function useLocalChat() {
     await organize(item.characterId)
   }
   const setSelected = (id: CharacterId) => {
-    if (deleting.current || active.current || mutationCount.current) { setError('请先停止回复或等待保存，再切换角色'); return }
+    if (deleting.current || active.current || mutationCount.current) { setError('请先停止回复或等待保存，再切换角色'); return false }
     if (id !== selectedRef.current) invalidateAppDataAccess()
     selectedRef.current = id; setSelectedState(id); setDraft(''); setError(''); void observeWrite(saveSetting('selected', id)).catch(() => setError('角色选择未能保存，请重试'))
+    return true
   }
   const changePrimary = async (id: CharacterId): Promise<void> => {
     if (deleting.current) throw new Error(t('正在删除本机资料，不能继续写入'))
@@ -260,8 +262,9 @@ export default function useLocalChat() {
     if (deleting.current || !ready || active.current || mutationCount.current) { if(options.rejectOnFailure) throw new Error('请等待当前操作完成后再赠送礼物'); return }
     const role = selectedRef.current
     const isTemporary = temporaryRef.current
-    if (options.appDataTicket && (isTemporary || role !== appDataIdentity().primaryId || options.giftId || options.attachment || options.localActionNote)) throw new Error('应用数据仅可由主 Bot 在普通文字会话中读取，请重新预览授权。')
-    const appSources = options.appDataTicket ? appDataTicketSources(options.appDataTicket) : []
+    if (options.appDataTicket && (isTemporary || role !== appDataIdentity().primaryId || options.giftId || options.attachment || options.localActionNote)) throw new Error('应用数据仅可由主 Bot 在普通文字会话中自动读取。')
+    let appTicket = options.appDataTicket
+    let appSources = appTicket ? appDataTicketSources(appTicket) : []
     const replyMode = currentReplyMode(role)
     const original = (isTemporary ? temporaryConversationsRef : conversationsRef).current[role]
     const persist = async (id: CharacterId, changed: ChatMessage[]) => {
@@ -271,7 +274,6 @@ export default function useLocalChat() {
     }
     const target = options.retryId === undefined ? undefined : original.find(message => message.id === options.retryId && message.from === 'user' && !message.withdrawn)
     if (options.retryId !== undefined && !target) return
-    if (target?.appDataRequest && !options.appDataTicket) { setError('应用数据读取需重新选择数据并预览授权，请使用“读取应用数据”。'); return }
     const creditGiftId = target?.giftId ?? options.giftId
     const creditGift = creditGiftId ? getCreditGift(creditGiftId) : undefined
     if (creditGiftId && !creditGift) { const message='礼物无效，请重新选择';setError(message);if(options.rejectOnFailure)throw new Error(message);return }
@@ -296,16 +298,35 @@ export default function useLocalChat() {
       if (controller.signal.aborted) throw new DOMException('Aborted', 'AbortError')
       // Attachments are local-only: no false claim that a text model can hear or see them.
       if (user.attachment || user.kind === 'image' || user.kind === 'audio' || user.kind === 'video') { setError(isTemporary ? '附件仅保留在临时会话内，未落盘；文字模型不会读取图片、语音或视频。' : '附件已保存在本机；文字模型不会读取图片、语音或视频。请另发文字描述。'); return }
+      // Route anaphoric followups only from adjacent earlier App-data turns.
+      // A retry must never inherit a newer question or resurrect an old source
+      // after unrelated conversation. Keep a short question-only chain for followups.
+      const priorUsers = original.filter(message => message.from === 'user' && message.id < user.id && !message.withdrawn)
+      const relatedQuestions: string[] = []
+      for (const previous of priorUsers.slice().reverse()) {
+        if (!previous.appDataRequest || relatedQuestions.length === 3) break
+        relatedQuestions.unshift(previous.text)
+      }
+      const previousQuestion = relatedQuestions.join('\n')
       const catalogReply = !creditGift && !options.appDataTicket && !options.localActionNote
-        ? installedAppsLocalReply(user.text, appDataIdentity(), resolveChatLocale(user.text)) ?? await appDataLocalReply(user.text, appDataIdentity(), resolveChatLocale(user.text), controller.signal)
+        ? installedAppsLocalReply(user.text, appDataIdentity(), resolveChatLocale(user.text)) ?? (!apiKey.trim() || isTemporary || role !== appDataIdentity().primaryId ? await appDataLocalReply(user.text, appDataIdentity(), resolveChatLocale(user.text), controller.signal, true, previousQuestion) : null)
         : null
       if (catalogReply !== null) {
+        user.appDataRequest = true
         assistant.localOnly = true; assistant.appDataReply = true
         content = catalogReply
         if (controller.signal.aborted) throw new DOMException('Aborted', 'AbortError')
         const saved = await persist(role, [{ ...user, status: 'sent' }, { ...assistant, text: content, status: 'sent' }])
         apply(role, saved)
         return
+      }
+      if (!appTicket && !creditGift && !options.localActionNote && apiKey.trim() && !isTemporary && role === appDataIdentity().primaryId) {
+        appTicket = await automaticAppDataTicket(user.text, appDataIdentity(), controller.signal, previousQuestion)
+        if (appTicket) {
+          appSources = appDataTicketSources(appTicket)
+          user.appDataRequest = true
+          assistant.localOnly = true; assistant.appDataReply = true
+        }
       }
       await persist(role, [{ ...user, status: 'sending' }, assistant])
       apply(role, [...records, assistant])
@@ -338,7 +359,7 @@ export default function useLocalChat() {
         }))
       }
       const replyContext = creditGift ? context.map(message => message.id === user.id ? { ...message, text: `${message.text}\n${giftResponseInstruction(creditGift.id, getLocale())}` } : message) : context
-      await streamReply({ contextExcludedMessageIds, appDataTicket: options.appDataTicket, appDataIdentity, billingCost: creditGift?.cost ?? options.billingCost ?? 1, requireCompletion: !!creditGift || !!options.appDataTicket, locale: resolveChatLocale(user.text), characterId: role, replyMode, onboardingProfile: onboardingProfileRef.current, messages: replyContext, memories: recallMemories, memorySources, summaries: isTemporary ? [] : await loadSummaries(role), memoryPolicy: await loadMemoryPolicy(role), apiKey, endpoint, model, signal: controller.signal, onDelta: delta => { if (!content && appSources.length) content = getLocale() === 'en' ? `[App sources: ${appSources.join(', ')}]\n` : `【应用数据来源：${appSources.join('、')}】\n`; content += delta; apply(role, [...records, { ...assistant, text: content }]) } })
+      await streamReply({ contextExcludedMessageIds, appDataTicket: appTicket, appDataIdentity, billingCost: creditGift?.cost ?? options.billingCost ?? 1, requireCompletion: !!creditGift || !!appTicket, locale: resolveChatLocale(user.text), characterId: role, replyMode, onboardingProfile: onboardingProfileRef.current, messages: replyContext, memories: recallMemories, memorySources, summaries: isTemporary ? [] : await loadSummaries(role), memoryPolicy: await loadMemoryPolicy(role), apiKey, endpoint, model, signal: controller.signal, onDelta: delta => { if (!content && appSources.length) content = getLocale() === 'en' ? `[App sources: ${appSources.join(', ')}]\n` : `【应用数据来源：${appSources.join('、')}】\n`; content += delta; apply(role, [...records, { ...assistant, text: content }]) } })
       if (controller.signal.aborted) throw new DOMException('Aborted', 'AbortError')
       const completed = await persist(role, [{ ...user, status: 'sent' }, { ...assistant, text: content, status: 'sent' }]); apply(role, completed)
     } catch (failure) {
@@ -351,7 +372,7 @@ export default function useLocalChat() {
         catch { apply(role, retained); setError('本机保存失败：当前内容仅暂留界面，请勿关闭页面并检查存储空间。') }
       } else { setError('消息未保存、未发送：请检查本机存储权限或空间。'); if (failure) return Promise.reject(failure) }
       if (options.rejectOnFailure) throw failure instanceof Error ? failure : new Error('礼物未送出，请重试')
-    } finally { if (!isTemporary && persisted) queueOrganization(role); if (active.current === controller) { active.current = null; if (mounted.current) setReplying(false) } }
+    } finally { if (appTicket) discardAppDataTicket(appTicket); if (!isTemporary && persisted) queueOrganization(role); if (active.current === controller) { active.current = null; if (mounted.current) setReplying(false) } }
   }
   const saveConfirmed = async (memory: MemoryDraft) => {
     const role = selectedRef.current

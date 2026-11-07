@@ -3,6 +3,8 @@ import { clearAllData } from './db'
 import { demoDb } from './giftDemo'
 import { clearMediaLibrary } from './mediaLibrary'
 import { clearLaughterLibrary } from './laughterStorage'
+import { clearWardrobePhotos } from './wardrobeData'
+import { clearSkincarePhotos } from './skincarePhotos'
 import { invalidateAppDataAccess } from './appDataGateway'
 import { clearRegisteredMiniAppData } from './extensionRuntime'
 
@@ -31,10 +33,12 @@ export async function deleteLocalProfile(): Promise<void> {
     invalidateAppDataAccess()
     for (const key of ['aily-api-key']) sessionStorage.removeItem(key)
     await clearRegisteredMiniAppData()
-    for (const key of [consentKey, 'aily-api-endpoint', 'aily-api-model', 'aily-demo-state', 'aily.locale', 'aily.chatLocale', 'aily-desktop-ledger', 'aily-desktop-contacts', 'aily-desktop-diary', 'aily.ext.meal.v1', 'aily.extension-apps.v1', 'aily.extension-apps.incarnation.v1', 'aily.extension-defaults.v1', 'aily.ext.feedback.v1', 'aily.ext.skincare', 'aily.ext.wardrobe', 'aily.ext.anniversary', 'aily.ext.2048.grid', 'aily.ext.2048.score', 'aily.app-data-access.v1']) localStorage.removeItem(key)
+    for (const key of [consentKey, 'aily-api-endpoint', 'aily-api-model', 'aily-demo-state', 'aily.locale', 'aily.chatLocale', 'aily-desktop-ledger', 'aily.ledger-budgets.v1', 'aily-desktop-contacts', 'aily-desktop-diary', 'aily.ext.meal.v1', 'aily.extension-apps.v1', 'aily.extension-apps.incarnation.v1', 'aily.extension-defaults.v1', 'aily.ext.feedback.v1', 'aily.ext.skincare', 'aily.ext.skincare-plans.v1', 'aily.ext.wardrobe', 'aily.ext.wardrobe.profile.v1', 'aily.ext.anniversary', 'aily.ext.2048.grid', 'aily.ext.2048.score', 'aily.app-data-access.v1']) localStorage.removeItem(key)
     await clearAllData()
     await clearMediaLibrary()
     await clearLaughterLibrary()
+    await clearWardrobePhotos()
+    await clearSkincarePhotos()
     await demoDb.transaction('rw', demoDb.wallet, demoDb.transactions, demoDb.storyEvents, async () => {
       await demoDb.wallet.clear()
       await demoDb.transactions.clear()

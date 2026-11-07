@@ -1,0 +1,43 @@
+/* Tabs are straight-edged page chrome, not rounded cards or pills.
+ * Keep colors, selected states, safe-area padding and ordinary action buttons.
+ * The root-qualified rule intentionally wins over individual tool themes.
+ */
+html body :is(#root, .desktop-tools-overlay) :is(
+  [role="tablist"], [role="tab"],
+  .bottom-nav, .wardrobe-bottom-nav, .sk-bottom-nav,
+  .organizer-bottom-nav, .ledger-bottom-nav,
+  .meal-tabs, .feed-role-tabs, .feedback-kind-tabs,
+  .ledger-segmented, .ledger-chart-kind,
+  .memory-view-switch, .journal-period,
+  .media-filter-row, .wardrobe-filters
+) {
+  border-radius: 0 !important;
+}
+
+html body :is(#root, .desktop-tools-overlay) :is(
+  [role="tablist"],
+  .bottom-nav, .wardrobe-bottom-nav, .sk-bottom-nav,
+  .organizer-bottom-nav, .ledger-bottom-nav,
+  .meal-tabs, .feed-role-tabs, .feedback-kind-tabs,
+  .ledger-segmented, .ledger-chart-kind,
+  .memory-view-switch, .journal-period,
+  .media-filter-row, .wardrobe-filters
+) button:not(.ledger-add),
+html body :is(#root, .desktop-tools-overlay) [role="tab"]::before,
+html body :is(#root, .desktop-tools-overlay) [role="tab"]::after {
+  border-radius: 0 !important;
+}
+
+/* The shared iOS chrome previously forced a dark background in light mode. */
+html[data-theme="light"] body #root .bottom-nav {
+  background: var(--cc-card, #fff) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+html[data-theme="light"] body #root .bottom-nav button,
+html[data-theme="light"] body #root .bottom-nav button span {
+  color: var(--cc-muted, #686a72) !important;
+}
+html[data-theme="light"] body #root .bottom-nav button.active svg {
+  color: var(--cc-primary, #74549b) !important;
+}

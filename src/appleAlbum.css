@@ -1,0 +1,649 @@
+/* Apple Photos-inspired, local photo library. Every rule is album-scoped.
+   Load after mediaLibrary.css; action/viewer overlays stay inside album-shell. */
+.desktop-tools-dialog.album-shell {
+  --album-bg: #000;
+  --album-surface: #1c1c1e;
+  --album-field: #1c1c1e;
+  --album-ink: #f5f5f7;
+  --album-muted: #a1a1a6;
+  --album-line: #38383a;
+  --album-blue: #0a84ff;
+  --album-blue-soft: #102b47;
+  --album-danger: #ff6961;
+  --album-hover: #2c2c2e;
+  --album-header: rgba(0, 0, 0, .9);
+  --album-sheet: #1c1c1e;
+  --album-disabled: #29292b;
+  --cc-fg: var(--album-ink);
+  --cc-muted: var(--album-muted);
+  --cc-card: var(--album-surface);
+  --cc-border: var(--album-line);
+  --cc-primary: var(--album-blue);
+  --cc-primary-soft: var(--album-blue-soft);
+  --cc-shadow-1: none;
+  --media-surface: var(--album-surface);
+  --media-line: var(--album-line);
+  color: var(--album-ink) !important;
+  background: var(--album-bg) !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.45;
+  color-scheme: dark;
+  isolation: isolate;
+  -webkit-font-smoothing: antialiased;
+}
+html[data-theme=light] .desktop-tools-dialog.album-shell {
+  --album-bg: #fff;
+  --album-surface: #f2f2f7;
+  --album-field: #f2f2f7;
+  --album-ink: #1d1d1f;
+  --album-muted: #6e6e73;
+  --album-line: #d8d8dc;
+  --album-blue: #007aff;
+  --album-blue-soft: #e8f2ff;
+  --album-danger: #d92d25;
+  --album-hover: #e8e8ed;
+  --album-header: rgba(255, 255, 255, .92);
+  --album-sheet: #f9f9fb;
+  --album-disabled: #e8e8ed;
+  color-scheme: light;
+}
+.desktop-tools-dialog.album-shell *,
+.desktop-tools-dialog.album-shell *::before,
+.desktop-tools-dialog.album-shell *::after { box-sizing: border-box; }
+.desktop-tools-dialog.album-shell .desktop-tools-header {
+  gap: 10px;
+  padding: calc(env(safe-area-inset-top, 0px) + 18px) max(18px, env(safe-area-inset-right, 0px)) 14px max(18px, env(safe-area-inset-left, 0px)) !important;
+  border: 0 !important;
+  background: var(--album-header) !important;
+  color: var(--album-ink) !important;
+  box-shadow: none !important;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+.desktop-tools-dialog.album-shell .desktop-tools-header h2 {
+  margin: 0 !important;
+  font-family: inherit;
+  font-size: clamp(28px, 4vw, 32px) !important;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -.045em;
+  color: var(--album-ink) !important;
+}
+.desktop-tools-dialog.album-shell .desktop-tools-header small { display: none; }
+.desktop-tools-dialog.album-shell .desktop-tools-content {
+  padding: 8px max(18px, env(safe-area-inset-right, 0px)) calc(24px + env(safe-area-inset-bottom, 0px)) max(18px, env(safe-area-inset-left, 0px)) !important;
+  color: var(--album-ink) !important;
+}
+.desktop-tools-dialog.album-shell .media-library-app.media-library-album.apple-album-library {
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0;
+  color: var(--album-ink) !important;
+  background: transparent !important;
+}
+.desktop-tools-dialog.album-shell :is(h1, h2, h3, h4, strong, b, p, span, small, time, label, legend) {
+  color: inherit !important;
+  text-shadow: none !important;
+}
+.desktop-tools-dialog.album-shell :is(button, input, textarea, select) { font-family: inherit; }
+.desktop-tools-dialog.album-shell button,
+.desktop-tools-dialog.album-shell label.media-import {
+  --album-button-bg: transparent;
+  --album-button-ink: var(--album-blue);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-width: 44px;
+  min-height: 44px;
+  margin: 0;
+  padding: 10px 14px;
+  color: var(--album-button-ink) !important;
+  background: var(--album-button-bg) !important;
+  border: 0 !important;
+  border-radius: 11px;
+  box-shadow: none !important;
+  text-shadow: none !important;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.25;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transform: none !important;
+}
+.desktop-tools-dialog.album-shell button:hover:not(:disabled) { background: var(--album-hover) !important; }
+.desktop-tools-dialog.album-shell button:active:not(:disabled) { background: var(--album-blue-soft) !important; }
+.desktop-tools-dialog.album-shell :is(button, input, textarea, select, summary, a, label.media-import):focus-visible {
+  outline: 3px solid var(--album-blue) !important;
+  outline-offset: 3px;
+}
+.desktop-tools-dialog.album-shell button:disabled,
+.desktop-tools-dialog.album-shell label.media-import:has(input:disabled) {
+  color: var(--album-muted) !important;
+  background: var(--album-disabled) !important;
+  opacity: .65 !important;
+  cursor: not-allowed;
+}
+.desktop-tools-dialog.album-shell button svg,
+.desktop-tools-dialog.album-shell label.media-import svg { flex: 0 0 auto; width: 20px; height: 20px; }
+.desktop-tools-dialog.album-shell.album-shell button.desktop-close {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 50%;
+  background: transparent !important;
+  color: var(--album-blue) !important;
+  font-size: 28px;
+}
+.desktop-tools-dialog.album-shell .album-library-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin: 5px 0 10px;
+}
+.desktop-tools-dialog.album-shell .album-library-summary > :is(p, span):first-child {
+  flex-basis: 100%;
+  margin: 0 0 3px;
+  color: var(--album-muted) !important;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .1em;
+}
+.desktop-tools-dialog.album-shell .album-library-summary h3 {
+  margin: 0;
+  color: var(--album-ink) !important;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -.025em;
+}
+.desktop-tools-dialog.album-shell .album-library-summary small,
+.desktop-tools-dialog.album-shell .album-grid-heading :is(small, span),
+.desktop-tools-dialog.album-shell .album-library-footer {
+  color: var(--album-muted) !important;
+  font-size: 13px;
+  font-weight: 400;
+}
+.desktop-tools-dialog.album-shell .media-library-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0 5px;
+}
+.desktop-tools-dialog.album-shell :is(button.album-import-button, label.media-import) {
+  --album-button-bg: var(--album-blue-soft);
+  --album-button-ink: var(--album-blue);
+  padding: 10px 14px;
+  border-radius: 12px;
+  white-space: nowrap;
+}
+.desktop-tools-dialog.album-shell label.media-import:focus-within {
+  outline: 3px solid var(--album-blue);
+  outline-offset: 3px;
+}
+/* Keep file input keyboard reachable while the whole label remains a 44px target. */
+.desktop-tools-dialog.album-shell label.media-import { position: relative; overflow: hidden; }
+.desktop-tools-dialog.album-shell label.media-import input[type=file] {
+  display: block;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.desktop-tools-dialog.album-shell .media-library-toolbar > button[aria-pressed=true] {
+  --album-button-bg: var(--album-blue-soft);
+  --album-button-ink: var(--album-blue);
+}
+.desktop-tools-dialog.album-shell .album-privacy-details { margin: 0 0 14px; }
+.desktop-tools-dialog.album-shell .album-privacy-details summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 7px 0;
+  color: var(--album-muted) !important;
+  font-size: 12px;
+  list-style: none;
+  cursor: pointer;
+}
+.desktop-tools-dialog.album-shell .album-privacy-details summary::-webkit-details-marker { display: none; }
+.desktop-tools-dialog.album-shell .album-privacy-details summary svg { width: 14px; height: 14px; flex-shrink: 0; }
+.desktop-tools-dialog.album-shell .album-privacy-details summary::after { content: '›'; margin-left: auto; font-size: 19px; transform: rotate(90deg); }
+.desktop-tools-dialog.album-shell .album-privacy-details[open] summary::after { transform: rotate(-90deg); }
+.desktop-tools-dialog.album-shell .apple-album-library .media-privacy {
+  margin: 0 0 9px;
+  max-width: 72ch;
+  padding: 0;
+  color: var(--album-muted) !important;
+  background: transparent !important;
+  font-size: 12px;
+  line-height: 1.65;
+}
+.desktop-tools-dialog.album-shell label.media-search { display: grid; gap: 6px; margin: 0; color: var(--album-muted) !important; font-size: 12px; }
+.desktop-tools-dialog.album-shell .album-search-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 0 12px;
+  border-radius: 12px;
+  background: var(--album-field) !important;
+  color: var(--album-muted) !important;
+}
+.desktop-tools-dialog.album-shell .album-search-field > svg { width: 18px; height: 18px; flex-shrink: 0; }
+.desktop-tools-dialog.album-shell :is(.media-search, .media-batch, .album-rename-sheet) input:not([type=checkbox]):not([type=file]) {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--album-line) !important;
+  border-radius: 11px;
+  color: var(--album-ink) !important;
+  background: var(--album-field) !important;
+  box-shadow: none !important;
+  font-size: 16px !important;
+  color-scheme: inherit;
+}
+.desktop-tools-dialog.album-shell.album-shell .album-search-field input[type=search] { flex: 1; padding: 10px 0 !important; border: 0 !important; background: transparent !important; box-shadow: none !important; border-radius: 4px; }
+.desktop-tools-dialog.album-shell input::placeholder { color: var(--album-muted) !important; opacity: 1; }
+.desktop-tools-dialog.album-shell input:disabled { opacity: .65; cursor: not-allowed; }
+.desktop-tools-dialog.album-shell .media-filter-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin: 14px 0 18px;
+  padding: 3px 0;
+  white-space: nowrap;
+  overscroll-behavior-x: contain;
+}
+.desktop-tools-dialog.album-shell .media-filter-row::-webkit-scrollbar { display: none; }
+.desktop-tools-dialog.album-shell .media-filter-row button {
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 9px 13px;
+  border-radius: 10px;
+  color: var(--album-muted) !important;
+  background: var(--album-field) !important;
+  font-size: 13px;
+}
+.desktop-tools-dialog.album-shell .media-filter-row button:nth-child(-n+2) { border-radius: 8px; }
+.desktop-tools-dialog.album-shell .media-filter-row button[aria-pressed=true] {
+  color: var(--album-blue) !important;
+  background: var(--album-blue-soft) !important;
+  font-weight: 600;
+}
+.desktop-tools-dialog.album-shell .album-grid-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin: 0 0 10px; }
+.desktop-tools-dialog.album-shell .album-grid-heading h4 { margin: 0; font-size: 17px; font-weight: 650; letter-spacing: -.02em; }
+.desktop-tools-dialog.album-shell .media-photo-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  width: 100%;
+  margin: 0;
+}
+.desktop-tools-dialog.album-shell .media-photo-grid article {
+  position: relative;
+  min-width: 0;
+  padding: 0;
+  border: 0 !important;
+  border-radius: 10px;
+  overflow: hidden;
+  isolation: isolate;
+  background: var(--album-surface) !important;
+  box-shadow: none !important;
+}
+.desktop-tools-dialog.album-shell .media-photo-grid button.media-open {
+  display: block;
+  width: 100%;
+  min-height: 44px !important;
+  aspect-ratio: 1;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 10px;
+  background: transparent !important;
+  overflow: hidden;
+  line-height: 0;
+}
+.desktop-tools-dialog.album-shell .media-photo-grid .media-open img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 10px;
+  opacity: 1 !important;
+}
+.desktop-tools-dialog.album-shell .album-photo-name {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  border: 0 !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  white-space: nowrap !important;
+}
+.desktop-tools-dialog.album-shell .media-photo-grid .media-item-actions { display: none !important; }
+.desktop-tools-dialog.album-shell .album-favorite-badge {
+  position: absolute;
+  z-index: 1;
+  bottom: 7px;
+  left: 7px;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  color: #fff !important;
+  background: rgba(0, 0, 0, .4) !important;
+  pointer-events: none;
+}
+.desktop-tools-dialog.album-shell .album-favorite-badge svg { width: 14px; height: 14px; }
+.desktop-tools-dialog.album-shell button.album-more-button {
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  right: 0;
+  width: 44px;
+  height: 44px;
+  padding: 8px !important;
+  border-radius: 0;
+  color: #fff !important;
+  background: transparent !important;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+.desktop-tools-dialog.album-shell button.album-more-button::before {
+  content: '';
+  position: absolute;
+  inset: 8px;
+  z-index: -1;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, .46);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+.desktop-tools-dialog.album-shell .media-photo-grid article:hover .album-more-button,
+.desktop-tools-dialog.album-shell .media-photo-grid article:focus-within .album-more-button { opacity: 1; }
+.desktop-tools-dialog.album-shell .media-photo-grid .media-selection {
+  position: absolute;
+  z-index: 3;
+  top: 0;
+  left: 0;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent !important;
+  cursor: pointer;
+}
+.desktop-tools-dialog.album-shell .media-selection input[type=checkbox] {
+  width: 23px;
+  height: 23px;
+  min-height: 0;
+  margin: 0;
+  accent-color: var(--album-blue);
+  cursor: pointer;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .4));
+}
+.desktop-tools-dialog.album-shell .media-photo-grid article:has(.media-selection input:checked)::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border: 3px solid var(--album-blue);
+  border-radius: 10px;
+  pointer-events: none;
+}
+.desktop-tools-dialog.album-shell .album-library-footer { margin: 20px 0 4px; text-align: center; }
+.desktop-tools-dialog.album-shell .album-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 230px;
+  padding: 34px 20px;
+  text-align: center;
+  color: var(--album-muted) !important;
+}
+.desktop-tools-dialog.album-shell .album-empty-state > svg { width: 44px; height: 44px; color: var(--album-muted); stroke-width: 1.4; }
+.desktop-tools-dialog.album-shell .album-empty-state :is(h4, strong) { margin: 0; color: var(--album-ink) !important; font-size: 18px; }
+.desktop-tools-dialog.album-shell .album-empty-state p { max-width: 34ch; margin: 0; font-size: 14px; line-height: 1.6; }
+.desktop-tools-dialog.album-shell .media-batch {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  padding: 12px;
+  margin: 0 0 16px;
+  border: 1px solid var(--album-line) !important;
+  border-radius: 14px;
+  color: var(--album-ink) !important;
+  background: var(--album-surface) !important;
+  box-shadow: none !important;
+}
+.desktop-tools-dialog.album-shell .media-batch > span { flex-basis: 100%; font-size: 13px; font-weight: 600; }
+.desktop-tools-dialog.album-shell .media-batch label { flex: 1 1 160px; display: grid; min-width: 0; gap: 5px; color: var(--album-muted) !important; font-size: 12px; }
+.desktop-tools-dialog.album-shell .media-batch > button:last-child { color: var(--album-danger) !important; }
+.desktop-tools-dialog.album-shell .media-error { padding: 12px; border: 1px solid var(--album-danger); border-radius: 11px; color: var(--album-danger) !important; background: var(--album-surface) !important; font-size: 13px; }
+/* Action and rename dialogs sit above the full-screen viewer, not under it. */
+.desktop-tools-dialog.album-shell .album-action-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2600;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 12px max(12px, env(safe-area-inset-right, 0px)) max(12px, env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px));
+  background: rgba(0, 0, 0, .48) !important;
+  color: var(--album-ink) !important;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.desktop-tools-dialog.album-shell :is(.album-action-sheet, .album-rename-sheet) {
+  width: 100%;
+  max-width: 520px;
+  max-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 24px);
+  overflow-y: auto;
+  padding: 8px 16px 12px;
+  border: 1px solid var(--album-line) !important;
+  border-radius: 22px;
+  color: var(--album-ink) !important;
+  background: var(--album-sheet) !important;
+  box-shadow: none !important;
+  color-scheme: inherit;
+}
+.desktop-tools-dialog.album-shell :is(.album-action-sheet, .album-rename-sheet)::before { content: ''; display: block; width: 36px; height: 4px; margin: 0 auto 10px; border-radius: 4px; background: var(--album-line); }
+.desktop-tools-dialog.album-shell :is(.album-action-sheet, .album-rename-sheet) > header { display: grid; gap: 4px; padding: 6px 6px 16px; text-align: center; }
+.desktop-tools-dialog.album-shell :is(.album-action-sheet, .album-rename-sheet) :is(h3, strong) { margin: 0; overflow-wrap: anywhere; font-size: 16px; font-weight: 600; }
+.desktop-tools-dialog.album-shell :is(.album-action-sheet, .album-rename-sheet) :is(small, time, header p) { margin: 0; color: var(--album-muted) !important; font-size: 12px; }
+.desktop-tools-dialog.album-shell .album-action-sheet button {
+  display: flex;
+  justify-content: flex-start;
+  width: 100%;
+  min-height: 52px;
+  padding: 14px 10px;
+  border-top: 1px solid var(--album-line) !important;
+  border-radius: 0;
+  color: var(--album-blue) !important;
+  background: transparent !important;
+  font-size: 16px;
+}
+.desktop-tools-dialog.album-shell .album-action-sheet button:last-child {
+  justify-content: center;
+  margin-top: 8px;
+  border-top: 0 !important;
+  border-radius: 12px;
+  background: var(--album-field) !important;
+  font-weight: 600;
+}
+.desktop-tools-dialog.album-shell button.album-action-danger { color: var(--album-danger) !important; }
+.desktop-tools-dialog.album-shell .album-rename-sheet { display: grid; gap: 12px; padding-bottom: 16px; }
+.desktop-tools-dialog.album-shell .album-rename-sheet label { display: grid; gap: 7px; color: var(--album-muted) !important; font-size: 13px; }
+.desktop-tools-dialog.album-shell .album-rename-sheet > :is(footer, div):last-child { display: flex; gap: 8px; }
+.desktop-tools-dialog.album-shell .album-rename-sheet button { flex: 1; min-height: 48px; background: var(--album-field) !important; }
+.desktop-tools-dialog.album-shell .album-rename-sheet button[type=submit] { color: #fff !important; background: var(--album-blue) !important; }
+.desktop-tools-dialog.album-shell :is(.album-action-sheet, .album-rename-sheet) button:disabled { color: var(--album-muted) !important; background: var(--album-disabled) !important; opacity: .65 !important; }
+/* Full-viewport black photo canvas in both themes. Never leave images at opacity 0. */
+.desktop-tools-dialog.album-shell .media-photo-viewer.album-photo-viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 2500;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0 !important;
+  border-radius: 0;
+  overflow: hidden;
+  color: #f5f5f7 !important;
+  background: #000 !important;
+  box-shadow: none !important;
+  color-scheme: dark;
+  overscroll-behavior: contain;
+}
+.desktop-tools-dialog.album-shell .album-photo-viewer :is(h2, h3, strong, p, span, small, time, label) { color: #f5f5f7 !important; }
+.desktop-tools-dialog.album-shell .album-photo-viewer > header {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
+  min-height: 64px;
+  padding: calc(env(safe-area-inset-top, 0px) + 8px) max(12px, env(safe-area-inset-right, 0px)) 8px max(12px, env(safe-area-inset-left, 0px));
+  border: 0 !important;
+  color: #f5f5f7 !important;
+  background: rgba(16, 16, 18, .72) !important;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+.desktop-tools-dialog.album-shell .album-photo-viewer > header > :is(div, strong) { min-width: 0; text-align: center; overflow: hidden; text-overflow: ellipsis; }
+.desktop-tools-dialog.album-shell .album-photo-viewer > header :is(strong, time) { display: block; font-size: 14px; font-weight: 600; }
+.desktop-tools-dialog.album-shell .album-photo-viewer > header small { display: block; margin-top: 2px; color: #b5b5ba !important; font-size: 11px; font-weight: 400; }
+.desktop-tools-dialog.album-shell.album-shell .media-photo-viewer.album-photo-viewer button {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 10px;
+  color: #f5f5f7 !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 50%;
+  box-shadow: none !important;
+}
+.desktop-tools-dialog.album-shell.album-shell .media-photo-viewer.album-photo-viewer button svg { width: 22px; height: 22px; }
+.desktop-tools-dialog.album-shell.album-shell .media-photo-viewer.album-photo-viewer button:hover:not(:disabled),
+.desktop-tools-dialog.album-shell.album-shell .media-photo-viewer.album-photo-viewer button:active:not(:disabled) { background: #ffffff18 !important; }
+.desktop-tools-dialog.album-shell.album-shell .media-photo-viewer.album-photo-viewer button[aria-pressed=true] { color: #0a84ff !important; background: transparent !important; }
+.desktop-tools-dialog.album-shell.album-shell .media-photo-viewer.album-photo-viewer button.album-action-danger { color: #ff6961 !important; }
+.desktop-tools-dialog.album-shell.album-shell .media-photo-viewer.album-photo-viewer button:disabled { color: #85858b !important; background: #ffffff08 !important; opacity: .65 !important; }
+.desktop-tools-dialog.album-shell .album-viewer-image-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
+  overflow: hidden;
+  padding: 0;
+  background: #000 !important;
+}
+.desktop-tools-dialog.album-shell .album-photo-viewer img.album-viewer-image {
+  display: block;
+  flex: 0 1 auto;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  max-width: 100%;
+  max-height: 100%;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  object-fit: contain;
+  opacity: 1 !important;
+  animation: album-photo-enter 180ms ease-out 1;
+}
+.desktop-tools-dialog.album-shell .album-photo-viewer > footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  flex: 0 0 auto;
+  width: 100%;
+  padding: 6px max(14px, env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom, 0px) + 10px) max(14px, env(safe-area-inset-left, 0px));
+  border: 0 !important;
+  color: #f5f5f7 !important;
+  background: rgba(16, 16, 18, .8) !important;
+}
+.desktop-tools-dialog.album-shell .album-viewer-toolbar { display: flex; align-items: center; justify-content: center; gap: clamp(12px, 7vw, 44px); width: 100%; min-height: 44px; }
+.desktop-tools-dialog.album-shell .album-viewer-counter { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 9px; margin: 0; color: #b5b5ba !important; font-size: 11px; line-height: 1.4; text-align: center; }
+.desktop-tools-dialog.album-shell .album-viewer-counter :is(span, small, time) { color: #b5b5ba !important; font-size: 11px; }
+/* Keep disabled paint authoritative over import/pressed/danger variants. */
+.desktop-tools-dialog.album-shell button:disabled:disabled:not(:where(.album-photo-viewer *)),
+.desktop-tools-dialog.album-shell label.media-import:has(input:disabled) {
+  color: var(--album-muted) !important;
+  background: var(--album-disabled) !important;
+  opacity: .65 !important;
+  cursor: not-allowed;
+}
+.desktop-tools-dialog.album-shell .media-photo-grid .media-open:focus-visible { outline-offset: -3px; }
+.desktop-tools-dialog.album-shell .media-photo-grid .album-more-button:focus-visible { outline-offset: -4px; opacity: 1; }
+@keyframes album-photo-enter { from { transform: scale(.985); } to { transform: scale(1); } }
+@media (hover: none) {
+  .desktop-tools-dialog.album-shell button.album-more-button { opacity: 1; }
+}
+@media (min-width: 520px) {
+  .desktop-tools-dialog.album-shell .desktop-tools-header { padding-right: max(24px, env(safe-area-inset-right, 0px)) !important; padding-left: max(24px, env(safe-area-inset-left, 0px)) !important; }
+  .desktop-tools-dialog.album-shell .desktop-tools-content { padding-right: max(24px, env(safe-area-inset-right, 0px)) !important; padding-left: max(24px, env(safe-area-inset-left, 0px)) !important; }
+  .desktop-tools-dialog.album-shell .media-photo-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+}
+@media (min-width: 900px) {
+  .desktop-tools-dialog.album-shell .media-photo-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@media (max-width: 359px) {
+  .desktop-tools-dialog.album-shell .media-library-toolbar { gap: 4px; }
+  .desktop-tools-dialog.album-shell :is(button.album-import-button, label.media-import) { padding-right: 10px; padding-left: 10px; font-size: 14px; }
+  .desktop-tools-dialog.album-shell .media-batch > button { flex: 1 1 auto; font-size: 13px; }
+}
+@media (max-height: 520px) and (orientation: landscape) {
+  .desktop-tools-dialog.album-shell .desktop-tools-header { padding-top: calc(env(safe-area-inset-top, 0px) + 8px) !important; padding-bottom: 6px !important; }
+  .desktop-tools-dialog.album-shell .album-photo-viewer > header { min-height: 52px; padding-top: calc(env(safe-area-inset-top, 0px) + 4px); padding-bottom: 4px; }
+  .desktop-tools-dialog.album-shell .album-photo-viewer > footer { gap: 0; padding-top: 2px; padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 3px); }
+  .desktop-tools-dialog.album-shell .album-viewer-counter { line-height: 1.2; }
+  .desktop-tools-dialog.album-shell :is(.album-action-sheet, .album-rename-sheet) > header { padding-bottom: 8px; }
+  .desktop-tools-dialog.album-shell .album-action-sheet button { min-height: 44px; padding-top: 10px; padding-bottom: 10px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .desktop-tools-dialog.album-shell button.album-more-button { transition: none; }
+  .desktop-tools-dialog.album-shell .album-photo-viewer img.album-viewer-image { animation: none !important; transform: none !important; }
+}

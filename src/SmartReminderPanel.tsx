@@ -4,6 +4,7 @@ import { getLocale, useI18n } from './i18n'
 import { proposeNextSteps, type Reminder, type ReminderKind } from './smartReminders'
 import type { SmartReminderController } from './useSmartReminders'
 import './smartReminders.css'
+import ReminderNotificationSettings from './ReminderNotificationSettings'
 
 const text = (zh: string, en: string) => getLocale() === 'en' ? en : zh
 const kinds: ReminderKind[] = ['water', 'meal', 'weather', 'mood', 'metro', 'plan']
@@ -62,7 +63,8 @@ export default function SmartReminderPanel({ controller, close }: { controller: 
   return <section className="screen smart-reminders" aria-label={text('智能提醒中心', 'Smart reminder center')}>
     <button className="text-button" onClick={close} disabled={busy}>{text('← 返回', '← Back')}</button>
     <div className="reminder-heading"><span className="reminder-symbol"><Bell size={24} /></span><div><h2>{text('把小事，放在心上', 'Care for the little things')}</h2><p>{text('智能提醒 · 你的节奏，你来决定', 'Smart reminders · Your pace, your choice')}</p></div></div>
-    <aside className="reminder-disclosure">{text('本机规则版：仅在应用打开且页面可见时检查（约每 15 秒），不提供关闭应用后的推送。天气与心情由你记录；未接入实时地图、定位或 AI 预测。', 'Local rule-based version: checks about every 15 seconds while this app is open and visible. No push after closing the app. You provide weather and mood; live maps, location and AI prediction are not connected.')}</aside>
+    <aside className="reminder-disclosure">{text('本机规则版：定时提醒可在下方开启系统本地通知，不需要后端。天气与心情仍由你记录，仅在应用打开且可见时检查（约每 15 秒）；未接入实时地图、定位、后台条件检测或 AI 预测。', 'Local rule-based version: timed reminders can use system local notifications below, without a server. Weather and mood still use your records and are checked about every 15 seconds while the app is open and visible. No live maps, location, background condition monitoring or AI prediction.')}</aside>
+    <ReminderNotificationSettings controller={controller}/>
     {error && <div className="chat-error" role="alert">{error}<button disabled={busy} onClick={() => void controller.refresh()}>{text('重试', 'Retry')}</button></div>}
     {!state ? <p role="status">{text('正在读取提醒…', 'Loading reminders…')}</p> : <>
       <div className="reminder-presets" aria-label={text('提醒场景', 'Reminder scenarios')}>{kinds.map(value => { const Icon = icons[value]; return <button key={value} disabled={busy} aria-pressed={kind === value} className={kind === value ? 'selected' : ''} onClick={() => chooseKind(value)}><Icon size={19} />{label(value)}</button> })}</div>
@@ -90,7 +92,7 @@ export default function SmartReminderPanel({ controller, close }: { controller: 
 
 export function ReminderItem({ reminder, controller }: { reminder: Reminder; controller: SmartReminderController }) {
   const Icon = icons[reminder.kind]
-  return <article className={`reminder-item glass ${reminder.status}`}><div className="reminder-item-title"><Icon size={20} /><strong>{reminder.title}</strong><span className="reminder-status">{!reminder.enabled ? text('已暂停', 'Paused') : reminder.status === 'due' ? text('待处理', 'Due') : reminder.status === 'completed' ? text('已完成', 'Completed') : text('等待触发', 'Waiting')}</span></div>
+  return <article data-reminder-id={reminder.id} className={`reminder-item glass ${reminder.status}${controller.openedNotificationId === reminder.id ? ' notification-focused' : ''}`}><div className="reminder-item-title"><Icon size={20} /><strong>{reminder.title}</strong><span className="reminder-status">{!reminder.enabled ? text('已暂停', 'Paused') : reminder.status === 'due' ? text('待处理', 'Due') : reminder.status === 'completed' ? text('已完成', 'Completed') : text('等待触发', 'Waiting')}</span></div>
     <p className="reminder-hint">{label(reminder.kind)}{reminder.snoozedUntil ? ` · ${text('稍后提醒', 'Snoozed until')} ${formattedTime(reminder.snoozedUntil)}` : reminder.scheduledAt ? ` · ${formattedTime(reminder.scheduledAt)}` : ''}{reminder.repeatMinutes ? ` · ${text('每', 'Every')} ${reminder.repeatMinutes} ${text('分钟', 'minutes')}` : ''}</p>
     {reminder.kind === 'metro' && <p>{reminder.station} · {reminder.exit} · {text('提前', 'Remind')} {reminder.leadMinutes} {text('分钟提醒（预计）', 'minutes early (estimated)')} · {metroTiming(reminder)}</p>}
     <div className="reminder-actions"><button disabled={controller.busy || reminder.status === 'completed' || (reminder.repeatMinutes !== null && reminder.status !== 'due')} onClick={() => void controller.act(reminder.id, 'complete')}><Check size={15} />{text('已完成', 'Done')}</button><button disabled={controller.busy || reminder.status !== 'due' || !reminder.enabled} onClick={() => void controller.act(reminder.id, 'snooze')}>{text('10 分钟后', 'In 10 minutes')}</button><button disabled={controller.busy || reminder.status === 'completed'} onClick={() => void controller.act(reminder.id, 'toggle')}>{reminder.enabled ? text('暂停', 'Pause') : text('继续', 'Resume')}</button><button aria-label={`${text('删除提醒', 'Delete reminder')}: ${reminder.title}`} disabled={controller.busy} onClick={() => { if (window.confirm(text('删除这条提醒？此操作不可撤销。', 'Delete this reminder? This cannot be undone.'))) void controller.act(reminder.id, 'delete') }}><X size={15} /></button></div>

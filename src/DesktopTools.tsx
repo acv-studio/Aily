@@ -9,10 +9,14 @@ import ExtensionStore, { ExtensionAppView } from './ExtensionStore'
 import { extensionApps, type ExtensionAppId } from './extensionApps'
 import './desktopTools.css'
 import MediaLibraryApp from './MediaLibraryApp'
+import MusicApp from './MusicApp'
 import ContactsApp from './ContactsApp'
 import LedgerApp from './LedgerApp'
 import DiaryApp from './DiaryApp'
 import PhotoOrganizerApp from './PhotoOrganizerApp'
+import WardrobeApp from './WardrobeApp'
+import SkincareApp from './SkincareApp'
+import { ChevronLeft } from 'lucide-react'
 
 export type DesktopTool = 'ledger' | 'album' | 'contacts' | 'music' | 'diary' | 'divination' | 'app-store' | ExtensionAppId
 type Copy = (zh: string, en: string) => string
@@ -65,9 +69,9 @@ export default function DesktopTools({ tool, onClose, modelConfig, onOpenTool }:
     document.body.style.overflow = 'hidden'
     const node = dialog.current
     node?.focus()
-    const focusable = () => Array.from((node?.querySelector<HTMLElement>('.media-photo-viewer, .organizer-expanded, .organizer-delete-confirm') || node)?.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), audio[controls], a[href], [tabindex="0"]') ?? []).filter(element => !element.closest('[hidden]') && element.getAttribute('tabindex') !== '-1')
+    const focusable = () => Array.from((node?.querySelector<HTMLElement>('.album-action-sheet, .album-rename-sheet, .wardrobe-editor, .vinyl-options') || node?.querySelector<HTMLElement>('.media-photo-viewer, .organizer-expanded, .organizer-delete-confirm') || node)?.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), audio[controls], a[href], [tabindex="0"]') ?? []).filter(element => !element.closest('[hidden]') && element.getAttribute('tabindex') !== '-1')
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') { if (node?.querySelector('.media-photo-viewer, .organizer-expanded, .organizer-delete-confirm')) return; event.preventDefault(); event.stopPropagation(); closeRef.current(); return }
+      if (event.key === 'Escape') { if (node?.querySelector('.album-action-sheet, .album-rename-sheet, .media-photo-viewer, .organizer-expanded, .organizer-delete-confirm, .wardrobe-editor, .vinyl-options')) return; event.preventDefault(); event.stopPropagation(); closeRef.current(); return }
       if (event.key !== 'Tab') return
       const elements = focusable(), first = elements[0], last = elements.at(-1)
       if (!first) { event.preventDefault(); node?.focus(); return }
@@ -79,9 +83,9 @@ export default function DesktopTools({ tool, onClose, modelConfig, onOpenTool }:
     document.addEventListener('focusin', guardFocus)
     return () => { document.body.style.overflow = oldOverflow; document.removeEventListener('keydown', onKey, true); document.removeEventListener('focusin', guardFocus); if (previous?.isConnected) previous.focus() }
   }, [])
-  return createPortal(<div className="desktop-tools-overlay"><section ref={dialog} className={`desktop-tools-dialog tools-surface${tool === 'photo-organizer' ? ' photo-organizer-shell' : ''}`} role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1}>
-    <header className="desktop-tools-header" hidden={tool === 'photo-organizer'}><button type="button" className="desktop-close" onClick={onClose} aria-label={copy('返回', 'Back')}>{'<'}</button><div><h2 id={titleId}>{copy(...title)}</h2></div></header>
-    <div className="desktop-tools-content" key={tool}>{tool === 'ledger' ? <LedgerApp copy={copy} /> : tool === 'contacts' ? <ContactsApp locale={locale} /> : tool === 'diary' ? <DiaryApp copy={copy} /> : tool === 'album' ? <MediaLibraryApp kind="album" copy={copy} /> : tool === 'music' ? <MediaLibraryApp kind="music" copy={copy} /> : tool === 'divination' ? <Divination copy={copy} modelConfig={modelConfig} /> : tool === 'photo-organizer' ? <PhotoOrganizerApp locale={locale} onClose={onClose} /> : tool === 'app-store' ? <ExtensionStore locale={locale} openApp={id=>onOpenTool?.(id)} /> : <ExtensionAppView id={tool as ExtensionAppId} locale={locale} />}</div>
+  return createPortal(<div className="desktop-tools-overlay"><section ref={dialog} className={`desktop-tools-dialog tools-surface${tool === 'photo-organizer' ? ' photo-organizer-shell' : tool === 'ledger' ? ' ledger-shell' : tool === 'album' ? ' album-shell' : tool === 'wardrobe' ? ' wardrobe-shell' : tool === 'skincare-diary' ? ' skincare-shell' : tool === 'music' ? ' music-shell' : ''}`} role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1}>
+    <header className="desktop-tools-header" hidden={tool === 'photo-organizer' || tool === 'ledger' || tool === 'wardrobe' || tool === 'skincare-diary' || tool === 'music'}><button type="button" className="desktop-close" onClick={onClose} aria-label={copy('返回', 'Back')}>{tool === 'album' ? <ChevronLeft size={24}/> : '<'}</button><div><h2 id={titleId}>{copy(...title)}</h2></div></header>
+    <div className="desktop-tools-content" key={tool}>{tool === 'skincare-diary' ? <SkincareApp locale={locale} onClose={onClose} /> : tool === 'ledger' ? <LedgerApp copy={copy} onClose={onClose} /> : tool === 'wardrobe' ? <WardrobeApp locale={locale} onClose={onClose} /> : tool === 'contacts' ? <ContactsApp locale={locale} /> : tool === 'diary' ? <DiaryApp copy={copy} /> : tool === 'album' ? <MediaLibraryApp kind="album" copy={copy} /> : tool === 'music' ? <MusicApp locale={locale} onClose={onClose} /> : tool === 'divination' ? <Divination copy={copy} modelConfig={modelConfig} /> : tool === 'photo-organizer' ? <PhotoOrganizerApp locale={locale} onClose={onClose} /> : tool === 'app-store' ? <ExtensionStore locale={locale} openApp={id=>onOpenTool?.(id)} /> : <ExtensionAppView id={tool as ExtensionAppId} locale={locale} />}</div>
   </section></div>, document.body)
 }
 

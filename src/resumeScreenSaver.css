@@ -1,0 +1,69 @@
+/* Scoped portal styles; intentionally never lock or mutate body overflow. */
+.resume-screensaver {
+  --resume-bg: var(--cc-bg, #110f16);
+  --resume-fg: var(--cc-fg, #f6f0f3);
+  --resume-muted: var(--cc-muted, #b5aaba);
+  --resume-button-bg: #d9c1ed;
+  --resume-button-fg: #24182f;
+  color-scheme: dark;
+  position: fixed;
+  inset: 0;
+  z-index: 2147483647;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding: max(22px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
+  background: radial-gradient(ellipse at 50% 38%, color-mix(in srgb, var(--resume-accent) 9%, transparent), transparent 58%), var(--resume-bg);
+  color: var(--resume-fg);
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'PingFang SC', sans-serif;
+  isolation: isolate;
+  outline: none;
+}
+html[data-theme='light'] .resume-screensaver {
+  --resume-bg: var(--cc-bg, #f5f5f7);
+  --resume-fg: var(--cc-fg, #202124);
+  --resume-muted: var(--cc-muted, #686a72);
+  --resume-button-bg: #74549b;
+  --resume-button-fg: #fff;
+  color-scheme: light;
+}
+.resume-screensaver-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; flex-shrink: 0; width: min(100%, 960px); margin: 0 auto; }
+.resume-screensaver-header > span { font-size: 20px; font-weight: 650; letter-spacing: -.6px; }
+.resume-screensaver-clock { display: flex; flex-direction: column; gap: 4px; text-align: right; color: var(--resume-muted); }
+.resume-screensaver-clock time { font-size: 20px; font-variant-numeric: tabular-nums; letter-spacing: .04em; }
+.resume-screensaver-clock small { font-size: 11px; }
+.resume-screensaver-content { flex: 1 0 auto; display: flex; flex-direction: column; align-items: center; justify-content: center; width: min(100%, 460px); margin: 0 auto; padding: 28px 0; text-align: center; }
+.resume-screensaver-eyebrow { margin: 0 0 24px; font-size: 13px; color: var(--resume-muted); letter-spacing: .12em; }
+.resume-screensaver-orb { position: relative; display: grid; place-items: center; width: clamp(150px, 25vh, 224px); aspect-ratio: 1; margin-bottom: 22px; }
+.resume-screensaver-halo { position: absolute; inset: 0; border-radius: 50%; background: radial-gradient(circle, color-mix(in srgb, var(--resume-accent) 25%, transparent) 0%, color-mix(in srgb, var(--resume-accent) 10%, transparent) 46%, transparent 72%); animation: resume-orb-breathe 5s ease-in-out infinite; }
+.resume-screensaver-avatar { position: relative; display: grid; place-items: center; width: 64%; height: 64%; border-radius: 36%; border: 1px solid color-mix(in srgb, var(--resume-accent) 35%, transparent); background: linear-gradient(145deg, color-mix(in srgb, var(--resume-accent) 20%, var(--resume-bg)), color-mix(in srgb, var(--resume-accent) 7%, var(--resume-bg))); color: var(--resume-fg); font-size: clamp(44px, 8vh, 68px); font-weight: 450; box-shadow: inset 0 1px 0 color-mix(in srgb, var(--resume-accent) 20%, transparent), 0 12px 48px color-mix(in srgb, var(--resume-accent) 10%, transparent); }
+.resume-screensaver h1 { margin: 0 0 20px; color: var(--resume-fg); font-size: clamp(28px, 5vw, 38px); font-weight: 650; line-height: 1.3; letter-spacing: -.04em; overflow-wrap: anywhere; }
+.resume-screensaver-status { width: 100%; }
+.resume-screensaver-state-label { margin: 0 0 10px; font-size: 12px; line-height: 1.7; color: var(--resume-muted); }
+.resume-screensaver-activity { margin: 0; font-size: 21px; line-height: 1.5; font-weight: 550; color: var(--resume-fg); overflow-wrap: anywhere; }
+.resume-screensaver-disclosure { margin: 12px 0 0; font-size: 12px; line-height: 1.7; color: var(--resume-muted); }
+.resume-screensaver-enter { display: inline-flex; align-items: center; justify-content: center; gap: 10px; width: min(100%, 320px); min-height: 56px; margin-top: 32px; padding: 15px 24px; border: 0; border-radius: 19px; background: var(--resume-button-bg); color: var(--resume-button-fg); font: inherit; font-size: 17px; font-weight: 650; cursor: pointer; box-shadow: 0 10px 32px #00000015; touch-action: manipulation; }
+.resume-screensaver-enter:focus-visible { outline: 3px solid var(--resume-fg); outline-offset: 5px; }
+.resume-screensaver-enter:disabled { opacity: .65; cursor: wait; }
+.resume-screensaver-spinner { width: 17px; height: 17px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: resume-spinner-turn .8s linear infinite; flex-shrink: 0; }
+.resume-screensaver-error { width: 100%; margin: 16px 0 0; font-size: 13px; line-height: 1.7; color: #ffbcc6; overflow-wrap: anywhere; }
+html[data-theme='light'] .resume-screensaver-error { color: #943444; }
+.resume-screensaver-footer { flex-shrink: 0; text-align: center; font-size: 11px; line-height: 1.7; color: var(--resume-muted); }
+@keyframes resume-orb-breathe { 0%, 100% { transform: scale(.92); opacity: .65; } 50% { transform: scale(1.08); opacity: 1; } }
+@keyframes resume-spinner-turn { to { transform: rotate(360deg); } }
+@media (max-height: 650px) {
+  .resume-screensaver-content { padding: 20px 0; }
+  .resume-screensaver-eyebrow { margin-bottom: 12px; }
+  .resume-screensaver-orb { width: 140px; margin-bottom: 12px; }
+  .resume-screensaver h1 { margin-bottom: 12px; }
+  .resume-screensaver-enter { margin-top: 22px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .resume-screensaver-halo, .resume-screensaver-spinner { animation: none; }
+}

@@ -1,3 +1,4 @@
+/// <reference types="@capacitor/local-notifications" />
 import type { CapacitorConfig } from '@capacitor/cli'
 import { KeyboardResize } from '@capacitor/keyboard'
 
@@ -16,6 +17,11 @@ const config: CapacitorConfig = {
     preferredContentMode: 'mobile',
   },
   plugins: {
+    LocalNotifications: {
+      smallIcon: 'ic_stat_aily_reminder',
+      iconColor: '#7b5f96',
+      presentationOptions: ['banner', 'list', 'sound'],
+    },
     Keyboard: {
       // ChatPanel already tracks visualViewport; avoid a second native resize.
       resize: KeyboardResize.None,

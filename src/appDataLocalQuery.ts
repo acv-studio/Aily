@@ -1,6 +1,6 @@
 import type { Locale } from './i18n'
-import type { AppDataIdentity, AppDataManifest, AppDataQuery, AppDataScope } from './appDataTypes'
-import { discardAppDataPreview, listRegisteredAppDataManifests, previewAppData } from './appDataGateway'
+import type { AppDataIdentity, AppDataManifest, AppDataQuery, AppDataScope, AppDataSelection } from './appDataTypes'
+import { discardAppDataPreview, listRegisteredAppDataManifests, previewAppData, readAppDataSnapshot } from './appDataGateway'
 import { initializeAppDataProviders } from './appDataProviders'
 import { extensionApps, extensionInstallationSnapshot } from './extensionApps'
 import { isInstalledAppsQuestion } from './appDataIntent'
@@ -11,7 +11,7 @@ const upcomingIntent = /最近|最近的|下一个|下一次|即将|快到|临�
 const recentIntent = /最近|最新|近期|近几|最后|\b(?:recent|latest|last)\b/i
 const readIntent = /数据|记录|内容|正文|查看|查询|读取|列出|有哪些|有什么|有啥|写了什么|写过什么|记了什么|花了多少|还剩|剩余|有没有|统计|列表|看一下|看看|\b(?:data|records?|entries|content|show|list|read|query|remaining)\b/i
 const mutationIntent = /删除|清空|移除|修改|改成|添加|新增|写入|导入|导出|发送给|上传|分享|\b(?:delete|remove|clear|update|edit|write|create|add|import|export|upload|share)\b/i
-const builtinAliases: Record<string, string[]> = { diary: ['日记', 'journal'], ledger: ['记账', '账本', '收支'], contacts: ['通讯录'], album: ['相册', 'photos'], music: ['音乐'], divination: ['梅花易数', '占卜'] }
+const builtinAliases: Record<string, string[]> = { diary: ['日记', 'journal', '心情记录'], ledger: ['记账', '账本', '收支', '支出', '收入', '花销', '花钱', '花了多少', '结余', 'spending', 'expenses'], contacts: ['通讯录', '联系人'], album: ['相册', 'photos'], music: ['音乐'], divination: ['梅花易数', '占卜'], 'meal-planner': ['冰箱', '库存', '食材', '吃什么', '晚餐', '午餐', '早餐', '忌口', '过敏', 'pantry', 'fridge'], wardrobe: ['衣物', '衣服', '穿什么', '穿搭', 'outfit'], 'skincare-diary': ['护肤', '肌肤'] }
 function aliases(manifest: Pick<AppDataManifest, 'id' | 'name' | 'english' | 'aliases'>): string[] {
   const catalog = extensionApps.find(app => app.id === manifest.id)
   const values = [manifest.name, manifest.english, manifest.id, ...(manifest.aliases || []), ...(builtinAliases[manifest.id] || []), ...(catalog ? [catalog.name, catalog.english] : [])]
@@ -40,9 +40,9 @@ function selectedScope(app: AppDataManifest, text: string): AppDataScope | undef
     || app.scopes[0]
 }
 const dateString = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-function queryFor(text: string, calendar: boolean): AppDataQuery {
+function queryFor(text: string, calendar: boolean, allowCount = true): AppDataQuery {
   const query: AppDataQuery = { text, limit: 20 }
-  if (quantityIntent.test(text)) query.operation = 'count'
+  if (allowCount && quantityIntent.test(text)) query.operation = 'count'
   else if (calendar && upcomingIntent.test(text) && !/过去|历史|此前|previous|past/i.test(text)) query.operation = 'upcoming'
   else if (recentIntent.test(text)) { query.operation = 'recent'; query.limit = 5 }
   else if (upcomingIntent.test(text)) query.operation = 'upcoming'
@@ -53,6 +53,35 @@ function queryFor(text: string, calendar: boolean): AppDataQuery {
   else if (/今天|today/i.test(text)) { query.from = dateString(now); query.to = dateString(new Date(year, month, now.getDate() + 1)) }
   return query
 }
+const allAppsIntent = /所有(?:应用|软件|小应用)|全部(?:应用|软件|数据)|各个(?:应用|软件)|跨应用|我的生活|生活数据|\ball (?:apps?|applications?|software|data)\b|\bacross (?:my )?apps\b/i
+const analysisIntent = /分析|总结|整理|建议|推荐|安排|计划|怎么样|如何|怎么|穿什么|吃什么|\b(?:analy[sz]e|summari[sz]e|recommend|suggest|plan)\b/i
+const followupIntent = /这些|它们|根据|结合|继续(?:分析|总结|整理)|再(?:分析|总结|整理)|\b(?:these|those|continue (?:the )?analysis|based on)\b/i
+
+/** Derive readable scopes from the live registry, including future installed Apps.
+ * Only declared record-set containment replaces narrower scopes; equal/richer
+ * field lists from independent datasets always remain separate.
+ */
+export function automaticAppDataPlan(text: string, manifests: AppDataManifest[], previousQuestion = ''): { targets: AppDataManifest[]; selections: AppDataSelection[]; query: AppDataQuery } {
+  const routingText = previousQuestion && followupIntent.test(text) ? `${previousQuestion}\n${text}` : text
+  if (assessUserInput(text) || mutationIntent.test(text) || isInstalledAppsQuestion(text)) return { targets: [], selections: [], query: { text: text.slice(0, 300), limit: 20 } }
+  const named = matchingApps(routingText, manifests)
+  if (followupIntent.test(text) && !previousQuestion && !named.length && !allAppsIntent.test(text)) return { targets: [], selections: [], query: { text: Array.from(text).slice(0, 300).join(''), limit: 20 } }
+  const broadDataQuestion = /数据|记录|\b(?:data|records?|entries)\b/i.test(routingText) && readIntent.test(routingText)
+    || /我的(?:生活|情况|数据|记录)|我(?:本月|最近|今天|生活|这周|这个月)|\bmy\b/i.test(routingText) && analysisIntent.test(routingText)
+  const targets = allAppsIntent.test(routingText) || !named.length && broadDataQuestion ? manifests : named
+  const wantsDetails = analysisIntent.test(text) || /正文|内容|详情|明细|备注|\b(?:content|details|notes?|text)\b/i.test(text)
+  const selections = targets.flatMap(app => {
+    const scopes = app.scopes.filter(scope => !app.scopes.some(other => other.includesScopes?.includes(scope.id)))
+    return scopes.map(scope => ({ appId: app.id, scope: scope.id }))
+  })
+  const calendar = selections.some(selection => targets.find(app => app.id === selection.appId)?.scopes.find(scope => scope.id === selection.scope)?.calendar)
+  const query = queryFor(routingText, !!calendar, !wantsDetails)
+  const currentQuery = queryFor(text, !!calendar, !wantsDetails)
+  if (currentQuery.from || currentQuery.to) { query.from = currentQuery.from; query.to = currentQuery.to }
+  if (currentQuery.operation) { query.operation = currentQuery.operation; query.limit = currentQuery.limit; if (currentQuery.today) query.today = currentQuery.today }
+  return { targets, selections, query: { ...query, text: Array.from(text).slice(0, 300).join('') } }
+}
+
 const fieldLabels: Record<string, [string, string]> = {
   nextDate: ['下一次日期', 'Next occurrence'], daysUntil: ['距今（天）', 'Days until'],
   name: ['名称', 'Name'], date: ['日期', 'Date'], yearly: ['每年重复', 'Repeat yearly'], text: ['正文', 'Text'], note: ['备注', 'Note'], notes: ['备注', 'Notes'], mood: ['心情', 'Mood'],
@@ -64,8 +93,8 @@ function fieldsText(fields: Record<string, string | number | boolean | null>, en
 }
 
 /** The user's explicit named-App read request authorizes this local read only, NEVER model upload. */
-export async function appDataLocalReply(text: string, identity: AppDataIdentity, locale: Locale, signal: AbortSignal): Promise<string | null> {
-  if (text.length > 300 || !(readIntent.test(text) || quantityIntent.test(text) || recentIntent.test(text) || upcomingIntent.test(text)) || mutationIntent.test(text) || isInstalledAppsQuestion(text) || assessUserInput(text)) return null
+export async function appDataLocalReply(text: string, identity: AppDataIdentity, locale: Locale, signal: AbortSignal, automatic = false, previousQuestion = ''): Promise<string | null> {
+  if (!automatic && (text.length > 300 || !(readIntent.test(text) || quantityIntent.test(text) || recentIntent.test(text) || upcomingIntent.test(text))) || mutationIntent.test(text) || isInstalledAppsQuestion(text) || assessUserInput(text)) return null
   const en = locale === 'en'
   signal.throwIfAborted()
   let targets: AppDataManifest[] = []
@@ -74,7 +103,7 @@ export async function appDataLocalReply(text: string, identity: AppDataIdentity,
     const registered = listRegisteredAppDataManifests()
     // Include catalog-only Apps so an unavailable provider never falls through to invented model data.
     const candidates = [...registered, ...extensionApps.filter(app => !registered.some(item => item.id === app.id)).map(app => ({ id: app.id, name: app.name, english: app.english, availability: 'installable' as const, schemaVersion: 1, scopes: [] }))]
-    targets = matchingApps(text, candidates)
+    targets = automatic ? automaticAppDataPlan(text, candidates, previousQuestion).targets : matchingApps(text, candidates)
     if (!targets.length) return null
     if (identity.temporary) return en ? '[Local reply]\nTemporary chat does not read saved App data. Ask the main Bot in regular chat.' : '【本机回复】\n临时会话不读取已保存的应用数据，请在主 Bot 的普通会话中查询。'
     if (identity.role !== identity.primaryId) return en ? '[Local reply]\nOnly the main Bot can read your saved App data.' : '【本机回复】\n只有主 Bot 可以读取你的应用记录，请切换到主 Bot。'
@@ -83,17 +112,17 @@ export async function appDataLocalReply(text: string, identity: AppDataIdentity,
     const selected = targets.flatMap(app => {
       const name = en ? app.english : app.name
       if (app.availability === 'installable' && !installed.has(app.id)) { chunks.push(en ? `${name}: not installed in Aily; retained data will not be read.` : `${name}：当前未安装，不读取可能保留的旧数据。`); return [] }
-      const scope = selectedScope(app, text)
-      if (!scope) { chunks.push(en ? `${name}: no readable persistent-data interface yet.` : `${name}：当前没有可读取的持久业务数据接口。`); return [] }
-      return [{ appId: app.id, scope: scope.id }]
+      const scopes = automatic ? automaticAppDataPlan(text, [app], previousQuestion).selections : (() => { const scope = selectedScope(app, text); return scope ? [{ appId: app.id, scope: scope.id }] : [] })()
+      if (!scopes.length) { chunks.push(en ? `${name}: no readable persistent-data interface yet.` : `${name}：当前没有可读取的持久业务数据接口。`); return [] }
+      return scopes
     })
     if (selected.length) {
       const calendar = selected.some(selection => targets.find(app => app.id === selection.appId)?.scopes.find(scope => scope.id === selection.scope)?.calendar)
-      const query = queryFor(text, calendar)
+      const query = automatic ? automaticAppDataPlan(text, targets, previousQuestion).query : queryFor(text, calendar)
       // A local read does not require an API key, endpoint or model. This ephemeral
       // preview is never approved for external use and is discarded below.
       const localIdentity = { ...identity, endpoint: 'local-only://aily', model: 'local-read' }
-      const preview = await previewAppData(selected, query, localIdentity, signal)
+      const preview = await (automatic ? readAppDataSnapshot : previewAppData)(selected, query, localIdentity, signal)
       try {
         signal.throwIfAborted()
         for (const view of preview.views) {
@@ -122,7 +151,7 @@ export async function appDataLocalReply(text: string, identity: AppDataIdentity,
         if (query.from || query.to) chunks.push(en ? `Dated records range: ${query.from} to ${query.to} (end excluded). Nondated settings are current snapshots.` : `有日期记录的范围：${query.from} 至 ${query.to}（不含结束当天）；无日期设置仍为当前快照。`)
       } finally { discardAppDataPreview(preview) }
     }
-    chunks.push(en ? 'This result stays in local chat and is excluded from future AI context. For AI analysis, preview and authorize the selected data via “Read app data”.' : '以上结果仅保留在本机聊天，不进入后续 AI 上下文。如需 AI 分析，请在“读取应用数据”中预览并确认本次发送。')
+    chunks.push(en ? 'This result stays in local chat and is excluded from future AI context. Configure a model connection for automatic App-data analysis in ordinary main Bot chat; no selection or preview setup is needed.' : '以上结果仅保留在本机聊天，不进入后续 AI 上下文。配置模型连接后，直接在主 Bot 普通聊天中提问即可自动读取并分析，无需勾选或预览设置。')
     return chunks.join('\n\n')
   } catch (error) {
     signal.throwIfAborted()

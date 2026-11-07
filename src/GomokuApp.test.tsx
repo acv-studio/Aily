@@ -1,0 +1,21 @@
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { afterEach, beforeEach, expect, it, vi } from 'vitest'
+import GomokuApp from './GomokuApp'
+import { ExtensionAppView } from './ExtensionStore'
+import fs from 'node:fs'
+import DesktopTools from './DesktopTools'
+import { setLocale } from './i18n'
+const stones=(n:number)=>document.querySelectorAll(`.gomoku-board button[data-stone="${n}"]`)
+const move=(index:number)=>fireEvent.click(screen.getByRole('button',{name:`棋位 ${index+1}`}))
+const tick=()=>act(()=>{vi.advanceTimersByTime(300)})
+beforeEach(()=>vi.useFakeTimers());afterEach(()=>{cleanup();vi.useRealTimers();vi.restoreAllMocks()})
+it('defaults to human black and automatically responds with one white move',()=>{const fetch=vi.spyOn(globalThis,'fetch');render(<GomokuApp/>);move(112);expect(stones(1)).toHaveLength(1);expect(screen.getByRole('status')).toHaveTextContent('电脑正在思考');move(113);expect(stones(1)).toHaveLength(1);tick();expect(stones(2)).toHaveLength(1);expect(screen.getByRole('status')).toHaveTextContent('轮到你（黑棋）');expect(fetch).not.toHaveBeenCalled()})
+it('undo removes a full completed human/computer round',()=>{render(<GomokuApp/>);move(112);tick();fireEvent.click(screen.getByRole('button',{name:/悔棋/}));expect(stones(1)).toHaveLength(0);expect(stones(2)).toHaveLength(0);tick();expect(stones(2)).toHaveLength(0)})
+it('undo cancels a pending computer response',()=>{render(<GomokuApp/>);move(112);fireEvent.click(screen.getByRole('button',{name:/悔棋/}));tick();expect(stones(1)).toHaveLength(0);expect(stones(2)).toHaveLength(0)})
+it('restarting while thinking cancels stale automatic moves',()=>{render(<GomokuApp/>);move(112);fireEvent.click(screen.getByRole('button',{name:'重新开始'}));tick();expect(stones(1)).toHaveLength(0);expect(stones(2)).toHaveLength(0)})
+it('switching to two-player mode cancels the old response and alternates normally',()=>{render(<GomokuApp/>);move(112);fireEvent.click(screen.getByRole('button',{name:'本机双人'}));tick();expect(stones(1)).toHaveLength(0);move(0);move(1);tick();expect(stones(1)).toHaveLength(1);expect(stones(2)).toHaveLength(1);fireEvent.click(screen.getByRole('button',{name:'悔棋'}));expect(stones(2)).toHaveLength(0);expect(screen.getByRole('status')).toHaveTextContent('轮到白方')})
+it('allows computer black to open, keeps that opening when undoing a white round',()=>{render(<GomokuApp/>);fireEvent.change(screen.getByLabelText('你的棋子'),{target:{value:'2'}});tick();expect(stones(1)).toHaveLength(1);expect(screen.getByRole('button',{name:/悔棋/})).toBeDisabled();move(113);tick();expect(stones(1)).toHaveLength(2);expect(stones(2)).toHaveLength(1);fireEvent.click(screen.getByRole('button',{name:/悔棋/}));expect(stones(1)).toHaveLength(1);expect(stones(2)).toHaveLength(0);expect(screen.getByRole('status')).toHaveTextContent('轮到你（白棋）')})
+it('stops play at a win and correctly restores the winning player turn after undo',()=>{render(<GomokuApp/>);fireEvent.click(screen.getByRole('button',{name:'本机双人'}));[0,15,1,16,2,17,3,18,4].forEach(move);expect(screen.getByRole('status')).toHaveTextContent('黑方获胜');expect(screen.getByRole('button',{name:'棋位 6'})).toBeDisabled();fireEvent.click(screen.getByRole('button',{name:'悔棋'}));expect(screen.getByRole('status')).toHaveTextContent('轮到黑方');expect(stones(1)).toHaveLength(4)})
+it('cleans up the computer timer on unmount',()=>{const view=render(<GomokuApp/>);move(112);expect(vi.getTimerCount()).toBe(1);view.unmount();expect(vi.getTimerCount()).toBe(0)})
+it('captures a real mixed-stone board for browser geometry checks',()=>{setLocale('zh-CN');render(<DesktopTools tool="gomoku" onClose={vi.fn()}/>);fireEvent.click(screen.getByRole('button',{name:'本机双人'}));[112,97,113,98,127,114].forEach(move);fs.mkdirSync('.mobile-build/gomoku-geometry',{recursive:true});fs.writeFileSync('.mobile-build/gomoku-geometry/mixed.html',`<!doctype html><html data-theme="light"><body>${document.body.innerHTML}</body></html>`);expect(stones(1)).toHaveLength(3);expect(stones(2)).toHaveLength(3)})
+it('routes the store gomoku id to the real automatic game',()=>{render(<ExtensionAppView id="gomoku" locale="zh-CN"/>);expect(screen.getByRole('button',{name:'人机对战'})).toHaveAttribute('aria-pressed','true');expect(document.querySelectorAll('.gomoku-board button')).toHaveLength(225)})

@@ -75,7 +75,7 @@ export function PersonalStoreNotice({ store, copy }: StoreNoticeProps) {
   </>
 }
 export function PersonalLocalNotice({ copy }: { copy: PersonalToolCopy }) {
-  return <p className="personal-privacy">{copy('仅保存在当前浏览器，默认不上传、不同步，不包含在聊天加密备份中。只有在主 Bot 中主动读取、预览并确认本次授权后，选中的数据才会发送给指定模型。清除浏览器数据会移除记录；共用设备上的其他使用者可能看到它们。', 'Saved only in this browser, not uploaded or synced by default, and not included in encrypted chat backups. Selected data is sent to your model only after you explicitly read, preview and authorize that turn in the main Bot. Clearing browser data removes records; other users of a shared device may see them.')}</p>
+  return <p className="personal-privacy">{copy('记录保存在当前浏览器，不同步，不包含在聊天加密备份中。主 Bot 普通聊天会自动查询已保存记录，并将相关数据发送给你配置的模型，无需手动选择、预览或确认；临时会话和非主 Bot 不读取。清除浏览器数据会移除记录；共用设备上的其他使用者可能看到它们。', 'Records are saved in this browser, not synced or included in encrypted chat backups. In regular chat, the main Bot automatically queries saved records and sends relevant data to your configured model, without manual selection, preview or confirmation. Temporary chats and other Bots do not read app data. Clearing browser data removes records; other users of a shared device may see them.')}</p>
 }
 
 export function PersonalJsonExport<T>({ items, name, blocked, isCurrent, copy }: { items: T[]; name: 'ledger' | 'diary'; blocked: boolean; isCurrent: () => boolean; copy: PersonalToolCopy }) {

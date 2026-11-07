@@ -1,15 +1,18 @@
 import Dexie, { type Table } from 'dexie'
 
 export type MediaKind = 'album' | 'music'
-export type LibraryMedia = { id: string; kind: MediaKind; name: string; blob: Blob; mime: string; addedAt: string; favorite: boolean; collection: string }
+export type LibraryMedia = { id: string; kind: MediaKind; name: string; artist?: string; blob: Blob; mime: string; addedAt: string; favorite: boolean; collection: string }
 export type PhotoDecision = { id: string; status: 'pending' | 'keep'; updatedAt: string }
+export type MediaSetting = { key: string; value: unknown }
 class MediaDatabase extends Dexie {
   items!: Table<LibraryMedia, string>
   photoDecisions!: Table<PhotoDecision, string>
+  settings!: Table<MediaSetting, string>
   constructor() {
     super('aily-media-library-v1')
     this.version(1).stores({ items: 'id,kind,addedAt' })
     this.version(2).stores({ items: 'id,kind,addedAt', photoDecisions: 'id,status' })
+    this.version(3).stores({ items: 'id,kind,addedAt', photoDecisions: 'id,status', settings: 'key' })
   }
 }
 export const mediaDb = new MediaDatabase()
@@ -35,8 +38,9 @@ export async function addLibraryMedia(kind: MediaKind, files: { name: string; bl
   })
 }
 export async function clearMediaLibrary() {
-  await mediaDb.transaction('rw', mediaDb.items, mediaDb.photoDecisions, async () => {
+  await mediaDb.transaction('rw', mediaDb.items, mediaDb.photoDecisions, mediaDb.settings, async () => {
     await mediaDb.items.clear()
     await mediaDb.photoDecisions.clear()
+    await mediaDb.settings.clear()
   })
 }

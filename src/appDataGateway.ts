@@ -54,6 +54,18 @@ export function registerAppDataProvider(provider: AppDataProvider): () => void {
     if (scope.calendar !== undefined && (!scope.calendar || typeof scope.calendar !== 'object' || typeof scope.calendar.dateField !== 'string' || !scope.fields.includes(scope.calendar.dateField) || (scope.calendar.yearlyField !== undefined && (typeof scope.calendar.yearlyField !== 'string' || !scope.fields.includes(scope.calendar.yearlyField))) || !scope.fields.includes('nextDate') || !scope.fields.includes('daysUntil'))) throw error('Invalid app data calendar declaration')
     scopeIds.add(scope.id)
   }
+  for (const scope of manifest.scopes) {
+    if (scope.includesScopes !== undefined && (!Array.isArray(scope.includesScopes) || scope.includesScopes.length > 20 || new Set(scope.includesScopes).size !== scope.includesScopes.length || scope.includesScopes.some(id => typeof id !== 'string' || id === scope.id || !scopeIds.has(id) || !manifest.scopes.find(item => item.id === id)!.fields.every(field => scope.fields.includes(field))))) throw error('Invalid app data scope containment')
+  }
+  const visiting = new Set<string>(), visited = new Set<string>()
+  const checkContainment = (id: string) => {
+    if (visiting.has(id)) throw error('Cyclic app data scope containment')
+    if (visited.has(id)) return
+    visiting.add(id)
+    for (const contained of manifest.scopes.find(scope => scope.id === id)!.includesScopes || []) checkContainment(contained)
+    visiting.delete(id); visited.add(id)
+  }
+  for (const scope of manifest.scopes) checkContainment(scope.id)
   const registered = { original: provider, manifest: clone(manifest), signature: signature(manifest), read: provider.read }
   providers.set(manifest.id, registered)
   notify()
@@ -130,13 +142,13 @@ function budget(views: AppDataView[], query: AppDataQuery, identity: AppDataIden
   }
   return views
 }
-export async function previewAppData(selections: AppDataSelection[], query: AppDataQuery, identity: AppDataIdentity, signal: AbortSignal): Promise<AppDataPreview> {
+async function captureAppData(selections: AppDataSelection[], query: AppDataQuery, identity: AppDataIdentity, signal: AbortSignal, maxSelections = 20, bindingText?: string): Promise<AppDataPreview> {
   validIdentity(identity); assertSignal(signal)
-  if (!Array.isArray(selections) || selections.length === 0 || selections.length > 20 || new Set(selections.map(s => `${s.appId}/${s.scope}`)).size !== selections.length) throw error('Invalid app data selections')
+  if (!Array.isArray(selections) || selections.length === 0 || selections.length > maxSelections || new Set(selections.map(s => `${s.appId}/${s.scope}`)).size !== selections.length) throw error('Invalid app data selections')
   const validDate = (v: unknown): v is string => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) && Number.isFinite(Date.parse(`${v}T00:00:00Z`)) && new Date(`${v}T00:00:00Z`).toISOString().slice(0, 10) === v
   if (!query || typeof query.text !== 'string' || Array.from(query.text).length > 300 || (query.search !== undefined && (typeof query.search !== 'string' || Array.from(query.search).length > 100)) || !Number.isFinite(query.limit) || query.limit < 1 || (query.from !== undefined && !validDate(query.from)) || (query.to !== undefined && !validDate(query.to)) || (query.from && query.to && query.from >= query.to)) throw error('Invalid app data query (text max 300 characters; dates use an exclusive end)')
   if ((query.operation !== undefined && !['list', 'count', 'recent', 'upcoming'].includes(query.operation)) || (query.today !== undefined && !validDate(query.today)) || (query.operation === 'upcoming' && !query.today)) throw error('Invalid app data operation or reference date')
-  const capturedIdentity = identityCopy(identity), queryText = query.text
+  const capturedIdentity = identityCopy(identity), queryText = bindingText ?? query.text
   const capturedQuery: AppDataQuery = { text: cut(query.text), limit: Math.min(20, Math.floor(query.limit)), ...(query.operation !== undefined ? { operation: query.operation } : {}), ...(query.today !== undefined ? { today: query.today } : {}), ...(query.search !== undefined ? { search: query.search } : {}), ...(query.from !== undefined ? { from: cut(query.from) } : {}), ...(query.to !== undefined ? { to: cut(query.to) } : {}) }
   const installation = extensionInstallationSnapshot(), epoch = accessEpoch, sharedAccess = localStorage.getItem(APP_DATA_ACCESS_REVISION_KEY)
   // Validate every selection before invoking any adapter: unknown scope/key must never read.
@@ -167,6 +179,24 @@ export async function previewAppData(selections: AppDataSelection[], query: AppD
   previews.set(preview, { preview: captured, publicSignature: signature(preview), identity: clone(capturedIdentity), queryText, install: installation.revision, sharedAccess, epoch, sources })
   return preview
 }
+export function previewAppData(selections: AppDataSelection[], query: AppDataQuery, identity: AppDataIdentity, signal: AbortSignal): Promise<AppDataPreview> {
+  return captureAppData(selections, query, identity, signal)
+}
+
+/** Trusted host automatic query: ephemeral capability, no user setup or persisted grant.
+ * Keep the same installation, session, sanitization, byte budget and revision checks.
+ * A larger scope budget lets cross-App queries include all disjoint provider scopes.
+ */
+export function readAppDataSnapshot(selections: AppDataSelection[], query: AppDataQuery, identity: AppDataIdentity, signal: AbortSignal): Promise<AppDataPreview> {
+  return captureAppData(selections, query, identity, signal, 200)
+}
+
+export async function readAutomaticAppData(selections: AppDataSelection[], query: AppDataQuery, identity: AppDataIdentity, signal: AbortSignal, bindingText = query.text): Promise<AppDataTicket> {
+  const preview = await captureAppData(selections, query, identity, signal, 200, bindingText)
+  try { assertSignal(signal); return approveAppDataPreview(preview) }
+  finally { discardAppDataPreview(preview) }
+}
+
 function checkCapture(capture: Capture) {
   if (capture.epoch !== accessEpoch || localStorage.getItem(APP_DATA_ACCESS_REVISION_KEY) !== capture.sharedAccess || extensionInstallationSnapshot().revision !== capture.install) throw error('App installation or data access changed')
   for (const source of capture.sources) checkProvider(source.provider)

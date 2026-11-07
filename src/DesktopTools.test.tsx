@@ -128,7 +128,14 @@ describe('desktop local tools', () => {
 // exercised in MediaLibraryApp.test.tsx / mediaLibrary.test.ts. These tests
 // intentionally cover the actual DesktopTools routing and shell, not LocalMedia.
 describe('persistent media tool integration', () => {
-  beforeEach(async () => { await mediaDb.delete(); await mediaDb.open() })
+  beforeEach(async () => {
+    await mediaDb.delete(); await mediaDb.open()
+    Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: vi.fn(() => 'blob:test-music') })
+    Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: vi.fn() })
+    vi.spyOn(HTMLMediaElement.prototype, 'load').mockImplementation(() => {})
+    vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => {})
+    vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined)
+  })
   afterEach(async () => { cleanup(); await mediaDb.delete() })
   it('renders and loads the album library with a real photo file picker', async () => {
     render(<DesktopTools tool="album" onClose={vi.fn()} />)
@@ -136,7 +143,8 @@ describe('persistent media tool integration', () => {
     expect(screen.getByRole('status')).toHaveTextContent('正在读取媒体库')
     expect(screen.getByLabelText('添加照片')).toHaveAttribute('type', 'file')
     expect(screen.getByLabelText('添加照片')).toHaveAttribute('accept', 'image/*')
-    expect(screen.getByText(/关闭后仍保留/)).toBeInTheDocument()
+    fireEvent.click(screen.getByText('仅保存在本机'))
+    expect(screen.getByText(/这里移除的只是 Aily 副本/)).toBeInTheDocument()
     expect(await screen.findByText('添加你喜欢的照片或音乐，建立自己的媒体库。')).toBeInTheDocument()
     expect(screen.queryByRole('status')).toBeNull()
     expect(screen.queryByRole('img')).toBeNull()
@@ -145,24 +153,28 @@ describe('persistent media tool integration', () => {
   it('renders and loads music without requesting protected tracks or auto-starting playback', async () => {
     setLocale('en'); render(<DesktopTools tool="music" onClose={vi.fn()} />)
     expect(screen.getByRole('dialog', { name: 'Music' })).toBeInTheDocument()
-    expect(screen.getByRole('status')).toHaveTextContent('Loading library')
+    await screen.findByRole('heading', { name: '晚风慢调' })
+    expect(HTMLMediaElement.prototype.play).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'Collapse player' }))
     expect(screen.getByLabelText('Add local music')).toHaveAttribute('type', 'file')
     expect(screen.getByLabelText('Add local music')).toHaveAttribute('accept', expect.stringContaining('audio/*'))
     expect(screen.getByText(/protected Apple Music tracks cannot be imported/)).toBeInTheDocument()
-    expect(await screen.findByText('Add your favorite photos or music to build your library.')).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Open 晚风慢调' })).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'Now playing' })).toBeNull()
     expect(localStorage.getItem('aily-desktop-music')).toBeNull()
   })
   it('switches media routes with independent searches and the correct localized shell', async () => {
     const view = render(<DesktopTools tool="album" onClose={vi.fn()} />)
     await screen.findByText('添加你喜欢的照片或音乐，建立自己的媒体库。')
-    change('搜索媒体', '海边')
+    change('搜索照片', '海边')
     view.rerender(<DesktopTools tool="music" onClose={vi.fn()} />)
     expect(screen.getByRole('dialog', { name: '音乐' })).toBeInTheDocument()
+    await screen.findByRole('heading', { name: '晚风慢调' })
+    fireEvent.click(screen.getByRole('button', { name: '收起播放器' }))
     expect(screen.getByLabelText('搜索媒体')).toHaveValue('')
     expect(screen.getByLabelText('添加本地音乐')).toBeInTheDocument()
     expect(screen.queryByLabelText('添加照片')).toBeNull()
-    await screen.findByText('添加你喜欢的照片或音乐，建立自己的媒体库。')
+    await screen.findByRole('button', { name: '打开 晚风慢调' })
   })
 })
 

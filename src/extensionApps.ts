@@ -13,7 +13,7 @@ export const extensionApps:ExtensionApp[]=[
  {id:'skincare-diary',name:'护肤日记',english:'Skincare Diary',description:'记录护肤步骤、产品和肌肤状态',englishDescription:'Track routines, products and skin condition',icon:'🫧',color:'#f5a9c7',category:'life'},
  {id:'wardrobe',name:'穿搭衣橱',english:'Wardrobe',description:'整理衣物并组合每日穿搭',englishDescription:'Organize clothes and create outfits',icon:'👗',color:'#c8b2ff',category:'life'},
  {id:'anniversary',name:'纪念日助手',english:'Anniversary',description:'记录重要日期并查看倒数',englishDescription:'Save important dates and countdowns',icon:'💝',color:'#ff9da8',category:'life'},
- {id:'gomoku',name:'五子棋',english:'Gomoku',description:'本机双人五子棋',englishDescription:'Local two-player Gomoku',icon:'⚫',color:'#e6c38c',category:'game'},
+ {id:'gomoku',name:'五子棋',english:'Gomoku',description:'电脑自动落子的人机对战，也支持本机双人模式',englishDescription:'Play an automatic offline opponent or local two-player Gomoku',icon:'⚫',color:'#e6c38c',category:'game'},
  {id:'game-2048',name:'2048',english:'2048',description:'滑动合并数字方块',englishDescription:'Swipe and merge number tiles',icon:'🔢',color:'#e5a76f',category:'game'},
 ]
 export const extensionInstallationKey = 'aily.extension-apps.v1'

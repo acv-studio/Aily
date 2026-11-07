@@ -1,0 +1,42 @@
+/* Final containment: legacy app-wide button elevation must not turn the ledger into raised tiles. */
+.desktop-tools-dialog.ledger-shell .ledger-reference-app {
+  --cu-focus:0 0 0 2px rgba(168,135,12,.25);
+  --cc-fg:var(--lr-fg); --cc-muted:var(--lr-muted); --cc-card:var(--lr-card); --cc-border:var(--lr-border);
+  --text-primary:var(--lr-fg); --text-secondary:var(--lr-muted);
+}
+.desktop-tools-dialog.ledger-shell .ledger-reference-app :is(button,input,select,textarea) {
+  box-shadow:none!important; text-shadow:none!important; background-image:none!important;
+}
+.desktop-tools-dialog.ledger-shell .ledger-reference-app button { -webkit-appearance:none; appearance:none; transform:none!important; }
+.desktop-tools-dialog.ledger-shell .ledger-reference-app :is(input,select,textarea) { background:var(--lr-input)!important; color:var(--lr-fg)!important; border-color:var(--lr-border)!important; border-radius:11px!important; }
+.desktop-tools-dialog.ledger-shell .ledger-reference-app fieldset:disabled :is(input,select,textarea) { background:var(--lr-disabled-bg)!important; color:var(--lr-disabled-fg)!important; }
+.desktop-tools-dialog.ledger-shell .ledger-reference-app:not([data-page=details]) .ledger-shortcuts { display:none; }
+.desktop-tools-dialog.ledger-shell .ledger-reference-app:not([data-page=details]) .ledger-content { padding-top:20px!important; }
+.desktop-tools-dialog.ledger-shell .ledger-reference-app :is(button,input,select,textarea,summary):focus-visible { outline:2px solid #a8870c!important; outline-offset:3px; }
+html[data-theme=dark] .desktop-tools-dialog.ledger-shell .ledger-reference-app :is(button,input,select,textarea,summary):focus-visible { outline-color:var(--lr-yellow)!important; }
+.desktop-tools-dialog.ledger-shell .ledger-reference-app :is(h2,h3,h4,strong,b) { color:inherit!important; }
+.desktop-tools-dialog.ledger-shell .ledger-reference-app :is(.ledger-muted,.ledger-filter-note,.ledger-row-copy small,.ledger-day-heading span,.ledger-section-heading>span,.ledger-calendar label,.ledger-budget label,.ledger-editor label,.personal-privacy) { color:var(--lr-muted)!important; }
+.desktop-tools-dialog.ledger-shell .ledger-reference-app .personal-status { color:var(--lr-income)!important; }
+.desktop-tools-dialog.ledger-shell .ledger-reference-app .personal-error { color:var(--lr-error)!important; }
+.desktop-tools-dialog.ledger-shell .ledger-reference-app .ledger-income { color:var(--lr-income)!important; }
+.desktop-tools-dialog.ledger-shell .ledger-reference-app .ledger-header button { border:0!important; border-radius:8px; background:transparent!important; }
+.desktop-tools-dialog.ledger-shell .ledger-reference-app .ledger-header button:active:not(:disabled) { background:rgba(0,0,0,.06)!important; }
+html[data-theme=dark] .desktop-tools-dialog.ledger-shell .ledger-reference-app .ledger-header button:active:not(:disabled) { background:rgba(255,255,255,.06)!important; }
+html[data-theme=dark] .desktop-tools-dialog.ledger-shell .ledger-reference-app .ledger-month-title { border-right-color:var(--lr-border); }
+.desktop-tools-dialog.ledger-shell .ledger-reference-app .ledger-shortcuts { background:var(--lr-card)!important; border:1px solid var(--lr-border); box-shadow:0 2px 8px rgba(0,0,0,.035)!important; }
+.desktop-tools-dialog.ledger-shell .ledger-reference-app .ledger-shortcuts button { background:transparent!important; border:0!important; border-radius:8px; }
+.desktop-tools-dialog.ledger-shell .ledger-reference-app .ledger-shortcuts button:active:not(:disabled) { background:var(--lr-soft)!important; }
+.desktop-tools-dialog.ledger-shell .ledger-reference-app .ledger-row { gap:8px; background:transparent!important; box-shadow:none!important; }
+.desktop-tools-dialog.ledger-shell .ledger-reference-app .ledger-row-main { border:0!important; background:transparent!important; border-radius:0!important; }
+.desktop-tools-dialog.ledger-shell .ledger-reference-app .ledger-row-main b { flex-shrink:0; margin-left:auto; }
+.desktop-tools-dialog.ledger-shell .ledger-reference-app .ledger-row-actions { flex-direction:row; align-items:center; align-self:center; }
+.desktop-tools-dialog.ledger-shell .ledger-reference-app .ledger-row-actions button { width:44px; height:44px; padding:10px; border:0!important; border-radius:8px; background:transparent!important; }
+.desktop-tools-dialog.ledger-shell .ledger-reference-app .ledger-row-actions button:active:not(:disabled) { background:var(--lr-error-bg)!important; color:var(--lr-error)!important; }
+.desktop-tools-dialog.ledger-shell .ledger-reference-app .ledger-app-frame { min-height:0; overflow:hidden; }
+.desktop-tools-dialog.ledger-shell .ledger-reference-app .ledger-content { flex:1 1 0; min-height:0; overflow-y:auto; padding-bottom:32px!important; scroll-padding-bottom:32px; }
+.desktop-tools-dialog.ledger-shell .ledger-reference-app .ledger-bottom-nav { position:relative!important; flex:0 0 auto; margin:0; box-shadow:none!important; }
+.desktop-tools-dialog.ledger-shell .ledger-reference-app .ledger-bottom-nav button { border:0!important; border-radius:8px; background:transparent!important; }
+.desktop-tools-dialog.ledger-shell .ledger-reference-app .ledger-bottom-nav button:active:not(:disabled) { background:var(--lr-soft)!important; }
+.desktop-tools-dialog.ledger-shell .ledger-reference-app .ledger-bottom-nav .ledger-add { border-radius:50%; background:var(--lr-yellow)!important; }
+.desktop-tools-dialog.ledger-shell .ledger-reference-app .ledger-bottom-nav .ledger-add:active:not(:disabled) { background:#f6cf27!important; }
+@media(max-width:370px) { .desktop-tools-dialog.ledger-shell .ledger-reference-app .ledger-row { gap:2px; } }

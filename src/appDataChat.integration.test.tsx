@@ -31,17 +31,90 @@ afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); invali
 async function ticket(who = identity, text = question) {
   return approveAppDataPreview(await previewAppData([{ appId: 'ledger', scope: 'totals' }], { text, limit: 20 }, who, new AbortController().signal))
 }
-async function hookSetup() {
+async function hookSetup(model = true) {
   const hook = renderHook(useLocalChat)
   await waitFor(() => expect(hook.result.current.ready).toBe(true))
   await act(() => hook.result.current.finishOnboarding(defaultOnboardingProfile('lu')))
-  act(() => { hook.result.current.setApiKey('test-key'); hook.result.current.setEndpoint(identity.endpoint); hook.result.current.setModel(identity.model) })
+  act(() => { hook.result.current.setApiKey(model ? 'test-key' : ''); hook.result.current.setEndpoint(identity.endpoint); hook.result.current.setModel(identity.model) })
   return hook
 }
 const body = (index: number) => String(fetchMock.mock.calls[index][1]?.body)
 describe('app data through the real model and persistence pipeline', () => {
-  it.each(['最近的纪念日', '我相册里面有几张照片'])('routes the newest screenshot phrase through real local repositories without a model request: %s', async text => {
+  it('ordinary main Bot chat automatically attaches saved notes and full diary data, without any setup', async () => {
     const hook = await hookSetup()
+    localStorage.setItem('aily-desktop-diary', JSON.stringify([{ id: 'diary-one', date: '2026-11-01', text: 'SAVED-DIARY-CONTENT', mood: 'good' }]))
+    await act(() => hook.result.current.send({ text: '帮我分析本月收支和日记' }))
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(body(0)).toContain('APP_DATA_JSON')
+    expect(body(0)).toContain('1234')
+    expect(body(0)).toContain('NEVER-SEND-UNAUTHORIZED-NOTE') // Automatic host queries include saved notes now.
+    expect(body(0)).toContain('SAVED-DIARY-CONTENT')
+    expect(body(0)).not.toContain('aily-desktop-ledger')
+    expect(hook.result.current.chatMessages.at(-1)).toMatchObject({ localOnly: true, appDataReply: true, status: 'sent' })
+    expect(hook.result.current.error).toBe('')
+    await act(() => hook.result.current.send({ text: '聊聊咖啡吧' }))
+    expect(body(1)).not.toContain('APP_DATA_JSON')
+    expect(body(1)).not.toContain('SAVED-DIARY-CONTENT')
+    expect(body(1)).not.toContain('NEVER-SEND-UNAUTHORIZED-NOTE')
+    expect(body(1)).not.toContain('CONFIDENTIAL-APP-ANSWER')
+    await act(() => hook.result.current.beforeDataChange())
+  })
+  it('requeries fresh sources for followup analysis instead of replaying an earlier answer', async () => {
+    const hook = await hookSetup()
+    await act(() => hook.result.current.send({ text: '分析我的收支' }))
+    localStorage.setItem('aily-desktop-ledger', JSON.stringify([{ ...ledger[0], cents: 7890, note: 'FRESH-NOTE' }]))
+    await act(() => hook.result.current.send({ text: '根据这些数据继续分析' }))
+    expect(body(1)).toContain('7890')
+    expect(body(1)).toContain('FRESH-NOTE')
+    expect(body(1)).not.toContain('CONFIDENTIAL-APP-ANSWER')
+    expect(body(1)).not.toContain('1234')
+    await act(() => hook.result.current.beforeDataChange())
+  })
+  it('a retried anaphoric question uses its original earlier App turn, not newer App requests', async () => {
+    const hook = await hookSetup()
+    localStorage.setItem('aily-desktop-diary', JSON.stringify([{ id: 'one', date: '2026-11-01', text: 'ORIGINAL-DIARY-SOURCE' }]))
+    await act(() => hook.result.current.send({ text: '帮我分析日记' }))
+    fetchMock.mockRejectedValueOnce(new Error('offline'))
+    await act(() => hook.result.current.send({ text: '根据这些数据继续分析' }))
+    const failed = hook.result.current.chatMessages.find(message => message.from === 'user' && message.status === 'failed')!
+    await act(() => hook.result.current.send({ text: '分析我的收支' }))
+    await act(() => hook.result.current.send({ retryId: failed.id }))
+    expect(body(3)).toContain('ORIGINAL-DIARY-SOURCE')
+    expect(body(3)).not.toContain('NEVER-SEND-UNAUTHORIZED-NOTE')
+    expect(hook.result.current.error).toBe('')
+    await act(() => hook.result.current.beforeDataChange())
+  })
+  it('does not revive an old App scope after unrelated conversation for an ambiguous followup', async () => {
+    const hook = await hookSetup()
+    await act(() => hook.result.current.send({ text: '分析我的收支' }))
+    await act(() => hook.result.current.send({ text: '聊聊咖啡吧' }))
+    await act(() => hook.result.current.send({ text: '根据这些数据继续分析' }))
+    expect(body(2)).not.toContain('APP_DATA_JSON')
+    expect(body(2)).not.toContain('NEVER-SEND-UNAUTHORIZED-NOTE')
+    await act(() => hook.result.current.beforeDataChange())
+  })
+  it.each(['temporary', 'nonprimary'])('does not read saved records in %s chat', async session => {
+    const hook = await hookSetup()
+    if (session === 'temporary') act(() => hook.result.current.toggleTemporary())
+    else await act(async () => { hook.result.current.setSelected('chen') })
+    const read = vi.spyOn(Storage.prototype, 'getItem')
+    await act(() => hook.result.current.send({ text: '分析我的收支' }))
+    expect(read.mock.calls.map(([key]) => key)).not.toContain('aily-desktop-ledger')
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(hook.result.current.chatMessages.at(-1)!.text).toContain('主 Bot')
+    await act(() => hook.result.current.beforeDataChange())
+  })
+  it('without a model connection, automatic analysis returns saved details locally instead of requesting preview setup', async () => {
+    const hook = await hookSetup(false)
+    await act(() => hook.result.current.send({ text: '帮我分析收支' }))
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(hook.result.current.chatMessages.at(-1)!.text).toContain('NEVER-SEND-UNAUTHORIZED-NOTE')
+    expect(hook.result.current.chatMessages.at(-1)!.text).toContain('无需勾选或预览设置')
+    expect(hook.result.current.error).toBe('')
+    await act(() => hook.result.current.beforeDataChange())
+  })
+  it.each(['最近的纪念日', '我相册里面有几张照片'])('without a model connection, automatically reads real local repositories: %s', async text => {
+    const hook = await hookSetup(false)
     let expected: string
     if (text.includes('相册')) {
       await mediaDb.items.bulkAdd(Array.from({ length: 3 }, (_, index) => ({ id: `photo-${index}`, kind: 'album' as const, name: `PRIVATE-PHOTO-${index}`, blob: new Blob(['fake'], { type: 'image/png' }), mime: 'image/png', addedAt: new Date().toISOString(), favorite: false, collection: '' })))
@@ -59,6 +132,7 @@ describe('app data through the real model and persistence pipeline', () => {
     expect(answer).toMatchObject({ localOnly: true, appDataReply: true, status: 'sent' })
     expect(hook.result.current.error).toBe('')
     expect(fetchMock).not.toHaveBeenCalled()
+    act(() => hook.result.current.setApiKey('test-key'))
     await act(() => hook.result.current.send({ text: '你好，我们聊点别的' }))
     expect(body(0)).not.toContain('PRIVATE-UPCOMING-ANNIVERSARY')
     expect(body(0)).not.toContain('PRIVATE-PHOTO-')
@@ -83,8 +157,8 @@ describe('app data through the real model and persistence pipeline', () => {
     expect(fetchMock).not.toHaveBeenCalled()
     await act(() => hook.result.current.beforeDataChange())
   })
-  it('retries the failed anniversary screenshot locally without duplicating the original user message or sending App data', async () => {
-    const hook = await hookSetup()
+  it('without a model, retries locally without duplicating the original user message or sending App data', async () => {
+    const hook = await hookSetup(false)
     setExtensionInstalled('anniversary', true)
     localStorage.setItem('aily.ext.anniversary', JSON.stringify([{ id: 'one', name: 'PRIVATE-ANNIVERSARY', date: '2026-12-01', yearly: true }]))
     await persistChatChanges('lu', [{ id: 100, from: 'user', text: '纪念日有哪些数据', time: '17:19', status: 'failed' }])
@@ -95,12 +169,13 @@ describe('app data through the real model and persistence pipeline', () => {
     expect(hook.result.current.chatMessages.at(-1)).toMatchObject({ appDataReply: true, localOnly: true, status: 'sent' })
     expect(hook.result.current.chatMessages.at(-1)!.text).toContain('PRIVATE-ANNIVERSARY')
     expect(fetchMock).not.toHaveBeenCalled()
+    act(() => hook.result.current.setApiKey('test-key'))
     await act(() => hook.result.current.send({ text: '继续聊聊吧' }))
     expect(body(0)).not.toContain('PRIVATE-ANNIVERSARY')
     await act(() => hook.result.current.beforeDataChange())
   })
-  it('answers an empty named App with no-records copy rather than a network error', async () => {
-    const hook = await hookSetup()
+  it('without a model, answers an empty named App with no-records copy rather than a network error', async () => {
+    const hook = await hookSetup(false)
     setExtensionInstalled('anniversary', true)
     await act(() => hook.result.current.send({ text: '纪念日有哪些数据' }))
     expect(hook.result.current.chatMessages.at(-1)!.text).toContain('没有已保存记录')
@@ -160,17 +235,21 @@ describe('app data through the real model and persistence pipeline', () => {
     expect(context).not.toContain('【应用数据来源：')
     await act(() => hook.result.current.beforeDataChange())
   })
-  it('never reuses a ticket for retry and requires fresh authorization after failure', async () => {
+  it('rereads current App records on retry without requiring a manual preview or reusing old capabilities', async () => {
     const hook = await hookSetup()
     const capability = await ticket(hook.result.current.appDataIdentity())
     fetchMock.mockRejectedValueOnce(new Error('offline'))
     await act(async () => { await expect(hook.result.current.send({ text: question, appDataTicket: capability, rejectOnFailure: true })).rejects.toThrow() })
     const user = hook.result.current.chatMessages.find(message => message.appDataRequest)!
+    localStorage.setItem('aily-desktop-ledger', JSON.stringify([{ ...ledger[0], cents: 5678 }]))
     await act(() => hook.result.current.send({ retryId: user.id }))
-    expect(fetchMock).toHaveBeenCalledTimes(1)
-    expect(hook.result.current.error).toContain('重新选择数据')
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(body(1)).toContain('5678')
+    expect(body(1)).toContain('APP_DATA_JSON')
+    expect(hook.result.current.chatMessages.filter(message => message.id === user.id)).toHaveLength(1)
+    expect(hook.result.current.error).toBe('')
     await act(async () => { await expect(hook.result.current.send({ text: question, appDataTicket: capability, rejectOnFailure: true })).rejects.toThrow() })
-    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(fetchMock).toHaveBeenCalledTimes(2)
     await act(() => hook.result.current.beforeDataChange())
   })
   it('does not pass app data to demo replies or safety responses', async () => {

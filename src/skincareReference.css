@@ -1,0 +1,138 @@
+.desktop-tools-dialog.skincare-shell{height:100dvh;max-height:100dvh;overflow:hidden;background:#f7f5f0!important}
+.desktop-tools-dialog.skincare-shell>.desktop-tools-header{display:none!important}
+.desktop-tools-dialog.skincare-shell>.desktop-tools-content{height:100%;min-height:0;padding:0!important;overflow:hidden}
+.skincare-app.skincare-app { --sk-bg:#f7f5f0; --sk-card:#fff; --sk-text:#313341; --sk-muted:#626678; --sk-border:#e9e6ef; --sk-blue:#456bb3; --sk-on-blue:#fff; --sk-blue-soft:#ecf2ff; --sk-lavender:#f0ecf8; --sk-cream:#f8f0dc; --sk-field:#fff; --sk-danger:#a33d50; color:var(--sk-text)!important; background:var(--sk-bg)!important; font-family:Arial,'PingFang SC',sans-serif; height:100%; min-height:0; width:100%; min-width:0; display:flex; position:relative; overflow:hidden; isolation:isolate; text-align:left; color-scheme:light; }
+.skincare-app.sk-night { --sk-bg:#242b3a; --sk-card:#30394c; --sk-text:#edf0f8; --sk-muted:#b2bdd3; --sk-border:#45516a; --sk-blue:#9cbaff; --sk-on-blue:#1d2b45; --sk-blue-soft:#3b4a69; --sk-lavender:#41435e; --sk-cream:#4d4750; --sk-field:#293346; --sk-danger:#ffb1bd; color-scheme:dark; }
+.skincare-app.skincare-app *, .skincare-app.skincare-app *::before, .skincare-app.skincare-app *::after { box-sizing:border-box; }
+.skincare-app.skincare-app .sk-background { display:flex; flex-direction:column; min-width:0; min-height:0; width:100%; height:100%; }
+.skincare-app.skincare-app h1,.skincare-app.skincare-app h2,.skincare-app.skincare-app h3,.skincare-app.skincare-app p,.skincare-app.skincare-app label,.skincare-app.skincare-app strong,.skincare-app.skincare-app small { color:inherit!important; margin:0; text-shadow:none; }
+.skincare-app.skincare-app h1 { font-size:22px; line-height:1.3; letter-spacing:.5px; font-weight:700; }
+.skincare-app.skincare-app h2 { font-size:23px; line-height:1.5; font-weight:700; }
+.skincare-app.skincare-app h3 { font-size:16px; line-height:1.5; font-weight:600; }
+.skincare-app.skincare-app p { font-size:13px; line-height:1.65; overflow-wrap:anywhere; }
+.skincare-app.skincare-app button { appearance:none; display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:44px; max-width:100%; border:1px solid var(--sk-border)!important; border-radius:12px; padding:9px 13px; margin:0; color:var(--sk-text)!important; background:var(--sk-card)!important; font:inherit; font-size:13px; line-height:1.3; cursor:pointer; box-shadow:none!important; text-shadow:none; flex-shrink:0; transform:none; touch-action:manipulation; }
+.skincare-app.skincare-app button:hover { background:var(--sk-lavender)!important; }
+.skincare-app.skincare-app button:disabled { opacity:1!important; color:var(--sk-muted)!important; background:var(--sk-bg)!important; cursor:default; border-color:var(--sk-border)!important; }
+.skincare-app.skincare-app button:focus-visible,.skincare-app.skincare-app input:focus-visible,.skincare-app.skincare-app select:focus-visible,.skincare-app.skincare-app textarea:focus-visible { outline:3px solid var(--sk-blue); outline-offset:3px; }
+.skincare-app.skincare-app svg { flex-shrink:0; }
+.skincare-app.skincare-app .sk-header { display:flex; align-items:center; gap:11px; padding:calc(19px + env(safe-area-inset-top,0px)) 20px 17px; flex-shrink:0; border-bottom:1px solid var(--sk-border); background:var(--sk-bg); }
+.skincare-app.skincare-app .sk-header p { color:var(--sk-muted)!important; font-size:11px; margin-top:3px; }
+.skincare-app.skincare-app .sk-icon-button { border:0!important; width:44px; height:44px; padding:0; background:transparent!important; }
+.skincare-app.skincare-app .sk-theme { margin-left:auto; }
+.skincare-app.skincare-app .sk-content { flex:1; min-height:0; overflow-y:auto; overflow-x:hidden; padding:22px 24px 24px; overscroll-behavior:contain; scrollbar-width:thin; }
+.skincare-app.skincare-app .sk-section-heading { margin-bottom:22px; }
+.skincare-app.skincare-app .sk-section-heading h2 { margin-top:5px; margin-bottom:5px; }
+.skincare-app.skincare-app .sk-section-heading p { color:var(--sk-muted)!important; }
+.skincare-app.skincare-app .sk-eyebrow { display:block; font-size:9px; letter-spacing:1.7px; font-weight:600; color:var(--sk-muted); line-height:1.5; }
+.skincare-app.skincare-app .sk-routine { background:var(--sk-card); border:1px solid var(--sk-border); border-radius:21px; margin-bottom:16px; overflow:hidden; box-shadow:0 5px 18px #24244904; }
+.skincare-app.skincare-app .sk-plan-open { display:flex; width:100%; border:0!important; background:transparent!important; gap:17px; padding:22px 20px 18px; text-align:left; border-radius:0; }
+.skincare-app.skincare-app .sk-plan-copy { display:flex; flex-direction:column; flex:1; min-width:0; gap:7px; }
+.skincare-app.skincare-app .sk-plan-copy strong { font-size:20px; line-height:1.4; overflow-wrap:anywhere; }
+.skincare-app.skincare-app .sk-plan-copy > span:last-child { color:var(--sk-muted); font-size:12px; }
+.skincare-app.skincare-app .sk-icon-tile { width:65px; height:65px; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; border-radius:20px; color:#b49654; background:var(--sk-cream); }
+.skincare-app.skincare-app .sk-evening .sk-icon-tile { color:#8d87be; background:var(--sk-lavender); }
+.skincare-app.skincare-app .sk-plan-open > svg { color:var(--sk-muted); }
+.skincare-app.skincare-app .sk-plan-bottom { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 19px 13px; border-top:1px solid var(--sk-border); }
+.skincare-app.skincare-app .sk-plan-bottom > span { color:var(--sk-muted); font-size:11px; }
+.skincare-app.skincare-app .sk-complete { border:0!important; font-size:12px; min-height:44px; color:var(--sk-blue)!important; background:var(--sk-blue-soft)!important; padding:8px 12px; }
+.skincare-app.skincare-app .sk-complete.is-complete { color:var(--sk-on-blue)!important; background:var(--sk-blue)!important; }
+.skincare-app.skincare-app .sk-complete:not(.is-complete) svg { border:1px solid var(--sk-blue); border-radius:50%; padding:1px; }
+.skincare-app.skincare-app .sk-diary-card { display:flex; gap:16px; width:100%; text-align:left; border-radius:21px; padding:20px; margin-top:21px; }
+.skincare-app.skincare-app .sk-diary-card .sk-icon-tile { color:#899e83; background:#edf4e9; }
+.skincare-app.sk-night .sk-diary-card .sk-icon-tile { color:#b9d0b2; background:#3c5045; }
+.skincare-app.skincare-app .sk-diary-card > span:nth-child(2) { flex:1; min-width:0; }
+.skincare-app.skincare-app .sk-diary-card strong { display:block; font-size:20px; margin-top:6px; }
+.skincare-app.skincare-app .sk-diary-card small { display:block; font-size:11px; color:var(--sk-muted)!important; margin-top:7px; line-height:1.6; }
+.skincare-app.skincare-app .sk-mini-stats { display:flex; padding:24px 5px 9px; gap:14px; }
+.skincare-app.skincare-app .sk-mini-stats > span { display:flex; flex:1; flex-direction:column; align-items:center; gap:7px; font-size:11px; color:var(--sk-muted); }
+.skincare-app.skincare-app .sk-mini-stats strong { font-size:28px; color:var(--sk-text)!important; font-weight:500; }
+.skincare-app.skincare-app .sk-mini-stats > span + span { border-left:1px solid var(--sk-border); }
+.skincare-app.skincare-app .sk-bottom-nav { display:flex; gap:0; padding:7px 12px calc(8px + env(safe-area-inset-bottom,0px)); background:var(--sk-card); border-top:1px solid var(--sk-border); flex-shrink:0; z-index:2; }
+.skincare-app.skincare-app .sk-bottom-nav button { flex:1; border:0!important; background:transparent!important; border-radius:12px; flex-direction:column; gap:5px; font-size:11px; padding:8px; color:var(--sk-muted)!important; min-height:57px; }
+.skincare-app.skincare-app .sk-bottom-nav button.is-active { color:var(--sk-blue)!important; background:var(--sk-blue-soft)!important; }
+.skincare-app.skincare-app .sk-calendar-card { padding:15px 13px 18px; background:var(--sk-card); border:1px solid var(--sk-border); border-radius:20px; }
+.skincare-app.skincare-app .sk-month-controls { display:flex; align-items:center; justify-content:space-between; gap:4px; }
+.skincare-app.skincare-app .sk-month-controls h3 { text-align:center; font-size:17px; }
+.skincare-app.skincare-app .sk-today-button { display:flex; margin:0 auto 12px; min-height:44px; font-size:11px; border:0!important; color:var(--sk-blue)!important; background:transparent!important; }
+.skincare-app.skincare-app .sk-weekdays { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); font-size:11px; color:var(--sk-muted); text-align:center; margin-bottom:10px; }
+.skincare-app.skincare-app .sk-calendar-grid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:4px; align-items:start; }
+.skincare-app.skincare-app .sk-day { width:100%; min-width:0; min-height:0; height:auto; aspect-ratio:1/1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px; padding:2px; border:1px solid transparent!important; background:transparent!important; border-radius:11px; font-size:17px; }
+.skincare-app.skincare-app .sk-day.is-adjacent { color:var(--sk-muted)!important; background:var(--sk-bg)!important; }
+.skincare-app.skincare-app .sk-day.is-today { border-color:var(--sk-blue)!important; }
+.skincare-app.skincare-app .sk-day.is-selected { background:var(--sk-blue-soft)!important; }
+.skincare-app.skincare-app .sk-day-number { font-weight:500; line-height:1; }
+.skincare-app.skincare-app .sk-day-markers { display:flex; flex-direction:column; gap:2px; }
+.skincare-app.skincare-app .sk-half { display:block; width:12px; height:5px; border:1px solid var(--sk-border); background:var(--sk-bg); }
+.skincare-app.skincare-app .sk-am { border-radius:10px 10px 0 0; }
+.skincare-app.skincare-app .sk-pm { border-radius:0 0 10px 10px; }
+.skincare-app.skincare-app .sk-half.is-filled { background:var(--sk-blue); border-color:var(--sk-blue); }
+.skincare-app.skincare-app .sk-calendar-legend { display:flex; align-items:center; gap:13px; margin-top:17px; color:var(--sk-muted); font-size:10px; flex-wrap:wrap; }
+.skincare-app.skincare-app .sk-calendar-legend > span { display:flex; align-items:center; gap:5px; }
+.skincare-app.skincare-app .sk-calendar-legend small { margin-left:auto; font-size:10px; }
+.skincare-app.skincare-app .sk-stats { display:flex; gap:8px; margin:17px 0 13px; }
+.skincare-app.skincare-app .sk-stats > div { display:flex; flex:1; min-width:0; flex-direction:column; align-items:center; gap:7px; padding:16px 5px; background:var(--sk-card); border:1px solid var(--sk-border); border-radius:15px; }
+.skincare-app.skincare-app .sk-stats svg { color:var(--sk-blue); }
+.skincare-app.skincare-app .sk-stats strong { font-size:24px; font-weight:500; }
+.skincare-app.skincare-app .sk-stats span { color:var(--sk-muted); text-align:center; font-size:10px; line-height:1.4; }
+.skincare-app.skincare-app .sk-muted { color:var(--sk-muted)!important; font-size:12px; margin:12px 0; }
+.skincare-app.skincare-app .sk-privacy { display:flex; align-items:flex-start; gap:8px; padding-top:23px; margin-top:16px; border-top:1px solid var(--sk-border); color:var(--sk-muted); }
+.skincare-app.skincare-app .sk-privacy p { color:var(--sk-muted)!important; font-size:10px; line-height:1.8; }
+.skincare-app.skincare-app .sk-privacy svg { margin-top:2px; }
+.skincare-app.skincare-app label { display:flex; flex-direction:column; gap:8px; font-size:13px; font-weight:500; margin:13px 0; min-width:0; }
+.skincare-app.skincare-app input,.skincare-app.skincare-app textarea,.skincare-app.skincare-app select { display:block; width:100%; min-width:0; max-width:100%; min-height:44px; margin:0; padding:11px 12px; font:inherit; font-size:16px; line-height:1.4; color:var(--sk-text)!important; background:var(--sk-field)!important; border:1px solid var(--sk-border)!important; border-radius:11px; box-shadow:none!important; color-scheme:inherit; }
+.skincare-app.skincare-app input::placeholder,.skincare-app.skincare-app textarea::placeholder { color:var(--sk-muted)!important; opacity:1; }
+.skincare-app.skincare-app textarea { resize:vertical; }
+.skincare-app.skincare-app .sk-primary { background:var(--sk-blue)!important; border-color:var(--sk-blue)!important; color:var(--sk-on-blue)!important; }
+.skincare-app.skincare-app .sk-danger { color:var(--sk-danger)!important; background:var(--sk-lavender)!important; border-color:var(--sk-danger)!important; }
+.skincare-app.skincare-app .sk-error,.skincare-app.skincare-app .personal-error { color:var(--sk-danger)!important; background:var(--sk-card); border:1px solid var(--sk-danger); border-radius:12px; padding:12px; margin-bottom:12px; font-size:12px; overflow-wrap:anywhere; }
+.skincare-app.skincare-app .personal-error button { margin-top:8px; }
+.skincare-app.skincare-app .sk-notice { color:var(--sk-blue)!important; background:var(--sk-blue-soft); padding:12px; border-radius:12px; margin-bottom:15px; }
+.skincare-app.skincare-app .sk-diary-controls { display:grid; grid-template-columns:minmax(0,1fr) auto auto; align-items:end; gap:8px; }
+.skincare-app.skincare-app .sk-diary-controls label { min-width:0; margin:0; }
+.skincare-app.skincare-app input[type=date] { -webkit-appearance:none; appearance:none; width:100%!important; inline-size:100%!important; min-width:0!important; min-inline-size:0!important; max-width:100%; overflow:hidden; }
+.skincare-app.skincare-app input[type=date]::-webkit-date-and-time-value { text-align:left; min-width:0; overflow:hidden; text-overflow:ellipsis; }
+@media(max-width:600px){
+  .skincare-app.skincare-app .sk-diary-controls{grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch;}
+  .skincare-app.skincare-app .sk-diary-controls label{grid-column:1/-1;}
+  .skincare-app.skincare-app .sk-diary-controls button:last-child:nth-child(2){grid-column:1/-1;}
+}
+.skincare-app.skincare-app .sk-record { border:1px solid var(--sk-border); background:var(--sk-card); border-radius:18px; padding:17px; margin-top:14px; }
+.skincare-app.skincare-app .sk-record-heading { display:flex; align-items:center; gap:10px; margin-bottom:14px; }
+.skincare-app.skincare-app .sk-record-heading > div { flex:1; min-width:0; }
+.skincare-app.skincare-app .sk-record-heading h3 { font-size:14px; }
+.skincare-app.skincare-app .sk-record-heading p { color:var(--sk-muted)!important; font-size:11px; margin-top:3px; }
+.skincare-app.skincare-app .sk-record-heading button { border:0!important; color:var(--sk-blue)!important; padding:8px; }
+.skincare-app.skincare-app .sk-small-tile { width:40px; height:40px; border-radius:13px; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
+.skincare-app.skincare-app .sk-small-tile.sk-morning { background:var(--sk-cream); color:#b49654; }
+.skincare-app.skincare-app .sk-small-tile.sk-evening { background:var(--sk-lavender); color:#8d87be; }
+.skincare-app.skincare-app .sk-record-products { white-space:pre-wrap; }
+.skincare-app.skincare-app .sk-record-products strong { display:block; font-size:10px; color:var(--sk-muted)!important; margin-bottom:3px; }
+.skincare-app.skincare-app .sk-record-notes { white-space:pre-wrap; margin-top:10px; }
+.skincare-app.skincare-app .sk-delete-link { background:transparent!important; border:0!important; color:var(--sk-danger)!important; font-size:10px; padding:8px 0; margin-top:8px; }
+.skincare-app.skincare-app .sk-empty { text-align:center; background:var(--sk-card); border:1px dashed var(--sk-border); padding:26px 18px; border-radius:18px; }
+.skincare-app.skincare-app .sk-empty h3 { margin:15px 0 7px; }
+.skincare-app.skincare-app .sk-empty p { color:var(--sk-muted)!important; }
+.skincare-app.skincare-app .sk-empty button { margin-top:16px; }
+.skincare-app.skincare-app .sk-photo-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-top:14px; }
+.skincare-app.skincare-app .sk-photo { width:100%; aspect-ratio:1/1; display:block; object-fit:cover; border-radius:11px; }
+.skincare-app.skincare-app .sk-photo-placeholder { display:flex; align-items:center; justify-content:center; width:100%; aspect-ratio:1/1; background:var(--sk-lavender); border-radius:11px; padding:8px; font-size:10px; color:var(--sk-muted); text-align:center; overflow-wrap:anywhere; }
+.skincare-app.skincare-app .sk-draft-photo { position:relative; min-width:0; }
+.skincare-app.skincare-app .sk-draft-photo button { position:absolute; right:2px; top:2px; width:44px; height:44px; padding:0; border-radius:50%; background:var(--sk-card)!important; }
+.skincare-app.skincare-app .sk-photo-input { background:var(--sk-lavender); border-radius:12px; padding:12px; align-items:flex-start; }
+.skincare-app.skincare-app .sk-photo-input input { font-size:12px; padding:6px; background:var(--sk-field)!important; }
+.skincare-app.skincare-app .sk-modal-backdrop { position:absolute; inset:0; z-index:10; background:#1d23366b; display:flex; align-items:center; justify-content:center; padding:16px; padding-top:calc(16px + env(safe-area-inset-top,0px)); padding-bottom:calc(16px + env(safe-area-inset-bottom,0px)); }
+.skincare-app.skincare-app .sk-modal { width:100%; max-width:540px; max-height:100%; min-width:0; overflow:auto; overscroll-behavior:contain; border-radius:21px; background:var(--sk-card); color:var(--sk-text); padding:21px; box-shadow:0 15px 50px #131a342b; }
+.skincare-app.skincare-app .sk-modal-heading { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:10px; }
+.skincare-app.skincare-app .sk-modal-heading h2 { font-size:19px; }
+.skincare-app.skincare-app .sk-form-row { display:grid; grid-template-columns:minmax(0,1.25fr) minmax(0,1fr); gap:10px; }
+.skincare-app.skincare-app .sk-step-list { display:flex; flex-direction:column; gap:12px; }
+.skincare-app.skincare-app fieldset { min-width:0; border:1px solid var(--sk-border); border-radius:13px; margin:0; padding:10px 13px; }
+.skincare-app.skincare-app legend { color:var(--sk-muted); font-size:11px; padding:0 6px; }
+.skincare-app.skincare-app .sk-step-actions { display:flex; gap:8px; justify-content:flex-end; }
+.skincare-app.skincare-app .sk-step-actions button { width:44px; padding:0; }
+.skincare-app.skincare-app .sk-add-step { width:100%; margin-top:14px; border-style:dashed!important; }
+.skincare-app.skincare-app .sk-form-actions { display:flex; justify-content:flex-end; flex-wrap:wrap; gap:10px; border-top:1px solid var(--sk-border); margin-top:20px; padding-top:16px; }
+.skincare-app.skincare-app .sk-discard { padding:14px; background:var(--sk-lavender); border-radius:13px; }
+.skincare-app.skincare-app .sk-discard p { margin-top:8px; }
+@media(min-width:650px) { .skincare-app.skincare-app .sk-content { padding:26px max(24px,calc((100% - 560px)/2)) 24px; } .skincare-app.skincare-app .sk-header { padding-left:28px; padding-right:28px; } .skincare-app.skincare-app .sk-bottom-nav { padding-left:max(14px,calc((100% - 560px)/2)); padding-right:max(14px,calc((100% - 560px)/2)); } }
+@media(max-width:360px) { .skincare-app.skincare-app .sk-header { padding-left:9px; padding-right:9px; gap:4px; } .skincare-app.skincare-app h1 { font-size:20px; } .skincare-app.skincare-app .sk-content { padding:18px 12px; } .skincare-app.skincare-app .sk-plan-open { padding:18px 14px; gap:12px; } .skincare-app.skincare-app .sk-icon-tile { width:52px; height:57px; border-radius:16px; } .skincare-app.skincare-app .sk-plan-copy strong { font-size:18px; } .skincare-app.skincare-app .sk-diary-card { gap:12px; padding:16px 13px; } .skincare-app.skincare-app .sk-calendar-card { padding:12px 8px 14px; } .skincare-app.skincare-app .sk-calendar-grid { gap:3px; } .skincare-app.skincare-app .sk-day { font-size:16px; gap:3px; border-radius:8px; } .skincare-app.skincare-app .sk-half { width:10px; height:4px; } .skincare-app.skincare-app .sk-modal-backdrop { padding-left:8px; padding-right:8px; } .skincare-app.skincare-app .sk-modal { padding:16px; } .skincare-app.skincare-app .sk-form-row { grid-template-columns:minmax(0,1fr); gap:0; } }

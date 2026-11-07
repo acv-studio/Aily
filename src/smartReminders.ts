@@ -1,5 +1,7 @@
+import Dexie, { type Transaction } from 'dexie'
 import { db } from './db'
 import { getLocale } from './i18n'
+import { notifyReminderChanges } from './reminderEvents'
 
 export type ReminderKind = 'water' | 'meal' | 'weather' | 'mood' | 'metro' | 'plan'
 export interface Reminder {
@@ -17,6 +19,12 @@ export interface Reminder {
   deliveredAt: string | null
   snoozedUntil: string | null
   createdAt: string
+}
+/** Identity of a scheduled occurrence, not a new persisted reminder field. */
+export type ReminderNotificationSnapshot = {
+  createdAt: string
+  scheduledAt: string | null
+  snoozedUntil: string | null
 }
 export interface ReminderContext {
   temperature: number | null
@@ -127,7 +135,19 @@ async function readState(): Promise<ReminderState> {
   check(new Set(reminders.map(reminder => reminder.id)).size === reminders.length)
   return { reminders, context: validateContext(value.context), quietHours: validateQuiet(value.quietHours) }
 }
-async function persist(state: ReminderState): Promise<void> { await db.settings.put({ key, value: state }) }
+const changeTransactions = new WeakSet<Transaction>()
+async function persist(state: ReminderState): Promise<void> {
+  await db.settings.put({ key, value: state })
+  // Nested transactions resolve before their enclosing transaction commits.
+  // Subscribe to the root's completion instead, coalescing changes per commit.
+  let transaction = Dexie.currentTransaction
+  check(transaction)
+  while (transaction.parent) transaction = transaction.parent
+  if (!changeTransactions.has(transaction)) {
+    changeTransactions.add(transaction)
+    transaction.on('complete', notifyReminderChanges)
+  }
+}
 export async function loadReminderState(): Promise<ReminderState> { return readState() }
 
 export async function addReminder(input: Omit<Reminder, 'id' | 'status' | 'deliveredAt' | 'snoozedUntil' | 'createdAt'>, now = new Date()): Promise<Reminder> {
@@ -161,38 +181,93 @@ export async function updateReminder(id: string, action: 'complete' | 'snooze' |
     if (!reminder) return
     if (action === 'delete') state.reminders = state.reminders.filter(item => item.id !== id)
     else if (action === 'toggle') reminder.enabled = !reminder.enabled
-    else if (action === 'snooze') {
-      if (reminder.status === 'completed') return
-      reminder.status = 'pending'; reminder.deliveredAt = null
-      reminder.snoozedUntil = timestamp(new Date(at.getTime() + 10 * minute).toISOString())
-    } else {
-      if (reminder.status === 'completed') return
-      reminder.snoozedUntil = null
-      if (reminder.repeatMinutes !== null) {
-        // A second tab completing the same occurrence must not advance it twice.
-        if (reminder.status !== 'due') return
-        const interval = reminder.repeatMinutes * minute
-        const lead = reminder.kind === 'metro' ? reminder.leadMinutes * minute : 0
-        const base = reminder.scheduledAt === null ? at.getTime() : Date.parse(reminder.scheduledAt) - lead
-        const next = base + Math.max(1, Math.floor((at.getTime() - base) / interval) + 1) * interval
-        reminder.scheduledAt = timestamp(new Date(next + lead).toISOString())
-        reminder.status = 'pending'; reminder.deliveredAt = null
-      } else reminder.status = 'completed'
-    }
+    else if (!applyReminderAction(reminder, action, at)) return
     await persist(state)
   })
 }
+/** Shared in-transaction mutations: preserve the existing UI action semantics. */
+function applyReminderAction(reminder: Reminder, action: 'complete' | 'snooze', at: Date): boolean {
+  if (reminder.status === 'completed') return false
+  const before = JSON.stringify(reminder)
+  if (action === 'snooze') {
+    reminder.status = 'pending'; reminder.deliveredAt = null
+    reminder.snoozedUntil = timestamp(new Date(at.getTime() + 10 * minute).toISOString())
+  } else {
+    // A second tab completing the same occurrence must not advance it twice.
+    if (reminder.repeatMinutes !== null && reminder.status !== 'due') return false
+    reminder.snoozedUntil = null
+    if (reminder.repeatMinutes !== null) {
+      const interval = reminder.repeatMinutes * minute
+      const lead = reminder.kind === 'metro' ? reminder.leadMinutes * minute : 0
+      const base = reminder.scheduledAt === null ? at.getTime() : Date.parse(reminder.scheduledAt) - lead
+      const next = base + Math.max(1, Math.floor((at.getTime() - base) / interval) + 1) * interval
+      reminder.scheduledAt = timestamp(new Date(next + lead).toISOString())
+      reminder.status = 'pending'; reminder.deliveredAt = null
+    } else reminder.status = 'completed'
+  }
+  return before !== JSON.stringify(reminder)
+}
+function validateNotificationSnapshot(value: unknown): ReminderNotificationSnapshot {
+  exact(value, ['createdAt', 'scheduledAt', 'snoozedUntil'])
+  const createdAt = timestamp(value.createdAt)
+  const scheduledAt = optionalTimestamp(value.scheduledAt), snoozedUntil = optionalTimestamp(value.snoozedUntil)
+  check(snoozedUntil === null || Date.parse(snoozedUntil) >= Date.parse(createdAt))
+  return { createdAt, scheduledAt, snoozedUntil }
+}
+function matchesNotificationOccurrence(reminder: Reminder, snapshot: ReminderNotificationSnapshot): boolean {
+  if (reminder.status === 'completed' || reminder.createdAt !== snapshot.createdAt || reminder.scheduledAt !== snapshot.scheduledAt) return false
+  if (reminder.status === 'pending') return reminder.snoozedUntil === snapshot.snoozedUntil
+  return snapshot.snoozedUntil === null || (reminder.snoozedUntil === null && reminder.deliveredAt !== null && Date.parse(reminder.deliveredAt) >= Date.parse(snapshot.snoozedUntil))
+}
+/** Pure occurrence matching for service deduplication, including disabled due
+ * reminders so toggling cannot re-deliver an already delivered occurrence.
+ * Invalid external snapshots are non-matches, not exceptions. */
+export function sameReminderNotificationOccurrence(reminder: Reminder, snapshot: ReminderNotificationSnapshot): boolean {
+  try { return matchesNotificationOccurrence(validateReminder(reminder), validateNotificationSnapshot(snapshot)) }
+  catch { return false }
+}
+
+/** Consume an already-delivered native signal atomically. Context and quiet hours
+ * are intentionally not re-evaluated: the planner handled them at scheduling.
+ * Rejects changed repeat slots and pending snoozes. The service additionally
+ * invalidates old native IDs when snoozing, since delivered snoozes clear their
+ * timestamp and intentionally do not add an occurrence ledger to this schema. */
+export async function actOnReminderNotification(id: string, snapshot: ReminderNotificationSnapshot, fireAt: string, action: 'open' | 'complete' | 'snooze', now = new Date()): Promise<boolean> {
+  return db.transaction('rw', db.settings, async () => {
+    idCheck(id); check(['open', 'complete', 'snooze'].includes(action))
+    const occurrence = validateNotificationSnapshot(snapshot), fire = timestamp(fireAt), at = clock(now)
+    const state = await readState(), reminder = state.reminders.find(item => item.id === id)
+    if (!reminder || !reminder.enabled || !matchesNotificationOccurrence(reminder, occurrence)) return false
+    const earliest = occurrence.snoozedUntil !== null ? Date.parse(occurrence.snoozedUntil)
+      : occurrence.scheduledAt !== null ? Date.parse(occurrence.scheduledAt) - (reminder.kind === 'metro' ? reminder.leadMinutes * minute : 0)
+      : Date.parse(occurrence.createdAt)
+    if (at.getTime() < Date.parse(fire) || Date.parse(fire) < Math.max(earliest, Date.parse(occurrence.createdAt))) return false
+    let changed = false
+    if (reminder.status === 'pending') {
+      reminder.status = 'due'; reminder.deliveredAt = at.toISOString(); reminder.snoozedUntil = null
+      changed = true
+    }
+    if (action !== 'open') changed = applyReminderAction(reminder, action, at) || changed
+    if (changed) await persist(state)
+    return true
+  })
+}
+
 export async function saveReminderContext(context: ReminderContext): Promise<void> {
   const validated = validateContext(context), now = Date.now()
   check([validated.weatherObservedAt, validated.moodObservedAt].every(at => at === null || Date.parse(at) <= now))
   await db.transaction('rw', db.settings, async () => {
-    const state = await readState(); state.context = validated; await persist(state)
+    const state = await readState()
+    if (JSON.stringify(state.context) === JSON.stringify(validated)) return
+    state.context = validated; await persist(state)
   })
 }
 export async function saveReminderQuietHours(quiet: ReminderState['quietHours']): Promise<void> {
   const validated = validateQuiet(quiet)
   await db.transaction('rw', db.settings, async () => {
-    const state = await readState(); state.quietHours = validated; await persist(state)
+    const state = await readState()
+    if (JSON.stringify(state.quietHours) === JSON.stringify(validated)) return
+    state.quietHours = validated; await persist(state)
   })
 }
 function quietNow(quiet: ReminderState['quietHours'], now: Date): boolean {

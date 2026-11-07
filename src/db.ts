@@ -1,4 +1,5 @@
 import { t } from './i18n'
+import { notifyReminderChanges } from './reminderEvents'
 import Dexie, { type EntityTable, type Table } from 'dexie'
 import { characters, type CharacterId } from './data'
 import { getCreditGift } from './creditGifts'
@@ -536,12 +537,14 @@ export async function importData(raw: string) {
     }
   } catch { throw backupError() }
   // Every field and duplicate key is checked before any destructive operation.
+  await (await import('./reminderNotifications')).cancelReminderNotificationsForReset()
   await db.transaction('rw', db.messages, db.memories, db.settings, db.summaries, async () => {
     await Promise.all([db.messages.clear(), db.memories.clear(), db.settings.clear(), db.summaries.clear()])
     await putData(data)
     for (const id of characterIds) await db.settings.put({ key: conversationKey(id), value: true })
     await db.settings.put({ key: migrationKey, value: true })
   })
+  notifyReminderChanges()
   return loadLocalData()
 }
 
@@ -570,9 +573,11 @@ export async function clearCharacterData(characterId: CharacterId) {
 }
 
 export async function clearAllData() {
+  await (await import('./reminderNotifications')).cancelReminderNotificationsForReset()
   await db.transaction('rw', db.messages, db.memories, db.settings, db.summaries, async () => {
     await Promise.all([db.messages.clear(), db.memories.clear(), db.settings.clear(), db.summaries.clear()])
     for (const id of characterIds) await db.settings.put({ key: conversationKey(id), value: true })
     await db.settings.put({ key: migrationKey, value: true })
   })
+  notifyReminderChanges()
 }

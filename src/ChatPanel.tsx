@@ -2,7 +2,6 @@ import { useI18n } from './i18n'
 import { useEffect, useRef, useState } from 'react'
 import { ArrowLeft, Search, Send, Square, Image as ImageIcon, Mic, Quote, Copy, X, ChevronDown, Plus, Video, Phone, Smile, Ellipsis, Star, Sparkles, Check, CalendarHeart, Gift, Settings2 } from 'lucide-react'
 import GiftStorePanel from './GiftStorePanel'
-import AppDataPanel from './AppDataPanel'
 import type { AppDataIdentity, AppDataTicket } from './appDataTypes'
 import PeriodRecordPanel from './PeriodRecordPanel'
 import './chatExtras.css'
@@ -51,6 +50,8 @@ export interface ChatPanelProps {
   isPrimary?: boolean
   setPrimary?: () => Promise<void>
   appDataIdentity?: () => AppDataIdentity
+  /** Close blocking UI after the screen saver, without clearing the chat draft. */
+  resumeSignal?: number
 }
 
 export default function ChatPanel(props: ChatPanelProps) {
@@ -86,10 +87,10 @@ export default function ChatPanel(props: ChatPanelProps) {
   const videoInput = useRef<HTMLInputElement>(null)
   const moreButton = useRef<HTMLButtonElement>(null)
   const fileRequest = useRef(0)
-  const [extraPanel, setExtraPanel] = useState<'period' | 'gift' | 'apps' | null>(null)
+  const [extraPanel, setExtraPanel] = useState<'period' | 'gift' | null>(null)
   const extraDialog = useRef<HTMLDivElement>(null)
   const extraTrigger = useRef<HTMLElement | null>(null)
-  const openExtra = (panel: 'period' | 'gift' | 'apps', trigger: HTMLElement) => {
+  const openExtra = (panel: 'period' | 'gift', trigger: HTMLElement) => {
     extraTrigger.current = trigger
     setSettingsOpen(false); setModeOpen(false); setExtraPanel(panel)
   }
@@ -343,6 +344,14 @@ export default function ChatPanel(props: ChatPanelProps) {
       finally { stream?.getTracks().forEach(track => track.stop()) }
     } finally { if (current()) acquiringAudio.current = false }
   }
+  const previousResume = useRef(props.resumeSignal)
+  useEffect(() => {
+    if (props.resumeSignal === previousResume.current) return
+    previousResume.current = props.resumeSignal
+    setSettingsOpen(false); setHistoryOpen(false); setModeOpen(false); setMemory(undefined); setActiveActions(undefined)
+    setSearch(''); setSearchOpen(false)
+    setMoreOpen(false); setEmojiOpen(false); setExtraPanel(null)
+  }, [props.resumeSignal])
   const submit = async () => {
     if (replying || recording || readingFile || (!draft.trim() && !attachment)) return
     try { await props.send({ replyToId: quoted?.id, attachment: attachment?.data, kind: attachment?.kind }); setQuote(undefined); setAttachment(undefined); closeMore() }
@@ -364,7 +373,7 @@ export default function ChatPanel(props: ChatPanelProps) {
             catch { setNotice('主 Bot 设置未保存，请稍后重试。') }
             finally { setPrimarySaving(false) }
           }}>{props.isPrimary ? <Check size={17} /> : <Star size={17} />}<span>{primarySaving ? t('正在保存…') : props.isPrimary ? t('已设为主 Bot') : t('设为主 Bot')}</span></button>}
-          {props.appDataIdentity && <button disabled={!props.isPrimary || props.temporary || replying || recording || readingFile} onClick={event => openExtra('apps', event.currentTarget)}><Sparkles size={17} /><span>{locale === 'en' ? 'Read app data' : '读取应用数据'}</span></button>}
+          <p className="chat-app-data-notice">{locale === 'en' ? 'Main Bot automatically queries saved app records in regular chat and sends relevant data to your configured model. Temporary chats and other Bots do not read app data.' : '主 Bot 普通聊天会自动查询应用已保存记录，并将相关数据发送给你配置的模型；临时会话和非主 Bot 不读取。'}</p>
           {props.openMoments && <button disabled={replying || primarySaving || recording || readingFile} onClick={() => { setSettingsOpen(false); props.openMoments?.() }}><Sparkles size={17} /><span>{t('查看朋友圈')}</span></button>}
           {props.openPreferences && <button disabled={replying || recording || readingFile} onClick={() => { setSettingsOpen(false); props.openPreferences?.() }}><Settings2 size={17} /><span>{t('修改称呼与互动偏好')}</span></button>}
           <button disabled={replying || recording || readingFile} onClick={() => { setSettingsOpen(false); setHistoryOpen(true) }}><CalendarHeart size={17} /><span>{t('对话历史')}</span></button>
@@ -402,7 +411,7 @@ export default function ChatPanel(props: ChatPanelProps) {
             {message.text && !message.localOnly && !props.temporary && <button onClick={() => { setMemory({ text: message.text, category: 'profile', sourceMessageId: message.id }); setActiveActions(undefined) }}>{t('记住这条')}</button>}
             {message.from === 'user' && <button disabled={replying} onClick={() => { setActiveActions(undefined); void props.withdraw(message.id) }}>{t('撤回')}</button>}
           </div>}
-          {!message.withdrawn && message.status === 'failed' && message.from === 'user' && <button disabled={replying} className="retry" onClick={event => { if (message.appDataRequest && props.appDataIdentity) { setDraft(message.text); openExtra('apps', event.currentTarget) } else void props.send({ retryId: message.id }) }}>{message.appDataRequest ? (locale === 'en' ? 'App data needs a fresh preview' : '应用数据需重新预览授权') : t('回复未完成 · 重试')}</button>}
+          {!message.withdrawn && message.status === 'failed' && message.from === 'user' && <button disabled={replying} className="retry" onClick={() => void props.send({ retryId: message.id })}>{t('回复未完成 · 重试')}</button>}
         </div>
       </div>)}<div ref={bottom} />
     </section>
@@ -436,12 +445,11 @@ export default function ChatPanel(props: ChatPanelProps) {
         <button disabled={replying || recording || readingFile} onClick={() => setEmojiOpen(true)}><span><Smile size={25} /></span>{t('表情')}</button>
         <button disabled={replying || recording || readingFile} onClick={event => openExtra('period', event.currentTarget)}><span><CalendarHeart size={25} /></span>{t('经期记录')}</button>
         <button disabled={replying || recording || readingFile} onClick={event => openExtra('gift', event.currentTarget)}><span><Gift size={25} /></span>{t('送礼物')}</button>
-        {props.appDataIdentity && <button disabled={!props.isPrimary || props.temporary || replying || recording || readingFile} onClick={event => openExtra('apps', event.currentTarget)}><span><Sparkles size={25} /></span>{locale === 'en' ? 'Read app data' : '读取应用数据'}</button>}
       </div>}
     </section>}
     {extraPanel && <div className="chat-extra-overlay"><div ref={extraDialog} className="chat-extra-dialog" role="dialog" aria-modal="true" aria-labelledby="chat-extra-heading">
-      <header><h2 id="chat-extra-heading">{extraPanel === 'apps' ? (locale === 'en' ? 'Main Bot app data' : '主 Bot 应用数据') : t(extraPanel === 'period' ? '经期记录' : '送礼物')}</h2><button aria-label={t('返回聊天')} onClick={() => { if (extraPanel === 'apps' && replying) props.stop(); setExtraPanel(null) }}><X /></button></header>
-      <div className="chat-extra-body">{extraPanel === 'apps' && props.appDataIdentity ? <AppDataPanel identity={props.appDataIdentity} text={draft} modelAvailable={!props.demo} send={props.send} stop={props.stop} close={() => setExtraPanel(null)} /> : extraPanel === 'period' ? <PeriodRecordPanel temporary={props.temporary} onSaved={record => void props.recordActivity?.(`🌸 已记录经期：${record.startDate}${record.endDate ? ` 至 ${record.endDate}` : ''}${record.note ? ` · ${record.note}` : ''}`, true)} /> : <GiftStorePanel selected={character.id} sending={replying} onOpenBilling={props.openBilling} onSendGift={giftId => props.send({ giftId, rejectOnFailure: true })} />}</div>
+      <header><h2 id="chat-extra-heading">{t(extraPanel === 'period' ? '经期记录' : '送礼物')}</h2><button aria-label={t('返回聊天')} onClick={() => setExtraPanel(null)}><X /></button></header>
+      <div className="chat-extra-body">{extraPanel === 'period' ? <PeriodRecordPanel temporary={props.temporary} onSaved={record => void props.recordActivity?.(`🌸 已记录经期：${record.startDate}${record.endDate ? ` 至 ${record.endDate}` : ''}${record.note ? ` · ${record.note}` : ''}`, true)} /> : <GiftStorePanel selected={character.id} sending={replying} onOpenBilling={props.openBilling} onSendGift={giftId => props.send({ giftId, rejectOnFailure: true })} />}</div>
     </div></div>}
     {readingFile && <div className="chat-notice" role="status">{t('正在读取附件…')}</div>}
     {historyOpen && <div className="chat-history-overlay"><section className="chat-history-dialog" role="dialog" aria-modal="true" aria-labelledby="chat-history-title"><header><div><small>{t(character.name)} · AI</small><h2 id="chat-history-title">{t('对话历史')}</h2></div><button aria-label={t('关闭')} onClick={() => setHistoryOpen(false)}><X /></button></header><div className="chat-history-body">

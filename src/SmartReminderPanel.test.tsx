@@ -29,9 +29,10 @@ function datetime(date: Date) { return `${date.getFullYear()}-${String(date.getM
 describe('smart reminder application journey', () => {
   it('opens smart reminder center from reminders and profile without inventing reminders', async () => {
     await openCenter()
-    expect(screen.getByText('还没有提醒，从一杯水开始吧。')).toBeInTheDocument()
     expect((await loadReminderState()).reminders).toEqual([])
+    expect(screen.getByRole('region', { name: '系统本地通知设置' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '← 返回' }))
+    expect(screen.getByText('还没有提醒，从一杯水开始吧。')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '我的' }))
     fireEvent.click(screen.getByRole('button', { name: '智能提醒' }))
     expect(screen.getByRole('heading', { name: '把小事，放在心上' })).toBeInTheDocument()
@@ -43,9 +44,11 @@ describe('smart reminder application journey', () => {
     fireEvent.click(screen.getByRole('button', { name: '确认添加提醒' }))
     await screen.findByText('提醒已保存')
     expect((await loadReminderState()).reminders[0]).toMatchObject({ kind: 'water', repeatMinutes: 120, status: 'pending' })
+    fireEvent.click(screen.getByRole('button', { name: '← 返回' }))
     expect(screen.getByRole('button', { name: '已完成' })).toBeDisabled()
     cleanup()
     await openCenter()
+    fireEvent.click(screen.getByRole('button', { name: '← 返回' }))
     expect(screen.getByText('休息一下，喝杯水', { selector: 'strong' })).toBeInTheDocument()
   })
 
@@ -150,6 +153,7 @@ describe('smart reminder application journey', () => {
     await addReminder({ kind: 'water', title: '喝水测试', enabled: true, scheduledAt: at.toISOString(), repeatMinutes: 120, temperatureBelow: null, station: '', exit: '', leadMinutes: 0 })
     await evaluateReminders(at)
     await openCenter()
+    fireEvent.click(screen.getByRole('button', { name: '← 返回' }))
     fireEvent.click(screen.getByRole('button', { name: '已完成' }))
     await waitFor(() => expect(screen.getByText('等待触发')).toBeInTheDocument())
     const item = (await loadReminderState()).reminders[0]
