@@ -10,6 +10,7 @@ import './memory-redesign.css'
 import './theme-light.css'
 import './chunui-refinement.css'
 import './theme-chat-light.css'
+import './light-audit.css'
 import './theme'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(<React.StrictMode><App /></React.StrictMode>)

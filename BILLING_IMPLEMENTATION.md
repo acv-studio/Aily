@@ -73,6 +73,7 @@ App ID 6831134786，组22552658 / Aily Monthly Credits，销售地区CHN。价�
 - 接下来无需继续盲跑原生LocalStoreKit测试或再上传同一Build6；当前等待用户真机沙盒结果。独立本地StoreKit测试故障仍SKInternalCode3；SDK公开文档未提供该内部码确切含义。
 - Round5整理TESTFLIGHT_BILLING_CHECKLIST.md（所有真实交易结果保持未测试，不伪造）。从Round3至Round5，仍未收到用户沙盒购买/恢复/续费/退款的实测结果，也没有代理可访问的已认证测试设备；当前全链路验收依赖用户在测试设备执行并反馈。用户此前已选择自行登录测试，不应索取密码或以正式Apple账号试付款。
 - 发布证书/配置沿用.mobile-build/testflight-signing与build3-ExportOptions.plist。
+- 用户后续要求上传最新界面版本，已发布TestFlight 1.0 Build7（ID e898e0c8-3ad6-4bd9-ba85-6e69e3dc0f23），processingState VALID、internalBuildState IN_BETA_TESTING，Alpha内部组有访问权限。安装包包含积分礼物3/5/8/10/10/10及移除旧演示记录的UI、最新配色和月卡间距。相关6套测试93项通过。真实Apple交易验收仍等待用户沙盒实测，上传成功不代表支付全链路已验证。
 - 本轮所有主代理和子代理背景任务均已收集，两个子代理当前inactive。
 
 ## 工具与操作注意

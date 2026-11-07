@@ -11,7 +11,7 @@ import './desktopTools.css'
 
 export type DesktopTool = 'ledger' | 'album' | 'contacts' | 'music' | 'diary' | 'divination' | 'app-store' | ExtensionAppId
 type Copy = (zh: string, en: string) => string
-const titles: Record<DesktopTool, [string, string]> = { ledger: ['记账', 'Ledger'], album: ['相册', 'Album'], contacts: ['通讯录', 'Contacts'], music: ['音乐', 'Music'], diary: ['日记', 'Diary'], divination: ['易之书 · 梅花易数', 'Yizhishu Divination'], 'app-store':['应用商店','App Store'], 'focus-timer':['专注时钟','Focus Timer'], 'skincare-diary':['护肤日记','Skincare Diary'], wardrobe:['穿搭衣橱','Wardrobe'], anniversary:['纪念日助手','Anniversary'], gomoku:['五子棋','Gomoku'], 'game-2048':['2048','2048'] }
+const titles: Record<DesktopTool, [string, string]> = { ledger: ['记账', 'Ledger'], album: ['相册', 'Album'], contacts: ['通讯录', 'Contacts'], music: ['音乐', 'Music'], diary: ['日记', 'Diary'], divination: ['易之书 · 梅花易数', 'Yizhishu Divination'], 'app-store':['应用商店','App Store'], 'meal-planner':['吃什么','What to Eat'], 'focus-timer':['专注时钟','Focus Timer'], 'skincare-diary':['护肤日记','Skincare Diary'], wardrobe:['穿搭衣橱','Wardrobe'], anniversary:['纪念日助手','Anniversary'], gomoku:['五子棋','Gomoku'], 'game-2048':['2048','2048'] }
 const today = () => { const now = new Date(); return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}` }
 const newId = () => globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`
 const isRecord = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object'

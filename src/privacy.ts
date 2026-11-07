@@ -25,7 +25,7 @@ export async function deleteLocalProfile(): Promise<void> {
     // Separate databases cannot share a transaction. A failure is surfaced and retryable,
     // never reported as success. Clear credentials first even when later storage fails.
     for (const key of ['aily-api-key']) sessionStorage.removeItem(key)
-    for (const key of [consentKey, 'aily-api-endpoint', 'aily-api-model', 'aily-demo-state', 'aily.locale', 'aily.chatLocale', 'aily-desktop-ledger', 'aily-desktop-contacts', 'aily-desktop-diary']) localStorage.removeItem(key)
+    for (const key of [consentKey, 'aily-api-endpoint', 'aily-api-model', 'aily-demo-state', 'aily.locale', 'aily.chatLocale', 'aily-desktop-ledger', 'aily-desktop-contacts', 'aily-desktop-diary', 'aily.ext.meal.v1']) localStorage.removeItem(key)
     await clearAllData()
     await demoDb.transaction('rw', demoDb.wallet, demoDb.transactions, demoDb.storyEvents, async () => {
       await demoDb.wallet.clear()

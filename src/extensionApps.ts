@@ -1,6 +1,7 @@
-export type ExtensionAppId = 'focus-timer'|'skincare-diary'|'wardrobe'|'anniversary'|'gomoku'|'game-2048'
+export type ExtensionAppId = 'focus-timer'|'skincare-diary'|'wardrobe'|'anniversary'|'gomoku'|'game-2048'|'meal-planner'
 export type ExtensionApp = { id:ExtensionAppId; name:string; english:string; description:string; englishDescription:string; icon:string; color:string; category:'life'|'game' }
 export const extensionApps:ExtensionApp[]=[
+ {id:'meal-planner',name:'吃什么',english:'What to Eat',description:'按人数与口味选餐，用冰箱库存和预算买菜，接着备菜、做菜和分配洗碗',englishDescription:'Plan meals for your household, shop from pantry gaps and budget, cook and share cleanup',icon:'🍳',color:'#eca76e',category:'life'},
  {id:'focus-timer',name:'专注时钟',english:'Focus Timer',description:'简单的专注与休息计时工具',englishDescription:'A simple focus and break timer',icon:'⏱',color:'#ffb38f',category:'life'},
  {id:'skincare-diary',name:'护肤日记',english:'Skincare Diary',description:'记录护肤步骤、产品和肌肤状态',englishDescription:'Track routines, products and skin condition',icon:'🫧',color:'#f5a9c7',category:'life'},
  {id:'wardrobe',name:'穿搭衣橱',english:'Wardrobe',description:'整理衣物并组合每日穿搭',englishDescription:'Organize clothes and create outfits',icon:'👗',color:'#c8b2ff',category:'life'},

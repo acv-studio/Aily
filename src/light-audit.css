@@ -1,0 +1,80 @@
+/* Final light-mode audit layer.  This is deliberately last in the cascade so
+   route-specific legacy CSS cannot reintroduce dark surfaces or low-contrast copy. */
+html[data-theme=light]{color-scheme:light}
+html[data-theme=light] :is(.memory-page,.feed,.relationship-memories,.monthly-album,.desktop-tools-content,.period-record-panel,.sharing-panel,.gift-store,.story-gift-panel){color:var(--cc-fg)}
+/* Memory management, relationship views, monthly album. */
+html[data-theme=light] .memory-page .memory-intro p,html[data-theme=light] .memory-page .memory-toolbar strong,html[data-theme=light] .memory-page .memory-filters label,html[data-theme=light] .memory-page .memory-help{color:#625962!important}
+html[data-theme=light] .memory-page .memory-controls,html[data-theme=light] .memory-page .managed-memory{background:#fff!important;border-color:var(--cc-border)!important;box-shadow:var(--cc-shadow-1)!important}
+html[data-theme=light] .memory-page .managed-memory h3{color:#2d2530!important}
+html[data-theme=light] .memory-page .memory-details,html[data-theme=light] .memory-page .memory-details>summary{border-color:var(--cc-hairline)!important;color:#625962!important}
+html[data-theme=light] .memory-page .memory-details>p,html[data-theme=light] .memory-entry-meta time{color:#6c626d!important}
+html[data-theme=light] .memory-page .managed-memory .memory-actions button{background:#faf8fb!important;color:#514457!important;border-color:var(--cc-border)!important}
+html[data-theme=light] :is(.recollection-card,.journal-card,.journal-preview,.album-cover,.album-preview,.monthly-album fieldset){background:#fff!important;border-color:var(--cc-border)!important;color:#2d2530!important;box-shadow:var(--cc-shadow-1)!important}
+html[data-theme=light] :is(.recollection-card p,.recollection-card span,.journal-card p,.monthly-album p,.monthly-album small,.album-preview pre){color:#625962!important}
+html[data-theme=light] :is(.memory-view-switch button,.journal-period button,.album-actions button){background:#fff!important;color:#514457!important;border-color:var(--cc-border)!important}
+html[data-theme=light] :is(.memory-view-switch button[aria-pressed=true],.journal-period button[aria-pressed=true]){background:var(--cc-primary-soft)!important;color:#67427d!important;border-color:var(--cc-primary)!important}
+/* Social moments and home tool sheets. */
+html[data-theme=light] :is(.feed-controls select,.feed-role-tabs button,.comment-box input,.moment-comment,.feed-empty){background:#fff!important;color:#514957!important;border-color:var(--cc-border)!important}
+html[data-theme=light] :is(.feed-controls label,.feed-controls p,.moment .hide-moment,.moment .moment-source,.moment .moment-comment small,.feed .feed-hero span){color:#625962!important}
+html[data-theme=light] .feed-role-tabs button[aria-pressed=true],html[data-theme=light] .feed-controls>button{background:var(--cc-primary-soft)!important;color:#67427d!important;border-color:var(--cc-primary)!important}
+html[data-theme=light] .desktop-tools-dialog{color:#2d2530!important}
+html[data-theme=light] .desktop-tools-header{background:#fff!important;border-color:var(--cc-border)!important}
+html[data-theme=light] .desktop-tools-header small{color:#756b77!important}
+html[data-theme=light] .desktop-tools-header h2{color:#211b22!important}
+html[data-theme=light] .desktop-tools-dialog .desktop-close{background:#f2edf5!important;color:#67427d!important;border-color:rgba(116,84,155,.22)!important;box-shadow:0 4px 12px rgba(45,33,48,.08)!important}
+html[data-theme=light] :is(.desktop-tools-dialog p,.desktop-tools-dialog label,.desktop-note,.desktop-empty,.desktop-list small){color:#625962!important}
+html[data-theme=light] :is(.desktop-form input,.desktop-form textarea,.desktop-form select,.desktop-file-label){background:#fff!important;color:#2d2530!important;border-color:var(--cc-border)!important}
+html[data-theme=light] :is(.desktop-list li,.desktop-album-grid article,.desktop-music-list article){background:#fff!important;border-color:var(--cc-border)!important;box-shadow:var(--cc-shadow-1)!important}
+/* Full-screen experiences and sheets. */
+html[data-theme=light] :is(.game-sheet,.story-sheet,.chat-history-dialog,.memory-modal,.chat-extra-dialog){color:#2d2530!important}
+html[data-theme=light] :is(.game-sheet p,.story-sheet p,.chat-history-dialog p,.chat-history-dialog small,.memory-modal p){color:#625962!important}
+html[data-theme=light] :is(.game-sheet header button,.story-sheet header button,.chat-history-dialog header button,.memory-modal-close){background:#f2edf5!important;color:#67427d!important;border-color:var(--cc-border)!important}
+html[data-theme=light] :is(.move-buttons button,.story-choices button,.story-library button,.chat-history-message){background:#fff!important;color:#403640!important;border-color:var(--cc-border)!important}
+html[data-theme=light] .call-screen{background:radial-gradient(circle at 50% 20%,rgba(116,84,155,.12),transparent 35%),#f5f5f7;color:#2d2530}
+html[data-theme=light] :is(.call-person p,.call-caption span,.call-caption p,.call-disclosure){color:#625962!important}
+html[data-theme=light] :is(.call-back,.call-caption,.call-controls button){background:#fff!important;color:#403640!important;border-color:var(--cc-border)!important;box-shadow:var(--cc-shadow-1)!important}
+/* Period/data and safety panels retain readable semantic feedback. */
+html[data-theme=light] .period-record-panel{background:#fff!important;color:#2d2530!important;border-color:var(--cc-border)!important}
+html[data-theme=light] .period-record-panel :is(h2,h3,legend,time){color:#403640!important}
+html[data-theme=light] .period-record-panel :is(p,label,.period-record-panel__note){color:#625962!important}
+html[data-theme=light] .period-record-panel [role=alert]{background:#f8e9eb;color:#8d3d49!important;border-radius:12px;padding:10px}
+html[data-theme=light] .period-record-panel [role=status]{color:#365d48!important}
+html[data-theme=light] :is(.loading-screen,.chat-empty){color:#625962!important}
+/* Chat-specific selectors need higher specificity than chatLayout.css. */
+html[data-theme=light] .chat-screen .chat-header{background:#fff!important;border-color:var(--cc-border)!important;color:#2d2530!important;box-shadow:0 1px 10px rgba(20,25,35,.04)}
+html[data-theme=light] .chat-screen :is(.chat-header strong,.chat-header strong small,.chat-header div>span,.chat-toolbar button,.chat-intro-detail,.chat-starter-hint){color:#625962!important}
+html[data-theme=light] .chat-screen :is(.chat-settings-options,.quick-mode-popover,.chat-popover){background:#fff!important;color:#2d2530!important;border-color:var(--cc-border)!important;box-shadow:var(--cc-shadow-2)!important}
+html[data-theme=light] .chat-screen :is(.chat-settings-options>button,.quick-mode-popover p,.chat-opening p,.chat-starters button,.chat-privacy-panel>button){color:#514457!important}
+html[data-theme=light] .chat-screen :is(.chat-opening,.chat-starters button,.chat-history-message){background:#fff!important;border-color:var(--cc-border)!important}
+html[data-theme=light] .chat-history-dialog :is(h2,h3,strong){color:#2d2530!important}
+html[data-theme=light] .chat-history-message small{color:#625962!important}
+/* Fixed Moments route and reminder chrome. */
+html[data-theme=light] .character-moments-page{background:#f5f5f7!important;color:#2d2530!important}
+html[data-theme=light] .character-moments-header{background:#fff!important;border-color:var(--cc-border)!important;color:#2d2530!important}
+html[data-theme=light] :is(.reminder-banner,.reminder-chat-overlay .reminder-banner){background:#fff!important;color:#2d2530!important;border-color:var(--cc-border)!important;box-shadow:var(--cc-shadow-2)!important}
+html[data-theme=light] :is(.reminder-banner strong,.reminder-banner small,.reminder-time-item time,.reminder-settings-card small,.reminder-result,.reminder-steps small,.reminder-status){color:#625962!important}
+html[data-theme=light] .reminder-time-item.due{background:#fff5f0!important;border-color:rgba(185,86,55,.28)!important}
+html[data-theme=light] .reminder-time-item.due time,html[data-theme=light] .reminder-time-item.due .reminder-status{color:#9d3b4b!important}
+/* Profile/onboarding status text and local-data feedback are always readable. */
+html[data-theme=light] :is(.profile-screen .profile-card p,.profile-plan-top>small,.memory-settings-profile .profile-inline-panel>p,.safety-consent p){color:#625962!important}
+html[data-theme=light] .profile-primary-feedback{color:#365d48!important}.profile-primary-error{color:#8d3d49!important}
+html[data-theme=light] .data-transfer input::placeholder{color:#7c747d!important}
+html[data-theme=light] .data-transfer :is(.backup-action,.backup-import .backup-action){background:#eee7f4!important;color:#514457!important}
+html[data-theme=light] .data-transfer .backup-notice{background:#eaf3ef!important;color:#365d48!important}.data-transfer .backup-notice.is-error{background:#f8e9eb!important;color:#8d3d49!important}
+html[data-theme=light] .onboarding :is(.brand,.welcome h1,.choose h1,.memory-preview strong,.character-card){color:#2d2530!important}
+html[data-theme=light] .onboarding :is(.lead,.memory-preview small,.step-indicator,.character-card p){color:#625962!important}
+html[data-theme=light] .onboarding :is(.memory-preview,.character-card){background:#fff!important;border-color:var(--cc-border)!important;box-shadow:var(--cc-shadow-1)!important}
+/* The in-app store follows iOS App Store list anatomy: icon, copy, compact GET control. */
+html[data-theme=light] .extension-store .store-section{margin-top:28px}
+html[data-theme=light] .extension-store .store-section>h3{margin:0 0 8px;color:#211b22!important;font-size:20px!important;letter-spacing:-.02em!important}
+html[data-theme=light] .extension-store .extension-grid{gap:0}
+html[data-theme=light] .extension-store .extension-grid article{grid-template-columns:64px minmax(0,1fr) auto!important;gap:14px!important;padding:18px 0!important;border:0!important;border-bottom:1px solid var(--cc-hairline)!important;border-radius:0!important;background:transparent!important;box-shadow:none!important}
+html[data-theme=light] .extension-store .extension-icon{width:64px;height:64px;border-radius:18px;background:color-mix(in srgb,var(--extension-color) 16%,#fff)!important;box-shadow:0 4px 12px rgba(30,35,45,.08)}
+html[data-theme=light] .extension-store .extension-grid h3{margin:0 0 5px;color:#211b22!important;font-size:17px!important;line-height:1.25}
+html[data-theme=light] .extension-store .extension-grid p{display:-webkit-box;overflow:hidden;color:#625962!important;font-size:13px!important;line-height:1.45!important;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+html[data-theme=light] .extension-store .extension-actions{grid-column:auto!important;align-self:center;justify-content:flex-end;gap:6px!important;flex-wrap:nowrap!important}
+html[data-theme=light] .extension-store .extension-actions button{min-width:64px;min-height:34px!important;padding:7px 12px!important;border:0!important;border-radius:999px!important;background:#eee6f5!important;color:#69417f!important;box-shadow:none!important;font-size:13px!important;font-weight:700}
+html[data-theme=light] .extension-store .extension-actions .extension-remove{background:#f9eaed!important;color:#963f50!important}
+/* Edge-to-edge iOS routes reserve physical safe areas. */
+.onboarding{padding-bottom:calc(32px + env(safe-area-inset-bottom))}.character-moments-header{padding-left:max(14px,env(safe-area-inset-left));padding-right:max(14px,env(safe-area-inset-right))}.chat-extra-overlay{padding:max(12px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) 0 max(12px,env(safe-area-inset-left))}.chat-extra-dialog{max-height:calc(100dvh - env(safe-area-inset-top) - 12px)}.chat-extra-dialog>.chat-extra-body{padding-bottom:env(safe-area-inset-bottom)}
+@media (prefers-contrast:more){html[data-theme=light]{--cc-border:rgba(30,35,45,.22);--cc-muted:#4c4d54}html[data-theme=light] :is(.memory-page,.feed,.desktop-tools-dialog,.period-record-panel) :is(p,small,label,span){color:#42434a}}
