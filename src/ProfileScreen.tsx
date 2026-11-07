@@ -6,6 +6,7 @@ import DataTransferPanel from './DataTransferPanel'
 import MemorySettings from './MemorySettings'
 import type { MemoryPolicy } from './longMemory'
 import { testDeepSeekConnection } from './chatService'
+import { modelProvider, normalizeGatewayUrl, DEEPSEEK_ENDPOINT, DEEPSEEK_MODEL, MAGPIE_ENDPOINT, MAGPIE_MODEL, type ModelProvider } from './modelGateway'
 import type { loadLocalData } from './db'
 import { characters, type CharacterId } from './data'
 import { useTheme, type ThemePreference } from './theme'
@@ -69,7 +70,9 @@ export default function ProfileScreen(props: Props) {
     }
   }
   const [showApi, setShowApi] = useState(false)
-  const [provider, setProvider] = useState<'magpie' | 'deepseek'>(() => endpoint.includes('magpie') ? 'magpie' : 'deepseek')
+  const [provider, setProvider] = useState<ModelProvider>(() => modelProvider(endpoint))
+  const copy = (zh: string, en: string) => locale === 'en' ? en : zh
+  const validGateway = (() => { try { const url = new URL(normalizeGatewayUrl(endpoint)); return url.protocol === 'https:' || ['localhost', '127.0.0.1', '[::1]', '10.0.2.2'].includes(url.hostname) } catch { return false } })()
   const [showLanguage, setShowLanguage] = useState(false)
   const [showAppearance, setShowAppearance] = useState(false)
   const [showLocalData, setShowLocalData] = useState(false)
@@ -120,14 +123,15 @@ export default function ProfileScreen(props: Props) {
     <section className="profile-group" aria-labelledby="profile-general-heading">
       <h3 id="profile-general-heading">{t('通用设置')}</h3>
       <div className="profile-settings glass">
-        <SettingRow icon={<MemoryStick />} label={t('AI 服务')} value={provider === 'magpie' ? 'Magpie' : apiKey ? 'DeepSeek' : t('未配置')} onClick={() => setShowApi(!showApi)} expanded={showApi} controls="profile-api" />
+        <SettingRow icon={<MemoryStick />} label={t('AI 服务')} value={provider === 'magpie' ? 'Magpie' : provider === 'openai' ? copy('OpenAI 兼容网关', 'OpenAI-compatible gateway') : apiKey ? 'DeepSeek' : t('未配置')} onClick={() => setShowApi(!showApi)} expanded={showApi} controls="profile-api" />
         {showApi && <div id="profile-api" className="api-settings profile-inline-panel">
           <h3>{t('AI 服务')}</h3>
-          <p>{t('选择 DeepSeek 或本地 Magpie 网关。DeepSeek 需要你填写自己的 Key；Magpie 使用本机默认网关。')}</p>
-          <div className="provider-switch" role="radiogroup" aria-label={t('AI 服务')}><button role="radio" aria-checked={provider === 'magpie'} className={provider === 'magpie' ? 'selected' : ''} onClick={() => { setProvider('magpie'); setEndpoint('/api/magpie/v1/messages'); setModel('ferry/claude-gpt-5-6-luna'); setApiKey('magpie'); setResult('已切换到本地 Magpie 网关') }}>Magpie</button><button role="radio" aria-checked={provider === 'deepseek'} className={provider === 'deepseek' ? 'selected' : ''} onClick={() => { setProvider('deepseek'); setEndpoint('https://api.deepseek.com/chat/completions'); setModel('deepseek-chat'); setApiKey(''); setResult('请填写 DeepSeek API Key') }}>DeepSeek</button></div>
-          {provider === 'deepseek' && <label>DeepSeek API Key<div className="secret-input"><input aria-label="DeepSeek API Key" type={visible ? 'text' : 'password'} value={apiKey} onChange={event => setApiKey(event.target.value)} placeholder="sk-…" /><button onClick={() => setVisible(!visible)}>{visible ? t('隐藏') : t('显示')}</button></div></label>}
-          <p className="api-provider-detail">{provider === 'magpie' ? 'ferry/claude-gpt-5-6-luna · /api/magpie/v1/messages' : 'deepseek-chat · https://api.deepseek.com/chat/completions'}</p>
-          <div className="api-actions"><button className="test-api" onClick={() => void test()} disabled={testing || provider === 'deepseek' && !apiKey.trim()}>{testing ? t('正在测试…') : t('测试连接')}</button>{provider === 'deepseek' && <button onClick={() => { setApiKey(''); setResult('已删除本次会话中的 Key') }}>{t('删除 Key')}</button>}</div>
+          <p>{copy('选择 OpenAI 兼容网关、DeepSeek 或 Magpie。自定义网关可填写 URL、模型名称和 API Key；Key 只保留在本次会话。', 'Choose an OpenAI-compatible gateway, DeepSeek or Magpie. Custom gateways accept a URL, model name and API Key; the Key is session-only.')}</p>
+          <div className="provider-switch" role="radiogroup" aria-label={t('AI 服务')}><button role="radio" disabled={testing} aria-checked={provider === 'openai'} className={provider === 'openai' ? 'selected' : ''} onClick={() => { setProvider('openai'); setEndpoint(''); setModel(''); setApiKey(''); setResult(copy('请填写网关 URL、模型名称和 API Key', 'Enter the gateway URL, model name and API Key')) }}>{copy('OpenAI 兼容网关', 'OpenAI-compatible gateway')}</button><button role="radio" disabled={testing} aria-checked={provider === 'deepseek'} className={provider === 'deepseek' ? 'selected' : ''} onClick={() => { setProvider('deepseek'); setEndpoint(DEEPSEEK_ENDPOINT); setModel(DEEPSEEK_MODEL); setApiKey(''); setResult('请填写 DeepSeek API Key') }}>DeepSeek</button><button role="radio" disabled={testing} aria-checked={provider === 'magpie'} className={provider === 'magpie' ? 'selected' : ''} onClick={() => { setProvider('magpie'); setEndpoint(MAGPIE_ENDPOINT); setModel(MAGPIE_MODEL); setApiKey('magpie'); setResult('已切换到本地 Magpie 网关') }}>Magpie</button></div>
+          {provider === 'openai' && <><label>{copy('网关 URL', 'Gateway URL')}<input type="url" aria-label={copy('网关 URL', 'Gateway URL')} value={endpoint} disabled={testing} onChange={event => { setEndpoint(event.target.value); setResult('') }} placeholder="https://gateway.example.com/v1" autoComplete="url" spellCheck={false}/></label><label>{copy('模型名称', 'Model name')}<input aria-label={copy('模型名称', 'Model name')} value={model} disabled={testing} onChange={event => { setModel(event.target.value); setResult('') }} placeholder="gpt-4o-mini" spellCheck={false}/></label><p className="api-provider-detail">{copy('支持根 URL、/v1 基础地址或完整接口地址。使用 HTTPS；本机 HTTP 可用 localhost、127.0.0.1 或 Android 模拟器的 10.0.2.2。不要把 Key 写在 URL 中。', 'Accepts a root URL, /v1 base URL or full endpoint. Use HTTPS; local HTTP can use localhost, 127.0.0.1 or Android emulator host 10.0.2.2. Do not put the Key in the URL.')}</p></>}
+          {provider !== 'magpie' && <label>{provider === 'deepseek' ? 'DeepSeek API Key' : 'API Key'}<div className="secret-input"><input aria-label={provider === 'deepseek' ? 'DeepSeek API Key' : 'API Key'} type={visible ? 'text' : 'password'} value={apiKey} disabled={testing} onChange={event => { setApiKey(event.target.value); setResult('') }} placeholder="sk-…" autoComplete="off" spellCheck={false}/><button onClick={() => setVisible(!visible)}>{visible ? t('隐藏') : t('显示')}</button></div></label>}
+          <p className="api-provider-detail">{provider === 'magpie' ? `${MAGPIE_MODEL} · ${MAGPIE_ENDPOINT}` : provider === 'deepseek' ? `${DEEPSEEK_MODEL} · ${DEEPSEEK_ENDPOINT}` : `${model || copy('待填写模型', 'Model required')} · ${endpoint || copy('待填写 URL', 'URL required')}`}</p>
+          <div className="api-actions"><button className="test-api" onClick={() => void test()} disabled={testing || provider !== 'magpie' && !apiKey.trim() || provider === 'openai' && (!validGateway || !model.trim())}>{testing ? t('正在测试…') : t('测试连接')}</button>{provider !== 'magpie' && <button disabled={testing} onClick={() => { setApiKey(''); setResult('已删除本次会话中的 Key') }}>{t('删除 Key')}</button>}</div>
           {result && <p className="api-result" role="status">{t(result)}</p>}
         </div>}
         <SettingRow icon={<SunMoon />} label={locale === 'en' ? 'Appearance' : '外观模式'} value={theme.preference === 'system' ? (locale === 'en' ? 'System' : '跟随系统') : theme.preference === 'light' ? (locale === 'en' ? 'Light' : '浅色') : (locale === 'en' ? 'Dark' : '深色')} onClick={() => setShowAppearance(!showAppearance)} expanded={showAppearance} controls="profile-appearance" />

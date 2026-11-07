@@ -8,6 +8,21 @@ import { defaultOnboardingProfile, type OnboardingProfile } from './onboarding'
 import './onboarding.css'
 import { SafetyConsent } from './SafetyPrivacyPanel'
 import { acceptSafetyConsent } from './privacy'
+import { DEEPSEEK_ENDPOINT, DEEPSEEK_MODEL, MAGPIE_ENDPOINT, MAGPIE_MODEL, modelProvider, normalizeGatewayUrl, type ModelProvider } from './modelGateway'
+
+function gatewayConfig(value: string): { endpoint: string; error: string } {
+  if (!value.trim()) return { endpoint: '', error: '' }
+  try {
+    const endpoint = normalizeGatewayUrl(value)
+    const url = new URL(endpoint)
+    if (url.protocol === 'http:' && !['localhost', '127.0.0.1', '[::1]', '10.0.2.2'].includes(url.hostname)) {
+      return { endpoint: '', error: '网关 URL 必须使用 HTTPS；仅本机 localhost、127.0.0.1、[::1] 或 10.0.2.2 可以使用 HTTP。' }
+    }
+    return { endpoint, error: '' }
+  } catch {
+    return { endpoint: '', error: '网关 URL 必须是有效的 HTTP(S) 地址，不能包含账号密码、查询参数或片段。' }
+  }
+}
 
 type ProfileProps = { profile: OnboardingProfile; change: (patch: Partial<OnboardingProfile>) => void }
 const introductions: Record<CharacterId, string> = {
@@ -32,7 +47,7 @@ export function OnboardingEditor({ initial, save, close }: { initial: Onboarding
   const change = (patch: Partial<OnboardingProfile>) => setProfile(current => ({ ...current, ...patch }))
   return <main className="onboarding onboarding-flow"><button className="text-button" disabled={busy} onClick={close}><ArrowLeft size={18}/>{t('返回')}</button><h1>{t('称呼与互动偏好')}</h1><p className="hint">{t('这里修改与{name}的互相称呼；互动偏好与边界用于所有角色。修改称呼不会降低关系进度。', { name: t(characters.find(role => role.id === profile.characterId)?.name || '') })}</p><fieldset disabled={busy} className="onboarding-fields"><Names profile={profile} change={change}/><Preferences profile={profile} change={change}/><Boundaries profile={profile} change={change}/>{error && <p role="alert">{t(error)}</p>}<button className="primary" disabled={busy || !profile.userName.trim() || !profile.characterName.trim()} onClick={async () => { setBusy(true); setError(''); try { await save(profile); close() } catch { setError('偏好未保存，请检查本机存储后重试。') } finally { setBusy(false) } }}>{t('保存偏好')}</button></fieldset></main>
 }
-export default function Onboarding({ selected, setSelected, finish, apiKey, setApiKey, setEndpoint, setModel, onSafetyAccepted }: { onSafetyAccepted?: () => void; selected: CharacterId; setSelected: (id: CharacterId) => void; finish: (profile: OnboardingProfile, messages: ChatMessage[]) => Promise<void>; apiKey: string; setApiKey: (key: string) => void; setEndpoint?: (value: string) => void; setModel?: (value: string) => void }) {
+export default function Onboarding({ selected, setSelected, finish, apiKey, setApiKey, endpoint = '', model = '', setEndpoint, setModel, onSafetyAccepted }: { onSafetyAccepted?: () => void; selected: CharacterId; setSelected: (id: CharacterId) => void; finish: (profile: OnboardingProfile, messages: ChatMessage[]) => Promise<void>; apiKey: string; setApiKey: (key: string) => void; endpoint?: string; model?: string; setEndpoint?: (value: string) => void; setModel?: (value: string) => void }) {
   const { locale } = useI18n()
   const [step, setStep] = useState(-1)
   // Localize fresh defaults only; saved and entered values never change with locale.
@@ -43,8 +58,29 @@ export default function Onboarding({ selected, setSelected, finish, apiKey, setA
   const [trial, setTrial] = useState<ChatMessage[]>([])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-  const [showApi, setShowApi] = useState(false)
-  const [provider, setProvider] = useState<'gateway' | 'deepseek' | null>(null)
+  const [provider, setProvider] = useState<ModelProvider | null>(null)
+  const [gatewayUrl, setGatewayUrl] = useState(() => endpoint && modelProvider(endpoint) === 'openai' ? endpoint : '')
+  const [gatewayModel, setGatewayModel] = useState(() => endpoint && modelProvider(endpoint) === 'openai' ? model : '')
+  const gateway = gatewayConfig(gatewayUrl)
+  const selectProvider = (choice: ModelProvider) => {
+    if (choice === 'openai') {
+      // Preset credentials must never follow the user to a custom destination.
+      if (provider !== 'openai') setApiKey('')
+      setEndpoint?.(gateway.endpoint || gatewayUrl.trim())
+      setModel?.(gatewayModel.trim())
+    } else if (choice === 'deepseek') {
+      if (provider !== 'deepseek') setApiKey('')
+      setEndpoint?.(DEEPSEEK_ENDPOINT)
+      setModel?.(DEEPSEEK_MODEL)
+    } else {
+      setApiKey('magpie')
+      setEndpoint?.(MAGPIE_ENDPOINT)
+      setModel?.(MAGPIE_MODEL)
+    }
+    setProvider(choice)
+    setError('')
+  }
+  const serviceReady = provider === 'magpie' || provider === 'deepseek' && !!apiKey.trim() || provider === 'openai' && !!gateway.endpoint && !!gatewayModel.trim() && !!apiKey.trim()
   const character = characters.find(c => c.id === profile.characterId)!
   const change = (patch: Partial<OnboardingProfile>) => { setProfile(current => ({ ...current, ...patch })); setTrial([]) }
   const next = () => { setError(''); setStep(current => current + 1) }
@@ -59,6 +95,24 @@ export default function Onboarding({ selected, setSelected, finish, apiKey, setA
     {step === 5 && <><h1>{t('怎样陪你更舒服？')}</h1><Preferences profile={profile} change={change}/><button className="primary" onClick={next}>{t('继续')}</button><button className="secondary" onClick={() => { const defaults = defaultOnboardingProfile(profile.characterId); change({ chatLength: defaults.chatLength, proactiveFrequency: defaults.proactiveFrequency, banter: defaults.banter, supportStyle: defaults.supportStyle }); next() }}>{t('先用默认偏好')}</button></>}
     {step === 6 && <><h1>{t('靠近，也尊重边界')}</h1><Boundaries profile={profile} change={change}/><button className="primary" disabled={!profile.notificationStart || !profile.notificationEnd} onClick={next}>{t('继续')}</button></>}
     {step === 7 && <><h1>{t('试着叫一声')}</h1><p className="hint">{t('本机称呼预演，不会发送给模型。确认后保存第一条关系记忆。')}</p><article className="intro-card glass"><p>{t('TA 叫你：{name}', { name: profile.userName === '你' || !profile.userName ? t('你') : profile.userName })}<br/>{t('你叫 TA：{name}', { name: profile.characterName || t(character.name) })}</p>{trial.map(message => <p key={message.id} className={message.from === 'user' ? 'trial-user' : ''}>{message.text}</p>)}</article>{!trial.length ? <button className="primary" onClick={() => { const now = Date.now(); const user = profile.userName.trim(); const name = profile.characterName.trim(); const time = new Date().toLocaleTimeString(locale); const createdAt = new Date().toISOString(); setTrial([{ id: now, from: 'user', text: t('{name}，我今天想先和你打个招呼。', { name }), time, createdAt, status: 'sent' }, { id: now + 1, from: 'character', text: user === '你' || user === 'You' ? t('好，就叫我{name}。暂时不填名字也没关系，我们慢慢认识。', { name }) : t('{user}，听到了。你叫我{name}就好，想换称呼时随时告诉我。', { user, name }), time, createdAt, status: 'sent' }]) }}>{t('发送试聊')}</button> : <button className="primary" onClick={next}>{t('称呼没问题，继续')}</button>}<button className="secondary" onClick={() => { setTrial([]); setStep(3) }}>{t('纠正称呼')}</button></>}
-    {step === 8 && <><h1>{t('选择 AI 服务')}</h1><p className="hint">{t('选择一种回复生成方式，之后随时可以在“我的”中修改。')}</p><div className="provider-choice-stack"><button type="button" className={provider==='gateway'?'selected':''} onClick={() => { setProvider('gateway'); setShowApi(false); setApiKey('magpie'); setEndpoint?.('/api/magpie/v1/messages'); setModel?.('ferry/claude-gpt-5-6-luna') }}><strong>{t('本地网关')}</strong><span>{t('推荐 · 使用当前设备的本地网关')}</span><small>ferry/claude-gpt-5-6-luna</small></button><button type="button" className={provider==='deepseek'?'selected':''} onClick={() => { setProvider('deepseek'); setShowApi(true); setEndpoint?.('https://api.deepseek.com/chat/completions'); setModel?.('deepseek-chat'); setApiKey('') }}><strong>DeepSeek</strong><span>{t('填写自己的 DeepSeek API Key')}</span><small>{t('Key 仅保留在本次浏览器会话')}</small></button></div>{provider==='deepseek' && <label>DeepSeek API Key<input type="password" autoComplete="off" value={apiKey} onChange={e => setApiKey(e.target.value)} placeholder="sk-…"/></label>}<article className="intro-card glass"><p>{t('聊天、称呼、偏好与记忆保存在本机 IndexedDB，不会自动同步到其他设备。清除浏览器数据或卸载可能导致记录丢失，请在“我的”导出加密备份。')}</p><p>{t('聊天内容会发送至你选择的 AI 服务以生成回复。API Key 只保留在本次浏览器会话，不包含在备份内。')}</p></article>{error && <p role="alert">{t(error)}</p>}<button className="primary" disabled={busy || !provider || provider==='deepseek' && !apiKey.trim()} onClick={async () => { setBusy(true); setError(''); try { await finish(profile, trial) } catch { setError('引导未完成：本机保存失败，请检查存储权限后重试。') } finally { setBusy(false) } }}>{busy ? t('正在保存…') : t('完成引导')}</button></>}
+    {step === 8 && <>
+      <h1>{t('选择 AI 服务')}</h1><p className="hint">{t('选择一种回复生成方式，之后随时可以在“我的”中修改。')}</p>
+      <div className="provider-choice-stack">
+        <button type="button" aria-pressed={provider === 'openai'} className={provider === 'openai' ? 'selected' : ''} onClick={() => selectProvider('openai')}><strong>{t('OpenAI兼容网关')}</strong><span>{t('填写自定义网关 URL、模型名称和 API Key')}</span><small>{t('Key 仅保留在本次浏览器会话')}</small></button>
+        <button type="button" aria-pressed={provider === 'deepseek'} className={provider === 'deepseek' ? 'selected' : ''} onClick={() => selectProvider('deepseek')}><strong>DeepSeek</strong><span>{t('填写自己的 DeepSeek API Key')}</span><small>{t('Key 仅保留在本次浏览器会话')}</small></button>
+        <button type="button" aria-pressed={provider === 'magpie'} className={provider === 'magpie' ? 'selected' : ''} onClick={() => selectProvider('magpie')}><strong>Magpie</strong><span>{t('使用当前设备的本地网关')}</span><small>{MAGPIE_MODEL}</small></button>
+      </div>
+      {provider === 'openai' && <>
+        <label>{t('网关 URL')}<input type="url" required autoComplete="off" value={gatewayUrl} aria-invalid={!!gateway.error} aria-describedby="onboarding-gateway-help" onChange={e => { const value = e.target.value; setGatewayUrl(value); setEndpoint?.(gatewayConfig(value).endpoint || value.trim()) }} placeholder="https://gateway.example.com"/></label>
+        <p id="onboarding-gateway-help" className="hint">{t('可填写根 URL、/v1 基础地址或完整的 /chat/completions 地址；根 URL 会补全 /v1/chat/completions，其他路径按原样使用。请使用 HTTPS，本机地址可以使用 HTTP。')}</p>
+        {gateway.error && <p role="alert">{t(gateway.error)}</p>}
+        <label>{t('模型名称')}<input required autoComplete="off" value={gatewayModel} onChange={e => { setGatewayModel(e.target.value); setModel?.(e.target.value.trim()) }} placeholder="your-model-name"/></label>
+        <label>API Key<input type="password" required autoComplete="off" value={apiKey} onChange={e => setApiKey(e.target.value)} placeholder="sk-…"/></label>
+      </>}
+      {provider === 'deepseek' && <label>DeepSeek API Key<input type="password" required autoComplete="off" value={apiKey} onChange={e => setApiKey(e.target.value)} placeholder="sk-…"/></label>}
+      <article className="intro-card glass"><p>{t('聊天、称呼、偏好与记忆保存在本机 IndexedDB，不会自动同步到其他设备。清除浏览器数据或卸载可能导致记录丢失，请在“我的”导出加密备份。')}</p><p>{t('聊天内容会发送至你选择的 AI 服务以生成回复。API Key 只保留在本次浏览器会话，不包含在备份内。')}</p></article>
+      {error && <p role="alert">{t(error)}</p>}
+      <button className="primary" disabled={busy || !serviceReady} onClick={async () => { setBusy(true); setError(''); try { await finish(profile, trial) } catch { setError('引导未完成：本机保存失败，请检查存储权限后重试。') } finally { setBusy(false) } }}>{busy ? t('正在保存…') : t('完成引导')}</button>
+    </>}
   </main>
 }

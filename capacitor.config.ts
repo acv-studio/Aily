@@ -23,8 +23,9 @@ const config: CapacitorConfig = {
       presentationOptions: ['banner', 'list', 'sound'],
     },
     Keyboard: {
-      // ChatPanel already tracks visualViewport; avoid a second native resize.
-      resize: KeyboardResize.None,
+      // Resize WKWebView to the keyboard-safe area. ChatPanel merges this with
+      // visualViewport/native events without subtracting the same height twice.
+      resize: KeyboardResize.Native,
       autoBackdropColor: 'dom',
     },
   },

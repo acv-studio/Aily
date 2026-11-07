@@ -12,8 +12,9 @@
 
 ## 生命周期和界面
 
-- [useAppResume.ts](../src/useAppResume.ts)：原生使用官方 `@capacitor/app` 8.1.2 的 `pause/resume/appStateChange`。仅 pause 记录后台进入，resume 或 active true 消费一次；冷启动 active true、权限提示引起的 inactive false 不触发。
-- iOS pause 对应 `didEnterBackground`，resume 对应 `willEnterForeground`；Android 对应 Activity `onPause/onResume`，Activity 切换也可能触发，不能将其等同于进程被系统杀死。
+- [useAppResume.ts](../src/useAppResume.ts)：原生使用官方 `@capacitor/app` 8.1.2 的 `pause/resume/appStateChange`。iOS 仅 pause 记录后台进入；Android 仅 `appStateChange(false)` 记录 Activity 已停止。resume 或 active true 消费一次，冷启动和重复恢复事件不触发。
+- iOS pause 对应 `didEnterBackground`，resume 对应 `willEnterForeground`；iOS inactive false 可能只是权限提示，不作为后台证据。Android pause 对应 `onPause`，短暂系统打断也可能发生；只暂停而没有 stop 时不弹屏保。Android inactive false 对应 `onStop`，外部全屏选择器也可能触发，不能将其等同于进程被系统杀死。
+- [useAndroidBack.ts](../src/useAndroidBack.ts)：Android 系统返回键先关闭当前弹层，再处理 React 页面导航；聊天返回首页，屏保上返回也进入首页，不循环进入聊天。首页没有其他导航时才最小化应用；不会强制退出或清空资料。聊天左上角返回明确进入首页，同角色重新打开聊天保留草稿。
 - Web 使用 document hidden → visible；原生监听不可用时才退回 Web，避免双通道重复。监听 Promise 迟到、失败及 unmount 都正确清理，不使用全局 removeAllListeners。
 - [ResumeScreenSaver.tsx](../src/ResumeScreenSaver.tsx) / [resumeScreenSaver.css](../src/resumeScreenSaver.css)：本机时间、主角色头像、柔和呼吸动效、状态、显著聊天按钮；支持浅/深色、安全区域及减少动效。
 - 屏保临时隔离后台 DOM 和 portal 的 inert/aria-hidden，拦截隐藏页面焦点陷阱，关闭后准确复原。没有新建模型请求、读取私人 App 数据或写入故事/记忆。
@@ -23,7 +24,7 @@
 ## 验证
 
 ```bash
-npx vitest run src/useAppResume.test.tsx src/ResumeScreenSaver.test.tsx \
+npx vitest run src/useAndroidBack.test.tsx src/useAppResume.test.tsx src/ResumeScreenSaver.test.tsx \
   src/App.screenSaver.test.tsx src/ChatPanel.appData.test.tsx \
   src/ChatPanel.messageActions.test.tsx src/AppDataPanel.test.tsx
 npm run build

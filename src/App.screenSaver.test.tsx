@@ -8,6 +8,8 @@ import { streamReply, type StreamRequest } from './chatService'
 import { characters, type CharacterId } from './data'
 
 const resume = vi.hoisted(() => ({ callback: () => {} }))
+const androidBack = vi.hoisted(() => ({ callback: (): boolean => false }))
+vi.mock('./useAndroidBack', () => ({ default: (callback: () => boolean) => { androidBack.callback = callback } }))
 vi.mock('./useAppResume', () => ({ default: (callback: () => void) => { resume.callback = callback } }))
 vi.mock('./chatService', async () => ({ ...await vi.importActual('./chatService'), streamReply: vi.fn() }))
 const stream = vi.mocked(streamReply)
@@ -44,6 +46,38 @@ function deferReply() {
   return { request: () => request, complete: () => complete() }
 }
 describe('resume screen saver host integration', () => {
+  it('Android system back and the chat arrow return to home, not the resume cover, retaining the chat draft', async () => {
+    await setup()
+    fireEvent.click(screen.getByRole('button', { name: '与陆听澜聊天' }))
+    fireEvent.change(screen.getByRole('textbox', { name: '发消息' }), { target: { value: '保留这份草稿' } })
+    act(() => { expect(androidBack.callback()).toBe(true) })
+    expect(screen.getByRole('button', { name: '与陆听澜聊天' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '进入聊天' })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '与陆听澜聊天' }))
+    expect(screen.getByRole('textbox', { name: '发消息' })).toHaveValue('保留这份草稿')
+    fireEvent.click(screen.getByRole('button', { name: '返回消息' }))
+    expect(screen.getByRole('button', { name: '与陆听澜聊天' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '进入聊天' })).not.toBeInTheDocument()
+  })
+  it('Android back dismisses the screen saver to home and later real resume still shows it', async () => {
+    await setup(); fireEvent.click(screen.getByRole('button', { name: '与陆听澜聊天' }))
+    triggerResume()
+    expect(screen.getByRole('button', { name: '进入聊天' })).toBeInTheDocument()
+    act(() => { expect(androidBack.callback()).toBe(true) })
+    expect(screen.queryByRole('button', { name: '进入聊天' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '与陆听澜聊天' })).toBeInTheDocument()
+    triggerResume(); expect(screen.getByRole('button', { name: '进入聊天' })).toBeInTheDocument()
+  })
+  it('Android back closes chat settings before leaving the conversation', async () => {
+    await setup(); fireEvent.click(screen.getByRole('button', { name: '与陆听澜聊天' }))
+    fireEvent.click(screen.getByRole('button', { name: '聊天设置' }))
+    expect(screen.getByRole('button', { name: '搜索消息' })).toBeInTheDocument()
+    act(() => { expect(androidBack.callback()).toBe(true) })
+    expect(screen.queryByRole('button', { name: '搜索消息' })).not.toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: '发消息' })).toBeInTheDocument()
+    act(() => { expect(androidBack.callback()).toBe(true) })
+    expect(screen.getByRole('button', { name: '与陆听澜聊天' })).toBeInTheDocument()
+  })
   it('does not show a screen saver during cold start or loading', async () => {
     await seed(); render(<App />); triggerResume()
     await screen.findByRole('button', { name: '与陆听澜聊天' })

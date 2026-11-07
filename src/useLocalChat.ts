@@ -1,6 +1,7 @@
 import { t, getLocale, resolveChatLocale, useI18n, detectLanguage } from './i18n'
 import { useEffect, useRef, useState } from 'react'
 import { hasSafetyConsent } from './privacy'
+import { modelProvider } from './modelGateway'
 import { characters, type CharacterId } from './data'
 import { excludedMemorySourceIds, streamReply, validLocalVideoAttachment, type ChatMessage, type ConfirmedMemory, type MemoryRecallSources } from './chatService'
 import { clearCharacterMemories, deleteMemory, finishOnboarding as persistFinishOnboarding, updateOnboarding as persistUpdateOnboarding, initializeLocalData, loadRoleConversation, persistChatChanges, saveMemory, saveSetting, setPrimaryCharacter, updateMemory } from './db'
@@ -89,10 +90,10 @@ export default function useLocalChat() {
     return task
   }
   const savedApiKey = readPreference('sessionStorage', 'aily-api-key')
-  const useDefaultGateway = !savedApiKey
-  const [apiKey, setKey] = useState(() => savedApiKey || 'magpie')
-  const [endpoint, setEndpointState] = useState(() => useDefaultGateway ? '/api/magpie/v1/messages' : readPreference('localStorage', 'aily-api-endpoint', '/api/magpie/v1/messages'))
-  const [model, setModelState] = useState(() => useDefaultGateway ? 'group/auto-mimo-v2-6-flash-free' : readPreference('localStorage', 'aily-api-model', 'group/auto-mimo-v2-6-flash-free'))
+  const savedEndpoint = readPreference('localStorage', 'aily-api-endpoint', '/api/magpie/v1/messages')
+  const [apiKey, setKey] = useState(() => savedApiKey || (modelProvider(savedEndpoint) === 'magpie' ? 'magpie' : ''))
+  const [endpoint, setEndpointState] = useState(() => savedEndpoint)
+  const [model, setModelState] = useState(() => readPreference('localStorage', 'aily-api-model', savedEndpoint === '/api/magpie/v1/messages' ? 'group/auto-mimo-v2-6-flash-free' : savedEndpoint.includes('api.deepseek.com') ? 'deepseek-chat' : ''))
   const modelConfigRef = useRef({ endpoint, model }); modelConfigRef.current = { endpoint, model }
   const load = async () => {
     setLoadError('')

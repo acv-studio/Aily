@@ -16,6 +16,8 @@ import './replyModes.css'
 import useMessageLongPress from './useMessageLongPress'
 import { copyMessageText } from './messageClipboard'
 import './messageActions.css'
+import { calculateChatViewport } from './chatViewport'
+import { getNativeKeyboardState, subscribeNativeKeyboard } from './nativeKeyboard'
 
 export type MemoryDraft = { text: string; category: NonNullable<ConfirmedMemory['category']>; sourceMessageId?: number }
 export interface ChatPanelProps {
@@ -65,6 +67,12 @@ export default function ChatPanel(props: ChatPanelProps) {
   const closeMode = () => { setModeOpen(false); modeTrigger.current?.focus({ preventScroll: true }) }
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
+  useEffect(() => {
+    if (!historyOpen) return
+    const dismiss = (event: KeyboardEvent) => { if (event.key === 'Escape') { event.preventDefault(); setHistoryOpen(false) } }
+    document.addEventListener('keydown', dismiss)
+    return () => document.removeEventListener('keydown', dismiss)
+  }, [historyOpen])
   const [primarySaving, setPrimarySaving] = useState(false)
   const settingsMenu = useRef<HTMLDivElement>(null)
   const settingsTrigger = useRef<HTMLButtonElement>(null)
@@ -72,7 +80,7 @@ export default function ChatPanel(props: ChatPanelProps) {
     if (!settingsOpen) return
     settingsMenu.current?.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus()
     const dismiss = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') { setSettingsOpen(false); settingsTrigger.current?.focus() }
+      if (event.key === 'Escape') { event.preventDefault(); setSettingsOpen(false); settingsTrigger.current?.focus() }
     }
     document.addEventListener('keydown', dismiss)
     const outside = (event: PointerEvent) => {
@@ -130,7 +138,7 @@ export default function ChatPanel(props: ChatPanelProps) {
   useEffect(() => {
     if (!moreOpen) return
     const dismiss = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && !extraPanel) { closeMore(); moreButton.current?.focus() }
+      if (event.key === 'Escape' && !extraPanel) { event.preventDefault(); closeMore(); moreButton.current?.focus() }
     }
     const outside = (event: PointerEvent) => {
       if (event.target instanceof Element && !event.target.closest('.composer, .chat-more-panel, .chat-extra-overlay')) closeMore()
@@ -139,19 +147,27 @@ export default function ChatPanel(props: ChatPanelProps) {
     document.addEventListener('pointerdown', outside)
     return () => { document.removeEventListener('keydown', dismiss); document.removeEventListener('pointerdown', outside) }
   }, [moreOpen, extraPanel])
-  // The visual viewport follows the soft keyboard, unlike 100vh in many WebViews.
+  // Native keyboard and visualViewport describe the same occlusion in different
+  // iOS versions. Use their minimum visible bottom, not visualViewport alone.
   useEffect(() => {
     const viewport = window.visualViewport
     const resize = () => {
-      screen.current?.style.setProperty('--chat-view-height', `${viewport?.height ?? window.innerHeight}px`)
-      screen.current?.style.setProperty('--chat-view-top', `${viewport?.offsetTop ?? 0}px`)
-      if (screen.current) screen.current.dataset.keyboardOpen = String(!!viewport && window.innerHeight - viewport.height - viewport.offsetTop > 120)
+      const native = getNativeKeyboardState()
+      const frame = calculateChatViewport({ layoutHeight:window.innerHeight, visualHeight:viewport?.height, visualTop:viewport?.offsetTop, nativeKeyboardHeight:native.height, fullHeight:native.width===window.innerWidth?native.fullHeight:0 })
+      screen.current?.style.setProperty('--chat-view-height', `${frame.height}px`)
+      screen.current?.style.setProperty('--chat-view-top', `${frame.top}px`)
+      if (screen.current) {
+        screen.current.dataset.keyboardOpen = String(frame.keyboardOpen)
+        screen.current.dataset.compactViewport = String(frame.height < 360)
+      }
     }
     resize()
+    const unsubscribe = subscribeNativeKeyboard(resize)
     viewport?.addEventListener('resize', resize)
     viewport?.addEventListener('scroll', resize)
     window.addEventListener('resize', resize)
     return () => {
+      unsubscribe()
       viewport?.removeEventListener('resize', resize)
       viewport?.removeEventListener('scroll', resize)
       window.removeEventListener('resize', resize)
@@ -191,6 +207,7 @@ export default function ChatPanel(props: ChatPanelProps) {
     }
     const dismiss = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return
+      event.preventDefault()
       const row = screen.current?.querySelector(`[data-message-id="${activeActions}"]`)
       if (row?.contains(document.activeElement)) row.querySelector<HTMLElement>('.bubble')?.focus({ preventScroll: true })
       setActiveActions(undefined)

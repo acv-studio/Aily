@@ -28,6 +28,27 @@ async function setup(overrides: Partial<ComponentProps<typeof ProfileScreen>> = 
 }
 
 describe('organized profile settings', () => {
+  it('orders OpenAI-compatible gateway, DeepSeek and Magpie and clears preset credentials on switch', async () => {
+    const props = await setup({ endpoint: '/api/magpie/v1/messages', apiKey: 'magpie' })
+    fireEvent.click(screen.getByRole('button', { name: 'AI 服务 Magpie' }))
+    const radios = within(screen.getByRole('radiogroup', { name: 'AI 服务' })).getAllByRole('radio')
+    expect(radios.map(button => button.textContent)).toEqual(['OpenAI 兼容网关', 'DeepSeek', 'Magpie'])
+    fireEvent.click(radios[0])
+    expect(props.setApiKey).toHaveBeenCalledWith('')
+    expect(props.setEndpoint).toHaveBeenCalledWith('')
+    expect(screen.getByLabelText('网关 URL')).toBeInTheDocument()
+    expect(screen.getByLabelText('模型名称')).toBeInTheDocument()
+  })
+  it('restores a custom gateway URL/model and exposes its real inputs without storing a Key in the URL', async () => {
+    const props = await setup({ endpoint: 'https://gateway.example/v1', model: 'custom-model', apiKey: 'custom-key' })
+    fireEvent.click(screen.getByRole('button', { name: 'AI 服务 OpenAI 兼容网关' }))
+    expect(screen.getByLabelText('网关 URL')).toHaveValue('https://gateway.example/v1')
+    expect(screen.getByLabelText('模型名称')).toHaveValue('custom-model')
+    expect(screen.getByLabelText('API Key')).toHaveAttribute('type', 'password')
+    expect(screen.getByRole('button', { name: '测试连接' })).toBeEnabled()
+    fireEvent.change(screen.getByLabelText('网关 URL'), { target: { value: 'http://10.0.2.2:8000/v1' } })
+    expect(props.setEndpoint).toHaveBeenCalledWith('http://10.0.2.2:8000/v1')
+  })
   it('puts the points entry first and connects all grouped actions without the removed profile card', async () => {
     const props = await setup()
     expect(screen.getAllByRole('button')[0]).toHaveAccessibleName('签到与月卡')

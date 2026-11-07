@@ -5,6 +5,7 @@ dist/
 coverage/
 .mobile-tools/
 .mobile-build/
+artifacts/
 .npm-cache/
 .toolchains/
 # Native build outputs, local SDK paths, and signing material

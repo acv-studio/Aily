@@ -10,6 +10,7 @@ export default function useAppResume(onResume: () => void): void {
   useEffect(() => {
     let channel: 'native' | 'web' | 'disposed' = 'native'
     let armed = false
+    let isAndroid = false
     const handles = new Set<PluginListenerHandle>()
 
     const remove = (handle: PluginListenerHandle) => {
@@ -50,12 +51,14 @@ export default function useAppResume(onResume: () => void): void {
 
     try {
       if (!Capacitor.isNativePlatform() || !Capacitor.isPluginAvailable('App')) useWeb()
+      else isAndroid = Capacitor.getPlatform() === 'android'
     } catch { useWeb() }
 
     // iOS pause = didEnterBackground; inactive alone = willResignActive and can
-    // be just a permission prompt. Android pause = Activity.onPause.
+    // be just a permission prompt. Android onPause can also be a brief system
+    // interruption; only appStateChange(false), from onStop, arms Android.
     register(() => App.addListener('pause', () => {
-      if (channel === 'native') armed = true
+      if (channel === 'native' && !isAndroid) armed = true
     }))
     // iOS resume = willEnterForeground, before didBecomeActive. Either signal
     // may consume the same pause; duplicate active/resume signals cannot fire twice.
@@ -63,7 +66,9 @@ export default function useAppResume(onResume: () => void): void {
       if (channel === 'native') consume()
     }))
     register(() => App.addListener('appStateChange', ({ isActive }) => {
-      if (channel === 'native' && isActive) consume()
+      if (channel !== 'native') return
+      if (isActive) consume()
+      else if (isAndroid) armed = true
     }))
     // Do not query getState: an asynchronously stale snapshot cannot arm a cycle.
 

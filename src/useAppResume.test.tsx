@@ -5,7 +5,7 @@ import useAppResume from './useAppResume'
 
 const sdk = vi.hoisted(() => ({
   addListener: vi.fn(), getState: vi.fn(), removeAllListeners: vi.fn(),
-  isNativePlatform: vi.fn(), isPluginAvailable: vi.fn(),
+  isNativePlatform: vi.fn(), isPluginAvailable: vi.fn(), getPlatform: vi.fn(),
 }))
 vi.mock('@capacitor/app', () => ({ App: sdk }))
 vi.mock('@capacitor/core', () => ({ Capacitor: sdk }))
@@ -44,6 +44,7 @@ beforeEach(() => {
   listeners = new Map(); handles = []; visibility = 'visible'
   vi.spyOn(document, 'visibilityState', 'get').mockImplementation(() => visibility)
   sdk.isNativePlatform.mockReturnValue(true)
+  sdk.getPlatform.mockReturnValue('ios')
   sdk.isPluginAvailable.mockReturnValue(true)
   sdk.addListener.mockImplementation((name: NativeEvent, listener: Listener) => {
     remember(name, listener)
@@ -123,6 +124,33 @@ describe('native app resume', () => {
     emit('pause'); emit('resume'); await settle()
     emit('pause'); emit('appStateChange'); await settle()
     expect(callback).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('Android foreground/background distinction', () => {
+  beforeEach(() => sdk.getPlatform.mockReturnValue('android'))
+  it('does not treat a pause-only interruption or duplicate active/resume as a background return', async () => {
+    const callback = vi.fn()
+    renderHook(() => useAppResume(callback)); await settle()
+    emit('appStateChange'); emit('resume')
+    for (let i = 0; i < 3; i++) { emit('pause'); emit('appStateChange', true); emit('resume') }
+    expect(callback).not.toHaveBeenCalled()
+  })
+  it('arms only at Android stop, and consumes the normal active-before-resume sequence once', async () => {
+    const callback = vi.fn()
+    renderHook(() => useAppResume(callback)); await settle()
+    emit('pause'); emit('appStateChange', false); emit('appStateChange', true); emit('resume'); emit('appStateChange', true)
+    expect(callback).toHaveBeenCalledTimes(1)
+  })
+  it('handles stop/active without pause, repeated real returns, and the latest callback', async () => {
+    const first = vi.fn(), latest = vi.fn()
+    const hook = renderHook(({ callback }) => useAppResume(callback), { initialProps: { callback: first } })
+    await settle()
+    emit('appStateChange', false); hook.rerender({ callback: latest }); emit('appStateChange', true)
+    emit('pause'); emit('appStateChange', false); emit('appStateChange', true); emit('resume')
+    expect(first).not.toHaveBeenCalled(); expect(latest).toHaveBeenCalledTimes(2)
+    hook.unmount(); emit('appStateChange', false); emit('appStateChange', true)
+    expect(latest).toHaveBeenCalledTimes(2)
   })
 })
 

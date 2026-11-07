@@ -6,6 +6,13 @@ export const englishSingular: Record<string, string> = {
 }
 
 export const appEnglish: Record<string, string> = {
+  'OpenAI兼容网关': 'OpenAI-compatible gateway',
+  '网关 URL': 'Gateway URL',
+  '模型名称': 'Model name',
+  '填写自定义网关 URL、模型名称和 API Key': 'Enter your gateway URL, model name and API Key',
+  '网关 URL 必须使用 HTTPS；仅本机 localhost、127.0.0.1、[::1] 或 10.0.2.2 可以使用 HTTP。': 'Use HTTPS. Only local localhost, 127.0.0.1, [::1] or emulator host 10.0.2.2 can use HTTP.',
+  '网关 URL 必须是有效的 HTTP(S) 地址，不能包含账号密码、查询参数或片段。': 'The gateway must be a valid HTTP(S) URL without credentials, query parameters or fragments.',
+  '可填写根 URL、/v1 基础地址或完整的 /chat/completions 地址；根 URL 会补全 /v1/chat/completions，其他路径按原样使用。请使用 HTTPS，本机地址可以使用 HTTP。': 'Enter a root URL, /v1 base URL or complete /chat/completions endpoint. Root URLs add /v1/chat/completions; other paths are used unchanged. Use HTTPS, or HTTP for local addresses.',
   '智能提醒': 'Smart reminders',
   '喝水、吃饭、天气、心情、地铁与下一步计划': 'Hydration, meals, weather, mood, metro and next steps',
   '记忆': 'Memories', '朋友圈': 'Moments', '提醒': 'Reminders',

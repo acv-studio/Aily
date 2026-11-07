@@ -1,0 +1,8 @@
+/* Keep the composer inside the measured visible frame, including landscape. */
+.chat-screen{max-height:var(--chat-view-height,100dvh);min-height:0!important;overflow:hidden;}
+.chat-screen[data-keyboard-open=true] .composer{padding-bottom:8px!important;flex-shrink:0;}
+.chat-screen[data-compact-viewport=true] .quick-replies{display:none!important;}
+.chat-screen[data-compact-viewport=true] .chat-header{padding-top:env(safe-area-inset-top,0px)!important;padding-bottom:2px!important;min-height:44px;}
+.chat-screen[data-compact-viewport=true] .messages{padding-top:0!important;padding-bottom:0!important;}
+.chat-screen[data-compact-viewport=true] .composer{padding-top:4px!important;padding-bottom:4px!important;}
+.chat-screen[data-compact-viewport=true]>:is(.quoted-preview,.chat-error,.chat-notice,.chat-search){flex:0 1 auto;min-height:0;max-height:44px;overflow:auto;margin-top:0!important;margin-bottom:0!important;}

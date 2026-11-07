@@ -1,14 +1,24 @@
+import { useState } from 'react'
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import Onboarding, { OnboardingEditor } from './OnboardingFlow'
 import { defaultOnboardingProfile } from './onboarding'
 import { consentKey } from './privacy'
-afterEach(cleanup)
+import { setLocale } from './i18n'
+import { DEEPSEEK_ENDPOINT, DEEPSEEK_MODEL, MAGPIE_ENDPOINT, MAGPIE_MODEL } from './modelGateway'
+
+beforeEach(() => { setLocale('zh-CN'); localStorage.removeItem(consentKey) })
+afterEach(() => { cleanup(); vi.unstubAllGlobals() })
 const proceed = () => fireEvent.click(screen.getByRole('button', { name: '继续' }))
-function start() {
-  localStorage.removeItem(consentKey)
+function start(initial: { endpoint?: string; model?: string; apiKey?: string } = {}) {
   const finish = vi.fn().mockResolvedValue(undefined)
-  render(<Onboarding selected="lu" setSelected={vi.fn()} finish={finish} apiKey="" setApiKey={vi.fn()}/> )
+  const setApiKey = vi.fn(), setEndpoint = vi.fn(), setModel = vi.fn()
+  function Harness() {
+    const [key, updateKey] = useState(initial.apiKey || '')
+    return <Onboarding selected="lu" setSelected={vi.fn()} finish={finish} endpoint={initial.endpoint} model={initial.model} apiKey={key} setApiKey={value => { setApiKey(value); updateKey(value) }} setEndpoint={setEndpoint} setModel={setModel}/>
+  }
+  render(<Harness/> )
+  proceed()
   const encounter = screen.getByRole('button', { name: /遇见 TA/ })
   expect(encounter).toBeDisabled()
   fireEvent.click(screen.getByLabelText('我已年满 18 周岁'))
@@ -18,37 +28,32 @@ function start() {
   fireEvent.click(encounter)
   fireEvent.click(screen.getByRole('button', { name: /开始我们的故事/ }))
   proceed()
-  return finish
+  return { finish, setApiKey, setEndpoint, setModel }
 }
-function toBoundary() { start(); proceed(); proceed(); proceed() }
+function toService(initial?: Parameters<typeof start>[0]) {
+  const config = start(initial)
+  proceed(); proceed(); proceed(); proceed()
+  fireEvent.click(screen.getByRole('button', { name: '发送试聊' }))
+  fireEvent.click(screen.getByRole('button', { name: '称呼没问题，继续' }))
+  return config
+}
+const chooseGateway = () => fireEvent.click(screen.getByRole('button', { name: /^OpenAI兼容网关/ }))
+const chooseMagpie = () => fireEvent.click(screen.getByRole('button', { name: /^Magpie/ }))
+const complete = () => screen.getByRole('button', { name: '完成引导' })
+const enterUrl = (value: string) => fireEvent.change(screen.getByLabelText('网关 URL'), { target: { value } })
+
 describe('nine-step onboarding UI', () => {
-  it('requires independent age and consent plus nonempty safety word, and can revoke', () => {
-    toBoundary()
-    expect(screen.getByText('成人模式：关闭（默认）')).toBeInTheDocument()
-    screen.getByRole('button', { name: '了解并确认成人模式' }).focus()
-    fireEvent.click(screen.getByRole('button', { name: '了解并确认成人模式' }))
-    expect(screen.getByLabelText('我确认已年满 18 岁')).toHaveFocus()
-    fireEvent.keyDown(document, { key: 'Tab', shiftKey: true })
-    expect(screen.getByRole('button', { name: '保持关闭' })).toHaveFocus()
-    fireEvent.keyDown(document, { key: 'Escape' })
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '了解并确认成人模式' })).toHaveFocus()
-    fireEvent.click(screen.getByRole('button', { name: '了解并确认成人模式' }))
-    const enable = screen.getByRole('button', { name: '确认开启' })
-    expect(enable).toBeDisabled()
-    fireEvent.click(screen.getByLabelText('我确认已年满 18 岁'))
-    expect(enable).toBeDisabled()
-    fireEvent.click(screen.getByLabelText('我自愿开启，知道可以随时撤回同意'))
-    fireEvent.change(screen.getByLabelText('安全词'), { target: { value: ' ' } })
-    expect(enable).toBeDisabled()
-    fireEvent.change(screen.getByLabelText('安全词'), { target: { value: '停' } })
-    fireEvent.click(enable)
-    expect(screen.getByText('成人模式：已开启')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: '关闭成人模式' }))
-    expect(screen.getByText('成人模式：关闭（默认）')).toBeInTheDocument()
+  it('requires independent age and AI/data consent and preserves the nine steps', () => {
+    start()
+    proceed(); proceed(); proceed()
+    expect(screen.getByText('第 7 / 9 步 · 边界与同意')).toBeInTheDocument()
+    expect(screen.getByLabelText('禁用话题')).toBeInTheDocument()
+    expect(screen.getByLabelText('允许通知开始时间')).toHaveValue('09:00')
+    expect(screen.queryByRole('button', { name: '了解并确认成人模式' })).not.toBeInTheDocument()
+    expect(localStorage.getItem(consentKey)).not.toBeNull()
   })
-  it('allows optional defaults, correcting trial names and completing without API key', async () => {
-    const finish = start()
+  it('allows optional defaults, correcting trial names and completing with Magpie', async () => {
+    const { finish } = start()
     fireEvent.click(screen.getByRole('button', { name: '先不填写' }))
     fireEvent.click(screen.getByRole('button', { name: '先用全名' }))
     fireEvent.click(screen.getByRole('button', { name: '先用默认偏好' }))
@@ -61,9 +66,9 @@ describe('nine-step onboarding UI', () => {
     fireEvent.click(screen.getByRole('button', { name: '发送试聊' }))
     expect(screen.getByText(/阿雨，听到了/)).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '称呼没问题，继续' }))
-    fireEvent.click(screen.getByRole('button', { name: '设置 API Key' }))
-    expect(screen.getByLabelText('DeepSeek API Key')).toHaveAttribute('type', 'password')
-    await act(async () => { fireEvent.click(screen.getByRole('button', { name: '完成引导' })) })
+    expect(complete()).toBeDisabled()
+    chooseMagpie()
+    await act(async () => { fireEvent.click(complete()) })
     expect(finish).toHaveBeenCalledWith(expect.objectContaining({ userName: '阿雨', adultEnabled: false }), expect.arrayContaining([expect.objectContaining({ from: 'user' }), expect.objectContaining({ from: 'character' })]))
   })
   it('keeps failed edits visible for retry instead of claiming they saved', async () => {
@@ -72,5 +77,93 @@ describe('nine-step onboarding UI', () => {
     fireEvent.click(screen.getByRole('button', { name: '保存偏好' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('偏好未保存')
     expect(close).not.toHaveBeenCalled()
+  })
+})
+
+describe('onboarding AI service choices', () => {
+  it('orders custom OpenAI, DeepSeek, Magpie and configures the local auto preset without a probe', () => {
+    const fetch = vi.fn()
+    vi.stubGlobal('fetch', fetch)
+    const { setApiKey, setEndpoint, setModel } = toService()
+    const choices = screen.getAllByRole('button').filter(button => button.querySelector('strong'))
+    expect(choices.map(button => button.querySelector('strong')?.textContent)).toEqual(['OpenAI兼容网关', 'DeepSeek', 'Magpie'])
+    expect(complete()).toBeDisabled()
+    chooseMagpie()
+    expect(setApiKey).toHaveBeenLastCalledWith('magpie')
+    expect(setEndpoint).toHaveBeenLastCalledWith(MAGPIE_ENDPOINT)
+    expect(setModel).toHaveBeenLastCalledWith(MAGPIE_MODEL)
+    expect(complete()).toBeEnabled()
+    expect(fetch).not.toHaveBeenCalled()
+    expect(screen.getByText(/聊天内容会发送至你选择的 AI 服务/)).toBeInTheDocument()
+  })
+  it('requires a valid custom URL, model and session-only key and updates actual configuration immediately', async () => {
+    const { finish, setApiKey, setEndpoint, setModel } = toService()
+    chooseMagpie(); chooseGateway()
+    expect(setApiKey).toHaveBeenLastCalledWith('')
+    expect(screen.getByLabelText('网关 URL')).toHaveValue('')
+    expect(screen.getByLabelText('模型名称')).toHaveValue('')
+    expect(screen.getByLabelText('API Key')).toHaveAttribute('type', 'password')
+    expect(screen.getByLabelText('API Key')).toHaveAttribute('autoComplete', 'off')
+    enterUrl('https://gateway.example.com')
+    expect(setEndpoint).toHaveBeenLastCalledWith('https://gateway.example.com/v1/chat/completions')
+    expect(complete()).toBeDisabled()
+    fireEvent.change(screen.getByLabelText('模型名称'), { target: { value: ' custom-model ' } })
+    expect(setModel).toHaveBeenLastCalledWith('custom-model')
+    expect(complete()).toBeDisabled()
+    fireEvent.change(screen.getByLabelText('API Key'), { target: { value: 'session-secret' } })
+    expect(complete()).toBeEnabled()
+    enterUrl('https://gateway.example.com/v1')
+    expect(setEndpoint).toHaveBeenLastCalledWith('https://gateway.example.com/v1/chat/completions')
+    enterUrl('https://gateway.example.com/custom/chat/completions')
+    expect(setEndpoint).toHaveBeenLastCalledWith('https://gateway.example.com/custom/chat/completions')
+    await act(async () => { fireEvent.click(complete()) })
+    expect(finish).toHaveBeenCalledOnce()
+    expect(localStorage.getItem('aily.apiKey')).toBeNull()
+  })
+  it.each(['gateway.example.com', 'ftp://gateway.example.com', 'http://gateway.example.com', 'https://user:secret@gateway.example.com', 'https://gateway.example.com?key=secret', 'https://gateway.example.com#fragment'])('shows a URL error and blocks completion for %s without erasing data', value => {
+    const { finish } = toService()
+    localStorage.setItem('onboarding-test-record', 'preserve')
+    chooseGateway()
+    fireEvent.change(screen.getByLabelText('模型名称'), { target: { value: 'custom-model' } })
+    fireEvent.change(screen.getByLabelText('API Key'), { target: { value: 'session-secret' } })
+    enterUrl(value)
+    expect(screen.getByRole('alert')).toHaveTextContent(/HTTP/)
+    expect(screen.getByLabelText('网关 URL')).toHaveAttribute('aria-invalid', 'true')
+    expect(complete()).toBeDisabled()
+    expect(finish).not.toHaveBeenCalled()
+    expect(localStorage.getItem('onboarding-test-record')).toBe('preserve')
+    localStorage.removeItem('onboarding-test-record')
+  })
+  it.each(['localhost', '127.0.0.1', '[::1]', '10.0.2.2'])('accepts HTTP for local host %s', host => {
+    toService(); chooseGateway()
+    enterUrl(`http://${host}:3425/v1`)
+    fireEvent.change(screen.getByLabelText('模型名称'), { target: { value: 'local-model' } })
+    fireEvent.change(screen.getByLabelText('API Key'), { target: { value: 'local-key' } })
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(complete()).toBeEnabled()
+  })
+  it('preserves the backward DeepSeek choice, requires its key, and clears it for a custom destination', () => {
+    const { setEndpoint, setModel, setApiKey } = toService()
+    fireEvent.click(screen.getByRole('button', { name: /^DeepSeek/ }))
+    expect(setEndpoint).toHaveBeenLastCalledWith(DEEPSEEK_ENDPOINT)
+    expect(setModel).toHaveBeenLastCalledWith(DEEPSEEK_MODEL)
+    expect(complete()).toBeDisabled()
+    fireEvent.change(screen.getByLabelText('DeepSeek API Key'), { target: { value: 'deepseek-key' } })
+    expect(complete()).toBeEnabled()
+    chooseGateway()
+    expect(setApiKey).toHaveBeenLastCalledWith('')
+    expect(screen.getByLabelText('API Key')).toHaveValue('')
+    expect(complete()).toBeDisabled()
+  })
+  it('initializes saved custom fields and restores them after selecting a preset', () => {
+    const { setEndpoint, setModel } = toService({ endpoint: 'https://custom.example.com/v1/chat/completions', model: 'saved-model', apiKey: 'magpie' })
+    chooseGateway()
+    expect(screen.getByLabelText('网关 URL')).toHaveValue('https://custom.example.com/v1/chat/completions')
+    expect(screen.getByLabelText('模型名称')).toHaveValue('saved-model')
+    expect(screen.getByLabelText('API Key')).toHaveValue('')
+    chooseMagpie(); chooseGateway()
+    expect(setEndpoint).toHaveBeenLastCalledWith('https://custom.example.com/v1/chat/completions')
+    expect(setModel).toHaveBeenLastCalledWith('saved-model')
+    expect(screen.getByLabelText('API Key')).toHaveValue('')
   })
 })
