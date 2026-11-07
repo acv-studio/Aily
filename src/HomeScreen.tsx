@@ -8,6 +8,7 @@ import WeatherWidget from './WeatherWidget'
 import DesktopTools, { type DesktopTool } from './DesktopTools'
 import { extensionApps, installedExtensionIds, type ExtensionAppId } from './extensionApps'
 import './home.css'
+import { ensureDefaultExtensionsInstalled } from './defaultExtensions'
 
 type Props = {
   selected: CharacterId
@@ -35,7 +36,9 @@ export default function HomeScreen({ selected, primaryId = selected, primaryName
   const { t, locale } = useI18n()
   const [tool, setTool] = useState<DesktopTool | null>(null)
   const [installedExtensions,setInstalledExtensions]=useState<ExtensionAppId[]>(installedExtensionIds)
-  useEffect(()=>{const refresh=()=>setInstalledExtensions(installedExtensionIds());window.addEventListener('aily-extension-apps',refresh);window.addEventListener('storage',refresh);return()=>{window.removeEventListener('aily-extension-apps',refresh);window.removeEventListener('storage',refresh)}},[])
+  const [defaultInstallFailed, setDefaultInstallFailed] = useState(false)
+  const retryDefaultInstall = () => { try { ensureDefaultExtensionsInstalled(); setInstalledExtensions(installedExtensionIds()); setDefaultInstallFailed(false) } catch { setDefaultInstallFailed(true) } }
+  useEffect(()=>{retryDefaultInstall();const refresh=()=>setInstalledExtensions(installedExtensionIds());window.addEventListener('aily-extension-apps',refresh);window.addEventListener('storage',refresh);return()=>{window.removeEventListener('aily-extension-apps',refresh);window.removeEventListener('storage',refresh)}},[])
   const [partnersOpen, setPartnersOpen] = useState(false)
   const primary = characters.find(character => character.id === primaryId) || characters[0]
   const name = primaryName || t(primary.name)
@@ -54,6 +57,7 @@ export default function HomeScreen({ selected, primaryId = selected, primaryName
         <ChevronRight size={18} className="desktop-bot-chevron" />
       </button>
       <div className="desktop-section-heading desktop-tools-heading"><span>{locale === 'en' ? 'LITTLE THINGS, EVERY DAY' : '把日子过成喜欢的样子'}</span><span className="desktop-section-line" /></div>
+      {defaultInstallFailed && <p role="alert">{locale === 'en' ? 'Default apps could not be added. Existing data is unchanged.' : '默认应用添加失败，原有应用数据未更改。'} <button onClick={retryDefaultInstall}>{locale === 'en' ? 'Retry' : '重试'}</button></p>}
       <div className="desktop-app-pages" role="group" aria-label={locale === 'en' ? 'Everyday apps' : '日常小应用'}>{appPages.map((page,index)=><div className="desktop-app-grid" key={index}>{page.map(app=>{if(app.kind==='built'){const Icon=app.icon;return <button key={app.id} className="desktop-app" onClick={()=>setTool(app.id)}><span className={`desktop-app-icon desktop-icon-${app.id}`} style={{'--tool-color':app.color} as CSSProperties}><Icon size={27} strokeWidth={1.65}/></span><span>{locale==='en'?app.english:app.label}</span></button>}return <button key={app.id} className="desktop-app" onClick={()=>setTool(app.id)}><span className="desktop-app-icon extension-installed-icon" style={{'--tool-color':app.color} as CSSProperties}>{app.icon}</span><span>{locale==='en'?app.english:app.name}</span></button>})}</div>)}</div>
       <button className="desktop-partners-toggle" aria-expanded={partnersOpen} aria-controls="desktop-partners" onClick={() => setPartnersOpen(value => !value)}>{locale === 'en' ? 'Find chat companions' : '寻找聊天伙伴'}<ChevronRight size={14} className={partnersOpen ? 'expanded' : ''} /></button>
       {partnersOpen && <div id="desktop-partners" className="companion-strip" role="group" aria-label={t('聊天伙伴')}>

@@ -1,0 +1,19 @@
+/* A compact settings control, visually separated from conversational shortcuts. */
+.chat-screen .quick-replies .inline-mode{padding-right:10px;margin-right:2px;border-right:1px solid var(--cc-border);display:flex;align-items:center}
+.chat-screen .quick-replies .chat-mode-trigger{gap:6px;min-height:36px;padding:7px 10px;border:0;border-radius:10px;background:var(--cc-primary-soft)!important;color:var(--cc-primary)!important;box-shadow:none;font-size:11px;font-weight:600;line-height:1.4}
+.chat-screen .quick-replies .chat-mode-trigger>svg{transform:none;flex:none}
+.chat-screen .quick-replies .chat-mode-trigger[aria-expanded=true]{background:color-mix(in srgb,var(--cc-primary) 22%,transparent)!important}
+.chat-screen .quick-replies .chat-mode-trigger[aria-expanded=true]>.mode-chevron{transform:rotate(180deg)}
+.chat-screen .quick-replies .chat-mode-trigger:focus-visible{outline:2px solid var(--cc-primary);outline-offset:2px}
+/* Anchored context menu: small, vertical, and attached to the mode trigger. */
+.chat-screen .chat-controls .compact-mode-menu{position:absolute;left:14px;right:auto;bottom:calc(100% + 8px);transform:none;width:min(232px,calc(100vw - 28px));max-height:min(55dvh,340px);overflow-y:auto;padding:6px;border:1px solid var(--cc-border);border-radius:16px;background:var(--cc-panel);box-shadow:0 8px 28px rgba(0,0,0,.2)}
+.chat-screen .compact-mode-menu .reply-mode-options{display:grid;grid-template-columns:1fr;gap:0;padding:0;background:transparent;border-radius:0}
+.chat-screen .compact-mode-menu .reply-mode-options>button{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:62px;padding:10px 12px;border:0!important;border-radius:10px;background:transparent!important;color:var(--cc-fg)!important;box-shadow:none!important;text-align:left;font-size:13px;font-weight:500}
+.chat-screen .compact-mode-menu .reply-mode-options>button+button{border-top:1px solid var(--cc-hairline)!important}
+.chat-screen .compact-mode-menu .reply-mode-options>button[aria-pressed=true]{background:transparent!important;color:var(--cc-fg)!important;box-shadow:none!important}
+.chat-screen .compact-mode-menu .reply-mode-options>button:hover:not(:disabled),.chat-screen .compact-mode-menu .reply-mode-options>button:focus-visible{background:var(--cc-primary-soft)!important}
+.chat-screen .compact-mode-menu .mode-option-copy{display:grid;gap:3px;min-width:0}
+.chat-screen .compact-mode-menu .mode-option-copy small{font-size:11px;line-height:1.45;color:var(--cc-muted)}
+.chat-screen .compact-mode-menu .reply-mode-options>button>svg{flex:none;color:var(--cc-primary)}
+html[data-theme=light] .chat-screen .chat-controls .compact-mode-menu{background:#fff!important;box-shadow:0 8px 28px rgba(30,20,35,.12)!important}
+html[data-theme=light] .chat-screen .compact-mode-menu .reply-mode-options>button[aria-pressed=true]{background:transparent!important;color:var(--cc-fg)!important}

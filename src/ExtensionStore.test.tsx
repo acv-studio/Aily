@@ -1,0 +1,82 @@
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import { afterEach, beforeEach, expect, it, vi } from 'vitest'
+import ExtensionStore from './ExtensionStore'
+import { installedExtensionIds, setExtensionInstalled } from './extensionApps'
+const KEY = 'aily.extension-apps.v1'
+beforeEach(() => localStorage.clear())
+afterEach(() => { cleanup(); vi.restoreAllMocks() })
+
+it('searches names and features, filters categories and handles empty results', () => {
+  render(<ExtensionStore locale="en" />)
+  fireEvent.click(screen.getByRole('button', { name: 'Games' }))
+  expect(screen.getByRole('heading', { name: 'Gomoku' })).toBeInTheDocument()
+  expect(screen.queryByRole('heading', { name: 'Focus Timer' })).toBeNull()
+  fireEvent.change(screen.getByLabelText('Search apps'), { target: { value: 'no-match' } })
+  expect(screen.getByText(/No matching apps/)).toBeInTheDocument()
+  fireEvent.change(screen.getByLabelText('Search apps'), { target: { value: 'pantry' } })
+  fireEvent.click(screen.getByRole('button', { name: 'All' }))
+  expect(screen.getByRole('heading', { name: 'What to Eat' })).toBeInTheDocument()
+  expect(screen.queryByRole('heading', { name: 'Gomoku' })).toBeNull()
+})
+
+it('opens app detail then returns to retained filtered browse state and focus', () => {
+  render(<ExtensionStore locale="en" />)
+  fireEvent.click(screen.getByRole('button', { name: 'Lifestyle' }))
+  fireEvent.change(screen.getByLabelText('Search apps'), { target: { value: 'focus' } })
+  fireEvent.click(screen.getByRole('button', { name: 'View details: Focus Timer' }))
+  expect(screen.getByRole('heading', { name: 'Focus Timer' })).toHaveFocus()
+  expect(screen.getByRole('heading', { name: 'About this app' })).toBeInTheDocument()
+  expect(screen.queryByLabelText('Search apps')).toBeNull()
+  fireEvent.click(screen.getByRole('button', { name: 'Back to apps' }))
+  expect(screen.getByLabelText('Search apps')).toHaveValue('focus')
+  expect(screen.getByRole('button', { name: 'Lifestyle' })).toHaveAttribute('aria-pressed', 'true')
+  expect(screen.getByRole('button', { name: 'View details: Focus Timer' })).toHaveFocus()
+})
+
+it('installs from detail, opens and manages installed apps with cancelable confirmation', () => {
+  const openApp = vi.fn()
+  render(<ExtensionStore locale="en" openApp={openApp} />)
+  fireEvent.click(screen.getByRole('button', { name: 'View details: Focus Timer' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Install Focus Timer' }))
+  expect(installedExtensionIds()).toContain('focus-timer')
+  fireEvent.click(screen.getByRole('button', { name: 'Open Focus Timer' }))
+  expect(openApp).toHaveBeenCalledWith('focus-timer')
+  fireEvent.click(screen.getByRole('button', { name: 'Back to apps' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Installed (1)' }))
+  expect(screen.queryByRole('heading', { name: 'Gomoku' })).toBeNull()
+  fireEvent.click(screen.getByRole('button', { name: 'Uninstall Focus Timer' }))
+  expect(installedExtensionIds()).toContain('focus-timer')
+  expect(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Cancel' })).toHaveFocus()
+  fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+  expect(installedExtensionIds()).toContain('focus-timer')
+  localStorage.setItem('aily.ext.focus.v1', '{"keep":true}')
+  fireEvent.click(screen.getByRole('button', { name: 'Uninstall Focus Timer' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Confirm uninstall' }))
+  expect(installedExtensionIds()).not.toContain('focus-timer')
+  expect(localStorage.getItem('aily.ext.focus.v1')).toBe('{"keep":true}')
+  expect(screen.getByText(/No apps installed yet/)).toBeInTheDocument()
+})
+
+it('syncs installed state from existing APIs and storage events without writing on mount', () => {
+  const writes = vi.spyOn(Storage.prototype, 'setItem')
+  render(<ExtensionStore locale="en" />)
+  expect(writes).not.toHaveBeenCalled()
+  act(() => { setExtensionInstalled('gomoku', true) })
+  expect(screen.getByRole('button', { name: 'Uninstall Gomoku' })).toBeInTheDocument()
+  localStorage.setItem(KEY, '["wardrobe"]')
+  act(() => { window.dispatchEvent(new StorageEvent('storage', { key: KEY })) })
+  expect(screen.getByRole('button', { name: 'Install Gomoku' })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Uninstall Wardrobe' })).toBeInTheDocument()
+})
+
+it('shows install and uninstall failures inline without pretending the state changed', () => {
+  localStorage.setItem(KEY, '["gomoku"]'); render(<ExtensionStore locale="en" />)
+  vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('quota') })
+  fireEvent.click(screen.getByRole('button', { name: 'Install Wardrobe' }))
+  expect(screen.getByRole('alert')).toHaveTextContent('Installation state is unchanged')
+  expect(screen.getByRole('button', { name: 'Install Wardrobe' })).toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: 'Uninstall Gomoku' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Confirm uninstall' }))
+  expect(screen.getByRole('alertdialog')).toBeInTheDocument()
+  expect(installedExtensionIds()).toEqual(['gomoku'])
+})

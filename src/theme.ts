@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react'
 import { Capacitor } from '@capacitor/core'
 import { StatusBar, Style } from '@capacitor/status-bar'
+import { Keyboard, KeyboardStyle } from '@capacitor/keyboard'
 
 export type ThemePreference = 'system' | 'light' | 'dark'
 const key = 'aily.theme'
@@ -14,7 +15,10 @@ async function apply() {
   document.documentElement.dataset.theme = resolved
   document.documentElement.style.colorScheme = resolved
   document.querySelector<HTMLMetaElement>('meta[name=theme-color]')?.setAttribute('content', resolved === 'light' ? '#f5f5f7' : '#110f16')
-  if (Capacitor.isNativePlatform()) { try { await StatusBar.setStyle({ style: resolved === 'light' ? Style.Light : Style.Dark }) } catch {} }
+  if (Capacitor.isNativePlatform()) {
+    try { await StatusBar.setStyle({ style: resolved === 'light' ? Style.Light : Style.Dark }) } catch {}
+    if (Capacitor.getPlatform() === 'ios') { try { await Keyboard.setStyle({ style: resolved === 'light' ? KeyboardStyle.Light : KeyboardStyle.Dark }) } catch {} }
+  }
 }
 export function setThemePreference(value: ThemePreference) { preference = value; try { localStorage.setItem(key, value) } catch {} void apply(); listeners.forEach(listener=>listener()) }
 export function getThemePreference(){ return preference }

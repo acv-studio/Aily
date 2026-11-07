@@ -69,7 +69,7 @@ export function canRecall(memory: ConfirmedMemory, policy: MemoryPolicy = defaul
 }
 
 function usable(message: ChatMessage): boolean {
-  return !message.withdrawn && message.status !== 'failed' && message.status !== 'sending'
+  return !message.localOnly && !message.withdrawn && message.status !== 'failed' && message.status !== 'sending'
     && (!message.kind || message.kind === 'text') && !message.attachment && !!message.text.trim()
 }
 
@@ -198,6 +198,17 @@ export function displaySummary(summary: ConversationSummary, locale: Locale): st
   }).join('\n')
 }
 
+function withoutPrivateTurns(messages: ChatMessage[]): ChatMessage[] {
+  const privateIds = new Set(messages.filter(message => message.localOnly).map(message => message.id))
+  let privateTurn = false
+  return messages.filter(message => {
+    if (message.from === 'user') privateTurn = !!message.localOnly
+    const privateReply = message.from === 'character' && (message.replyToId !== undefined ? privateIds.has(message.replyToId) : privateTurn)
+    if (message.localOnly || privateReply) { privateIds.add(message.id); return false }
+    return true
+  })
+}
+
 function periodKey(date: Date, period: ConversationSummary['period']): string {
   const iso = date.toISOString()
   if (period === 'day') return iso.slice(0, 10)
@@ -217,7 +228,7 @@ function periodKey(date: Date, period: ConversationSummary['period']): string {
 export function summarizeConversation(role: CharacterId, messages: ChatMessage[], policy: MemoryPolicy = defaultMemoryPolicy): ConversationSummary[] {
   if (!policy.extractionEnabled) return []
   const buckets = new Map<string, { period: ConversationSummary['period']; key: string; messages: { message: ChatMessage; date: Date }[] }>()
-  const eligible = messages.filter(message => usable(message) && !isSensitive(message.text)
+  const eligible = withoutPrivateTurns(messages).filter(message => usable(message) && !isSensitive(message.text)
     && !categoriesFor(message.text).some(category => policy.disabledCategories.includes(category)))
   for (const message of eligible) {
     const date = dateOf(message)

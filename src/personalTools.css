@@ -1,0 +1,107 @@
+/* All tokens and selectors are scoped; importing a component never restyles another tool. */
+.personal-tools {
+  --pt-bg: #17151e; --pt-surface: #24212c; --pt-input: #1b1922; --pt-fg: #f4f1f7;
+  --pt-muted: #bcb4c8; --pt-border: #3e384b; --pt-accent: #b4a0ed; --pt-on-accent: #221637;
+  --pt-soft: #342b46; --pt-income: #9fddbd; --pt-danger: #ffb5bb; --pt-error-bg: #40252e;
+  color: var(--pt-fg); background: var(--pt-bg); color-scheme: dark; border-radius: 24px;
+  padding: clamp(16px, 3vw, 26px); max-width: 920px; margin: 0 auto;
+  font: 14px/1.5 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  -webkit-text-size-adjust: 100%; overflow-wrap: anywhere;
+}
+html[data-theme='light'] .personal-tools, .personal-tools[data-theme='light'] {
+  --pt-bg: #f6f4f8; --pt-surface: #fff; --pt-input: #faf9fc; --pt-fg: #302839;
+  --pt-muted: #71647c; --pt-border: #dfd8e7; --pt-accent: #735397; --pt-on-accent: #fff;
+  --pt-soft: #eee6f6; --pt-income: #26704c; --pt-danger: #a63349; --pt-error-bg: #fff0f2;
+  color-scheme: light;
+}
+.personal-tools *, .personal-tools *::before, .personal-tools *::after { box-sizing: border-box; }
+.personal-tools :is(h3, h4, p) { margin: 0; }
+.personal-tools .personal-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+.personal-tools h3 { font-size: clamp(20px, 4vw, 27px); letter-spacing: -.03em; margin-top: 5px; line-height: 1.3; }
+.personal-tools h4 { font-size: 15px; font-weight: 600; }
+.personal-tools .personal-eyebrow { color: var(--pt-accent); font-size: 10px; font-weight: 600; letter-spacing: .12em; }
+.personal-tools :is(.personal-privacy, .personal-help) { color: var(--pt-muted); font-size: 12px; line-height: 1.7; }
+.personal-tools .personal-privacy { margin-bottom: 20px; }
+.personal-tools .personal-help { margin: 10px 0 18px; }
+/* Extra specificity beats legacy desktop dialog buttons, independent of CSS import order. */
+.personal-tools.personal-tools button {
+  min-height: 44px; min-width: 44px; padding: 9px 13px; border: 1px solid var(--pt-border);
+  border-radius: 12px; color: var(--pt-fg); background: var(--pt-surface); font: inherit; cursor: pointer;
+  touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+}
+.personal-tools.personal-tools button:hover { background: var(--pt-soft); }
+.personal-tools.personal-tools button:disabled { opacity: .45; cursor: not-allowed; }
+.personal-tools.personal-tools :is(button, input, textarea, select):focus-visible { outline: 3px solid var(--pt-accent); outline-offset: 3px; }
+.personal-tools.personal-tools .personal-primary { color: var(--pt-on-accent); background: var(--pt-accent); border-color: var(--pt-accent); font-weight: 600; }
+.personal-tools.personal-tools .personal-primary:hover { filter: brightness(1.08); }
+.personal-tools.personal-tools .personal-danger { color: var(--pt-danger); background: var(--pt-error-bg); }
+.personal-tools label { display: grid; align-content: start; gap: 6px; font-size: 12px; color: var(--pt-muted); min-width: 0; }
+.personal-tools :is(input, textarea, select) { width: 100%; min-width: 0; min-height: 44px; padding: 11px 12px; color: var(--pt-fg) !important; background: var(--pt-input) !important; border: 1px solid var(--pt-border); border-color: var(--pt-border) !important; border-radius: 12px; font: inherit; font-size: 16px; }
+.personal-tools textarea { resize: vertical; line-height: 1.75; }
+.personal-tools input::placeholder, .personal-tools textarea::placeholder { color: var(--pt-muted); opacity: .8; }
+.personal-tools .personal-month-nav { display: flex; flex-wrap: wrap; align-items: end; gap: 8px; margin: 20px 0 14px; }
+.personal-tools .personal-month-nav label { flex: 1; min-width: 150px; }
+.personal-tools .personal-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border: 1px solid var(--pt-border); background: var(--pt-surface); border-radius: 20px; overflow: hidden; }
+.personal-tools .personal-summary > div { padding: 18px 14px; min-width: 0; }
+.personal-tools .personal-summary > div + div { border-left: 1px solid var(--pt-border); }
+.personal-tools .personal-summary span { color: var(--pt-muted); font-size: 11px; }
+.personal-tools .personal-summary strong { display: block; font-size: clamp(14px, 2.8vw, 22px); margin-top: 8px; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.personal-tools .personal-income { color: var(--pt-income); }
+.personal-tools .personal-editor { padding: 20px; border: 1px solid var(--pt-border); border-radius: 20px; background: var(--pt-surface); margin: 20px 0; }
+.personal-tools .personal-editor h4 { margin-bottom: 16px; }
+.personal-tools fieldset { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; min-width: 0; padding: 0; margin: 0; border: 0; }
+.personal-tools .personal-wide { grid-column: 1 / -1; }
+.personal-tools .personal-editor .personal-help { margin: -4px 0 0; }
+.personal-tools .personal-cancel { margin-top: 12px; }
+.personal-tools .personal-filters { display: grid; grid-template-columns: minmax(150px, 2fr) minmax(100px, 1fr) minmax(140px, 1fr) auto; gap: 10px; align-items: end; margin-top: 24px; }
+.personal-tools .personal-filters input[type='search'] { border-radius: 14px; }
+.personal-tools .personal-error, .personal-tools .personal-delete-confirm { padding: 14px; border: 1px solid var(--pt-danger); border-radius: 16px; color: var(--pt-danger); background: var(--pt-error-bg); margin: 14px 0; line-height: 1.7; }
+.personal-tools .personal-error button, .personal-tools .personal-delete-confirm button { margin: 8px 8px 0 0; }
+.personal-tools .personal-status { color: var(--pt-income); margin: 12px 0; }
+.personal-tools .personal-entry-list { list-style: none; margin: 0; padding: 0; }
+.personal-tools .personal-day-heading { color: var(--pt-muted); font-size: 12px; margin: 24px 0 9px; font-weight: 500; }
+.personal-tools .personal-ledger-row { display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--pt-border); padding: 14px 0; }
+.personal-tools .personal-kind-icon { width: 40px; height: 40px; border-radius: 13px; background: var(--pt-soft); color: var(--pt-accent); display: grid; place-items: center; flex: none; font-size: 20px; }
+.personal-tools .personal-kind-icon.income { color: var(--pt-income); }
+.personal-tools .personal-entry-body { flex: 1; min-width: 0; }
+.personal-tools .personal-entry-body strong { font-size: 14px; font-weight: 500; }
+.personal-tools .personal-entry-body small { display: block; margin-top: 4px; color: var(--pt-muted); font-size: 11px; }
+.personal-tools .personal-ledger-row b { font-weight: 600; font-size: 14px; font-variant-numeric: tabular-nums; }
+.personal-tools .personal-row-actions { display: flex; gap: 6px; flex: none; }
+.personal-tools .personal-row-actions button { font-size: 12px; padding: 9px 10px; }
+.personal-tools .personal-diary-list { display: grid; gap: 14px; }
+.personal-tools .personal-diary-card { padding: 20px; border: 1px solid var(--pt-border); border-radius: 20px; background: var(--pt-surface); }
+.personal-tools .personal-diary-card header { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.personal-tools .personal-diary-card time { font-weight: 600; font-variant-numeric: tabular-nums; }
+.personal-tools .personal-diary-card .personal-row-actions { margin-left: auto; }
+.personal-tools .personal-diary-card p { white-space: pre-wrap; line-height: 1.9; margin-top: 15px; }
+.personal-tools .personal-mood { display: inline-block; padding: 4px 9px; border-radius: 20px; color: var(--pt-accent); background: var(--pt-soft); font-size: 11px; }
+.personal-tools .personal-empty { text-align: center; padding: 36px 16px; color: var(--pt-muted); }
+.personal-tools .personal-empty > span { display: block; color: var(--pt-accent); font-size: 32px; margin-bottom: 12px; }
+.personal-tools .personal-empty h4 { color: var(--pt-fg); }
+.personal-tools .personal-empty p { margin-top: 8px; font-size: 13px; }
+.personal-tools .personal-export { flex: none; }
+.personal-tools .personal-export-confirm { border: 1px solid var(--pt-border); border-radius: 16px; background: var(--pt-surface); padding: 16px; margin: 12px 0; max-width: 340px; }
+.personal-tools .personal-export-confirm > p { color: var(--pt-muted); font-size: 12px; line-height: 1.7; margin: 0 0 12px; }
+/* Legacy light audit targets every dialog p/label with !important: reassert only scoped tokens. */
+html[data-theme='light'] .personal-tools :is(p, label) { color: var(--pt-muted) !important; }
+html[data-theme='light'] .personal-tools :is(.personal-error, .personal-error p, .personal-delete-confirm p) { color: var(--pt-danger) !important; }
+html[data-theme='light'] .personal-tools .personal-status { color: var(--pt-income) !important; }
+html[data-theme='light'] .personal-tools .personal-diary-card p { color: var(--pt-fg) !important; }
+@media (max-width: 680px) {
+  .personal-tools .personal-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .personal-tools .personal-search { grid-column: 1 / -1; }
+  .personal-tools .personal-filters > button { grid-column: 1 / -1; }
+  .personal-tools .personal-heading { flex-wrap: wrap; }
+  .personal-tools .personal-export-confirm { max-width: none; }
+  .personal-tools .personal-ledger-row { flex-wrap: wrap; }
+  .personal-tools .personal-ledger-row .personal-row-actions { margin-left: auto; }
+}
+@media (max-width: 380px) {
+  .personal-tools { padding: 13px; border-radius: 18px; }
+  .personal-tools .personal-editor { padding: 14px; }
+  .personal-tools fieldset { grid-template-columns: minmax(0, 1fr); }
+  .personal-tools .personal-summary > div { padding: 15px 8px; }
+  .personal-tools .personal-diary-card { padding: 14px; }
+}
+@media (prefers-reduced-motion: reduce) { .personal-tools { scroll-behavior: auto; } }

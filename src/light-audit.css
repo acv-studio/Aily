@@ -25,6 +25,23 @@ html[data-theme=light] .desktop-tools-dialog .desktop-close{background:#f2edf5!i
 html[data-theme=light] :is(.desktop-tools-dialog p,.desktop-tools-dialog label,.desktop-note,.desktop-empty,.desktop-list small){color:#625962!important}
 html[data-theme=light] :is(.desktop-form input,.desktop-form textarea,.desktop-form select,.desktop-file-label){background:#fff!important;color:#2d2530!important;border-color:var(--cc-border)!important}
 html[data-theme=light] :is(.desktop-list li,.desktop-album-grid article,.desktop-music-list article){background:#fff!important;border-color:var(--cc-border)!important;box-shadow:var(--cc-shadow-1)!important}
+/* All seven chapters share a quiet daylight reading surface. */
+html[data-theme=light] .story-sheet .story-art{background:linear-gradient(145deg,#f5eff7,#f9f5f0)!important;border:1px solid #e6dce9;border-radius:20px;box-shadow:none;color:#433848;padding:20px}
+html[data-theme=light] .story-sheet .story-art p{color:#433848!important;text-shadow:none;font-family:inherit;line-height:1.8;margin:12px 0 0}
+html[data-theme=light] .story-sheet .story-art>span{color:#92739f!important;font-size:22px}
+html[data-theme=light] .story-sheet header small,html[data-theme=light] .seven-day-sheet .story-chapter{color:#855066!important}
+html[data-theme=light] .story-days{gap:6px;margin:20px 0 24px}
+html[data-theme=light] .story-days button{background:#faf8fb;color:#635568;border:1px solid #e6e0e8;box-shadow:none;padding:10px 3px;border-radius:12px}
+html[data-theme=light] .story-days button[aria-current]{background:#eee7f3;border-color:#9775ad;box-shadow:none;color:#63467a}
+html[data-theme=light] .story-days button:disabled{opacity:1;background:#f5f3f6;color:#79727d;border-color:#ece8ee}
+html[data-theme=light] .seven-day-sheet .story-ending{margin:20px 0 0;padding:18px;border-radius:18px;background:#fff;border:1px solid #e6e0e8}
+html[data-theme=light] .seven-day-sheet .story-ending h3{font-family:inherit;font-size:18px;color:#433848;margin:12px 0}
+html[data-theme=light] .seven-day-sheet .story-next{background:#795791!important;color:#fff!important;border:1px solid #795791;box-shadow:none;border-radius:14px;min-height:48px;font-weight:600;margin-top:16px}
+html[data-theme=light] .seven-day-sheet .story-next:disabled{background:#e8e2ec!important;color:#726579!important;border-color:#e8e2ec}
+html[data-theme=light] .story-sheet .story-choices button span,html[data-theme=light] .story-sheet .story-library button span,html[data-theme=light] .seven-day-sheet>footer{color:#625962!important}
+html[data-theme=light] .seven-day-sheet .story-back{background:#eee8f3;color:#514457;border:1px solid var(--cc-border)}
+html[data-theme=light] .seven-day-sheet .story-complete,html[data-theme=light] .seven-day-sheet [role=status]{color:#285c42!important}
+html[data-theme=light] .seven-day-sheet [role=alert]{color:#923b4d!important}
 /* Full-screen experiences and sheets. */
 html[data-theme=light] :is(.game-sheet,.story-sheet,.chat-history-dialog,.memory-modal,.chat-extra-dialog){color:#2d2530!important}
 html[data-theme=light] :is(.game-sheet p,.story-sheet p,.chat-history-dialog p,.chat-history-dialog small,.memory-modal p){color:#625962!important}

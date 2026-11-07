@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { X } from 'lucide-react'
+import { ChevronDown, Search, X } from 'lucide-react'
+import './memory-filter-bar.css'
 import { useI18n } from './i18n'
 import type { ChatMessage, ConfirmedMemory } from './chatService'
 import { defaultMemoryPolicy, semanticScore, type ConversationSummary, type MemoryPolicy } from './longMemory'
@@ -51,7 +52,13 @@ export default function MemoryPanel({ memories, selected, onSave, onUpdate, onDe
   return <section className="screen memory-page">
     <div className="memory-intro"><p>{locale === 'en' ? 'Little things worth remembering, all in one place.' : '把值得记住的小事，留在这里。'}</p></div>
     <div className="memory-toolbar"><div><strong>{t('{count} 条记忆', { count: confirmedCount })}</strong></div><button disabled={busy} onClick={() => { setAdding(true); setEditing(null); setText(''); setNewCategory('profile') }}>{t('＋ 添加记忆')}</button></div>
-    <div className="memory-controls glass"><div className="memory-filters"><label>{t('分类')}<select aria-label={t('记忆分类筛选')} value={category} onChange={event => setCategory(event.target.value)}><option value="all">{t('全部分类')}</option>{Object.entries(categories).map(([key, value]) => <option key={key} value={key}>{t(value)}</option>)}</select></label><label>{t('状态')}<select aria-label={t('记忆状态筛选')} value={status} onChange={event => setStatus(event.target.value)}>{[['all', '全部状态'], ['confirmed', '已记住'], ['archived', '已归档']].map(([key, label]) => <option key={key} value={key}>{t(label)}</option>)}</select></label></div><input className="memory-search" aria-label={t('搜索记忆')} placeholder={t('搜索全部记忆')} value={search} onChange={event => setSearch(event.target.value)} /></div>
+    <div className="memory-controls memory-filter-bar">
+      <div className="memory-search-field"><Search size={18} aria-hidden="true" /><input className="memory-search" aria-label={t('搜索记忆')} placeholder={locale === 'en' ? 'Search memories…' : '搜索回忆…'} enterKeyHint="search" value={search} onChange={event => setSearch(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && !event.nativeEvent.isComposing) event.currentTarget.blur() }} />{search && <button type="button" aria-label={locale === 'en' ? 'Clear search' : '清空搜索'} onClick={() => setSearch('')}><X size={16} /></button>}</div>
+      <div className="memory-filter-chips">
+        <div className="memory-filter-chip" data-active={category !== 'all'}><select aria-label={t('记忆分类筛选')} value={category} onChange={event => setCategory(event.target.value)}><option value="all">{t('全部分类')}</option>{Object.entries(categories).map(([key, value]) => <option key={key} value={key}>{t(value)}</option>)}</select><ChevronDown size={14} aria-hidden="true" /></div>
+        <div className="memory-filter-chip" data-active={status !== 'all'}><select aria-label={t('记忆状态筛选')} value={status} onChange={event => setStatus(event.target.value)}>{[['all', '全部状态'], ['confirmed', '已记住'], ['archived', '已归档']].map(([key, label]) => <option key={key} value={key}>{t(label)}</option>)}</select><ChevronDown size={14} aria-hidden="true" /></div>
+      </div>
+    </div>
     <>
     {error && <p role="alert" className="chat-error">{t(error)}</p>}
     {!visible.length && <p className="chat-empty">{t('还没有符合条件的记忆。可在聊天中选择“记住这条”。')}</p>}

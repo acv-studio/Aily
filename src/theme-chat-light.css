@@ -48,3 +48,13 @@ html[data-theme=light] .period-record-panel fieldset{border-color:var(--cc-borde
 html[data-theme=light] .period-record-panel form button{background:#eeebf5!important;color:#624a7b!important;border:1px solid #74549b24;box-shadow:none!important;border-radius:12px;min-height:44px;font-weight:600}
 html[data-theme=light] .period-record-panel form button:disabled{background:#e8e9ee!important;color:#666974!important;border-color:#dbdde4!important;opacity:1!important;cursor:not-allowed}
 html[data-theme=light] .custom-voice .voice-toggle{background:#eeebf5!important;color:var(--cc-primary)!important}
+html[data-theme=light] .chat-screen .quick-mode-popover .reply-mode-options>button{background:#fff!important;color:#535661!important;border-color:#dfe1e6!important;box-shadow:none!important}
+html[data-theme=light] .chat-screen .quick-mode-popover .reply-mode-options>button[aria-pressed=true]{background:#eeebf5!important;color:#624a7b!important;border-color:#74549b!important}
+html[data-theme=light] .chat-screen .quick-mode-popover .reply-mode-options>button:disabled{background:#f0f1f5!important;color:#666974!important;opacity:1!important}
+html[data-theme=light] .chat-screen .quick-mode-popover .reply-mode-heading .reply-mode-close{background:#f0eef5!important;color:#74549b!important;border-color:#dfe1e6!important}
+html[data-theme=light] .chat-screen .quick-mode-popover p span{color:#666974!important}
+html[data-theme=light] .chat-screen .message-actions button{background:#eeebf5!important;color:#624a7b!important;border:1px solid #74549b24;box-shadow:none!important}
+.chat-screen .chat-notice{margin:6px 14px;padding:8px 12px;border:1px solid var(--cc-border,#ffffff1c);border-radius:12px;font-size:12px;line-height:1.55;background:#ffffff08;color:#ddd5e5;box-shadow:none}
+.chat-screen .chat-notice>button{display:grid;place-items:center;flex:0 0 32px;width:32px;min-height:32px;padding:0;background:transparent;color:inherit}
+html[data-theme=light] .chat-screen .chat-notice{background:#eeebf5!important;color:#51445d!important;border-color:#74549b24!important;box-shadow:none!important}
+html[data-theme=light] .chat-screen .chat-notice>button{color:#74549b!important}

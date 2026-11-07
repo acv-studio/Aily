@@ -6,6 +6,8 @@ final class AilyBridgeViewController: CAPBridgeViewController {
     override func capacitorDidLoad() {
         super.capacitorDidLoad()
         bridge?.registerPluginInstance(StoreKitBillingPlugin())
+        bridge?.registerPluginInstance(PhotoOrganizerPlugin())
+        bridge?.registerPluginInstance(FeedbackMailPlugin())
     }
 
     override var preferredStatusBarStyle: UIStatusBarStyle { statusBarStyle }

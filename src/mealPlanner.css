@@ -132,6 +132,5 @@
   .meal-app .meal-shopping-item > strong { font-size: 13px; }
   .meal-app .meal-toolbar > button { flex: 1; }
 }
-.desktop-tools-dialog:has(.meal-app) { max-height:calc(100dvh - max(16px,env(safe-area-inset-top)) - max(16px,env(safe-area-inset-bottom))); }
 .meal-app button.meal-primary:disabled { color:var(--meal-muted)!important; background:var(--meal-card)!important; border-color:var(--meal-line)!important; opacity:1!important; }
 @media (prefers-reduced-motion: reduce) { .meal-app *, .meal-app *::before, .meal-app *::after { scroll-behavior: auto; transition: none; animation: none; } }

@@ -2,7 +2,7 @@ import { act, cleanup, fireEvent, render, screen, within } from '@testing-librar
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import ChatPanel, { type ChatPanelProps } from './ChatPanel'
 import { characters } from './data'
-import { REPLY_MODES, REPLY_MODE_LABELS, REPLY_MODE_DESCRIPTIONS } from './replyModes'
+import { REPLY_MODES, REPLY_MODE_LABELS } from './replyModes'
 
 function panel(overrides: Partial<ChatPanelProps> = {}) {
   const props: ChatPanelProps = {
@@ -106,6 +106,17 @@ describe('chat settings menu', () => {
 })
 
 describe('reply mode selection', () => {
+  it('dismisses the compact menu on outside press or Escape', () => {
+    panel({ setReplyMode: vi.fn(async () => {}) })
+    const toggle = screen.getByRole('button', { name: `回复模式：${REPLY_MODE_LABELS.brief}` })
+    fireEvent.click(toggle)
+    fireEvent.pointerDown(document.body)
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    fireEvent.click(toggle)
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    expect(toggle).toHaveFocus()
+  })
   it('starts collapsed with the current Chinese label and reveals three options and the selected description', () => {
     panel({ replyMode: 'deep', setReplyMode: vi.fn(async () => {}) })
     const toggle = screen.getByRole('button', { name: `回复模式：${REPLY_MODE_LABELS.deep}` })
@@ -117,13 +128,14 @@ describe('reply mode selection', () => {
     for (const mode of REPLY_MODES) {
       expect(screen.getByRole('button', { name: REPLY_MODE_LABELS[mode] })).toHaveAttribute('aria-pressed', String(mode === 'deep'))
     }
-    expect(screen.getByText(REPLY_MODE_DESCRIPTIONS.deep)).toBeInTheDocument()
-    expect(screen.getByText('仅影响下一次回复')).toBeInTheDocument()
+    expect(screen.getByText('认真倾听，一起梳理')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '关闭回复模式' })).not.toBeInTheDocument()
+    expect(screen.getByRole('region', { name: '回复模式' }).querySelectorAll('header')).toHaveLength(0)
     fireEvent.click(toggle)
     expect(toggle).toHaveAttribute('aria-expanded', 'false')
   })
 
-  it('preserves draft and transcript and closes only after mode selection succeeds', async () => {
+  it('preserves draft and transcript and dismisses immediately while saving the selected mode', async () => {
     let finishSaving!: () => void
     const setReplyMode = vi.fn(() => new Promise<void>(resolve => { finishSaving = resolve }))
     const messages = [{ id: 1, from: 'user' as const, text: '已经发送的消息', time: '' }]
@@ -132,7 +144,7 @@ describe('reply mode selection', () => {
     fireEvent.click(toggle)
     fireEvent.click(screen.getByRole('button', { name: REPLY_MODE_LABELS.story }))
     expect(setReplyMode).toHaveBeenCalledExactlyOnceWith('story')
-    expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
     await act(async () => { finishSaving() })
     expect(toggle).toHaveAttribute('aria-expanded', 'false')
     expect(screen.queryByRole('button', { name: REPLY_MODE_LABELS.story })).not.toBeInTheDocument()
@@ -144,15 +156,15 @@ describe('reply mode selection', () => {
     expect(view.props.send).not.toHaveBeenCalled()
   })
 
-  it('keeps the picker expanded and shows an error notice when saving the mode fails', async () => {
+  it('keeps the picker dismissed and shows an error notice when saving the mode fails', async () => {
     const setReplyMode = vi.fn(async () => { throw new Error('storage unavailable') })
     panel({ replyMode: 'deep', setReplyMode })
     const toggle = screen.getByRole('button', { name: `回复模式：${REPLY_MODE_LABELS.deep}` })
     fireEvent.click(toggle)
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: REPLY_MODE_LABELS.story })) })
     expect(setReplyMode).toHaveBeenCalledExactlyOnceWith('story')
-    expect(toggle).toHaveAttribute('aria-expanded', 'true')
-    expect(screen.getByRole('button', { name: REPLY_MODE_LABELS.deep })).toHaveAttribute('aria-pressed', 'true')
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    expect(toggle).toHaveTextContent(REPLY_MODE_LABELS.deep)
     expect(screen.getByText('回复模式未切换，请停止回复或检查本机存储后重试。')).toBeInTheDocument()
   })
 
@@ -175,17 +187,13 @@ describe('reply mode selection', () => {
 })
 
 describe('chat privacy controls', () => {
-  it.each([false, true])('reveals the temporary-session control only after expansion (temporary=%s)', temporary => {
+  it('does not offer temporary chat mode in settings', () => {
     const toggleTemporary = vi.fn()
-    panel({ temporary, toggleTemporary })
-    const toggle = screen.getByRole('button', { name: '会话与隐私' })
-    const controlName = temporary ? '结束临时会话' : '临时会话'
-    expect(toggle).toHaveAttribute('aria-expanded', 'false')
-    expect(screen.queryByRole('button', { name: controlName })).not.toBeInTheDocument()
-    fireEvent.click(toggle)
-    expect(toggle).toHaveAttribute('aria-expanded', 'true')
-    fireEvent.click(screen.getByRole('button', { name: controlName }))
-    expect(toggleTemporary).toHaveBeenCalledOnce()
+    panel({ toggleTemporary })
+    fireEvent.click(screen.getByRole('button', { name: '聊天设置' }))
+    expect(screen.queryByRole('button', { name: '临时会话' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '结束临时会话' })).not.toBeInTheDocument()
+    expect(toggleTemporary).not.toHaveBeenCalled()
   })
 })
 

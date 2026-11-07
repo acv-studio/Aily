@@ -1,0 +1,113 @@
+/* Shared tools theme; the photo organizer owns its reference-inspired cream/forest palette. Do not style chat/profile/navigation. */
+.desktop-tools-dialog.tools-surface:not(.photo-organizer-shell) {
+  --tools-bg:#201e27; --tools-card:#2a2733; --tools-input:#231f2c;
+  --tools-ink:#f4f0fa; --tools-muted:#c3bccf; --tools-line:#514b60;
+  --tools-accent:#cbb4ff; --tools-soft:#3c3150; --tools-action-ink:#221833; --tools-action-hover:#dccaFF;
+  --tools-disabled:#302c39; --tools-danger:#ffb5c3; --tools-danger-bg:#40242c; --tools-danger-line:#7b485d; --tools-success:#9ee6c3; --tools-success-bg:#233f35;
+  --cc-fg:var(--tools-ink); --cc-muted:var(--tools-muted); --cc-card:var(--tools-card); --cc-border:var(--tools-line);
+  --cc-primary:var(--tools-accent); --cc-primary-soft:var(--tools-soft); --cc-shadow-1:none;
+  --text-primary:var(--tools-ink); --text-secondary:var(--tools-muted); --border-color:var(--tools-line);
+  --surface:var(--tools-card); --surface-primary:var(--tools-card); --surface-secondary:var(--tools-soft);
+  color:var(--tools-ink)!important; background:var(--tools-bg)!important; color-scheme:dark;
+}
+html[data-theme=light] .desktop-tools-dialog.tools-surface:not(.photo-organizer-shell) {
+  --tools-bg:#f5f5f7; --tools-card:#fff; --tools-input:#fff;
+  --tools-ink:#202124; --tools-muted:#60636d; --tools-line:#dfe1e7;
+  --tools-accent:#74549b; --tools-soft:#eeebf5; --tools-action-ink:#fff; --tools-action-hover:#67488d;
+  --tools-disabled:#e9eaf0; --tools-danger:#a5334b; --tools-danger-bg:#fff0f2; --tools-danger-line:#eac5ce; --tools-success:#246d53; --tools-success-bg:#e8f3ee;
+  color-scheme:light;
+}
+.desktop-tools-dialog.tools-surface:not(.photo-organizer-shell) .desktop-tools-header {
+  color:var(--tools-ink)!important; background:var(--tools-card)!important; border-color:var(--tools-line)!important; box-shadow:none!important;
+}
+.desktop-tools-dialog.tools-surface:not(.photo-organizer-shell) .desktop-tools-header :is(h2,small) { color:inherit!important; }
+.desktop-tools-dialog.tools-surface:not(.photo-organizer-shell) .desktop-tools-header button.desktop-close {
+  color:var(--tools-accent)!important; background:var(--tools-soft)!important; border-color:var(--tools-line)!important; box-shadow:none!important;
+}
+.desktop-tools-dialog.tools-surface:not(.photo-organizer-shell) .desktop-tools-content { color:var(--tools-ink); }
+.desktop-tools-dialog.tools-surface:not(.photo-organizer-shell) .desktop-tools-content :is(h1,h2,h3,h4,strong,b,p,span,small,time,label,legend):not(:where(.meal-app *, .grid2048 *, .gomoku-board *, .media-photo-viewer *)) { color:inherit!important; }
+.desktop-tools-dialog.tools-surface:not(.photo-organizer-shell) .desktop-tools-content :is(small,time,label):not(:where(.meal-app *, .media-photo-viewer *)) { color:var(--tools-muted)!important; }
+.desktop-tools-dialog.tools-surface:not(.photo-organizer-shell) .desktop-tools-content :is(.feedback-privacy,.feedback-storage-note,.desktop-note,.desktop-empty,.contacts-notice,.contacts-count,.personal-help,.personal-empty,.personal-eyebrow,.media-privacy,.media-empty,.store-muted,.store-empty,.store-app-copy p,.laughter-note,.laughter-empty,.organizer-hint,.focus-dial small,.wardrobe-grid article span,.extension-item-list small,.anniversary-list small) {
+  color:var(--tools-muted)!important; font-size:12px; line-height:1.65;
+}
+.desktop-tools-dialog.tools-surface:not(.photo-organizer-shell) .desktop-tools-content :is(.desktop-positive,.personal-income,.store-installed-label) { color:var(--tools-accent)!important; }
+.desktop-tools-dialog.tools-surface:not(.photo-organizer-shell) .desktop-tools-content :is(.game-status,.focus-dial time) { color:var(--tools-ink)!important; }
+/* A button's paint comes from semantic variables, so disabled can reliably override primary. */
+.desktop-tools-dialog.tools-surface:not(.photo-organizer-shell) .desktop-tools-content button:not(:where(.gomoku-board button,.media-open,.meal-app button,.media-photo-viewer button)) {
+  --tools-button-bg:var(--tools-card); --tools-button-ink:var(--tools-ink); --tools-button-line:var(--tools-line); --tools-button-hover:var(--tools-soft);
+  color:var(--tools-button-ink)!important; background:var(--tools-button-bg)!important; border:1px solid var(--tools-button-line)!important;
+  box-shadow:none!important; text-shadow:none!important; opacity:1!important; min-height:44px; font-size:14px; line-height:1.35; border-radius:12px;
+}
+.desktop-tools-dialog.tools-surface:not(.photo-organizer-shell) .desktop-tools-content :is(.feedback-send,.desktop-primary,.personal-primary,.contacts-primary,.laughter-record,.store-install,.extension-install,.extension-form>button,.extension-inline-form>button,.focus-extension .extension-functional-actions>button:first-child,.game2048>header>button,.media-library-toolbar>button:first-child:not([aria-pressed]),.media-batch>button:first-of-type) {
+  --tools-button-bg:var(--tools-accent); --tools-button-ink:var(--tools-action-ink); --tools-button-line:var(--tools-accent); --tools-button-hover:var(--tools-action-hover);
+}
+.desktop-tools-dialog.tools-surface:not(.photo-organizer-shell) .desktop-tools-content :is(.personal-danger,.store-remove,.extension-remove,.laughter-record.is-recording,.laughter-library .laughter-actions>button:last-child,.laughter-segments button,.organizer-flag,.desktop-list li>button,.extension-item-list article>button,.wardrobe-grid article>button,.anniversary-list article>button,.contacts-actions button:last-child,.personal-row-actions button:last-child,.media-item-actions button:last-child,.media-batch>button:last-child,.store-confirm .store-app-actions>button:last-child) {
+  --tools-button-bg:var(--tools-danger-bg); --tools-button-ink:var(--tools-danger); --tools-button-line:var(--tools-danger-line); --tools-button-hover:var(--tools-danger-bg);
+}
+.desktop-tools-dialog.tools-surface:not(.photo-organizer-shell) .desktop-tools-content button[aria-pressed=true]:not(:where(.gomoku-board button,.meal-app button,.media-photo-viewer button)) {
+  --tools-button-bg:var(--tools-soft); --tools-button-ink:var(--tools-accent); --tools-button-line:var(--tools-accent);
+}
+.desktop-tools-dialog.tools-surface:not(.photo-organizer-shell) .desktop-tools-content button:disabled:not(:where(.gomoku-board button,.meal-app button,.media-photo-viewer button)) {
+  --tools-button-bg:var(--tools-disabled)!important; --tools-button-ink:var(--tools-muted)!important; --tools-button-line:var(--tools-line)!important; cursor:not-allowed;
+}
+.desktop-tools-dialog.tools-surface:not(.photo-organizer-shell) .desktop-tools-content button:hover:not(:disabled):not(:where(.gomoku-board button,.media-open,.meal-app button,.media-photo-viewer button)) { background:var(--tools-button-hover)!important; }
+.desktop-tools-dialog.tools-surface:not(.photo-organizer-shell) .desktop-tools-content :is(button,input,textarea,select,a):focus-visible { outline:2px solid var(--tools-accent)!important; outline-offset:3px; }
+.desktop-tools-dialog.tools-surface:not(.photo-organizer-shell) .desktop-tools-content .store-confirm button { color:var(--tools-button-ink)!important; background:var(--tools-button-bg)!important; border-color:var(--tools-button-line)!important; }
+/* Keep fields readable and prevent iPhone focus-zoom. Checkboxes and range controls retain their own geometry. */
+.desktop-tools-dialog.tools-surface:not(.photo-organizer-shell) .desktop-tools-content :is(input,textarea,select):not(:where([type=checkbox],[type=radio],[type=range],[type=hidden],.meal-app *)) {
+  color:var(--tools-ink)!important; background:var(--tools-input)!important; border:1px solid var(--tools-line)!important; box-shadow:none!important;
+  font-size:16px!important; min-height:44px; min-width:0; max-width:100%; color-scheme:inherit; border-radius:12px; box-sizing:border-box;
+}
+.desktop-tools-dialog.tools-surface:not(.photo-organizer-shell) .desktop-tools-content :is(input,textarea)::placeholder { color:var(--tools-muted)!important; opacity:1!important; }
+.desktop-tools-dialog.tools-surface:not(.photo-organizer-shell) .desktop-tools-content :is(input,textarea,select):disabled:not(:where(.meal-app *)) { color:var(--tools-muted)!important; background:var(--tools-disabled)!important; opacity:1!important; }
+.desktop-tools-dialog.tools-surface:not(.photo-organizer-shell) .desktop-tools-content :is(input[type=checkbox],input[type=radio]) { accent-color:var(--tools-accent); }
+.desktop-tools-dialog.tools-surface:not(.photo-organizer-shell) .desktop-tools-content input::file-selector-button { background:var(--tools-accent); color:var(--tools-action-ink); border:0; border-radius:8px; padding:8px 12px; font:inherit; }
+.desktop-tools-dialog.tools-surface:not(.photo-organizer-shell) .desktop-tools-content :is(.desktop-totals>div,.desktop-list li,.extension-item-list article,.wardrobe-grid article,.anniversary-list article,.outfit-result,.media-photo-grid article,.media-track-list article,.media-batch,.media-player,.laughter-recorder,.laughter-editor,.laughter-library article,.store-app-card,.store-detail,.store-confirm) {
+  background:var(--tools-card)!important; border-color:var(--tools-line)!important; box-shadow:none!important;
+}
+.desktop-tools-dialog.tools-surface:not(.photo-organizer-shell) .desktop-tools-content :is(.feedback-error,.feedback-warning,.desktop-error,.personal-error,.contacts-error,.media-error,.store-error,.laughter-error,.organizer-error) {
+  color:var(--tools-danger)!important; background:var(--tools-danger-bg)!important; border-color:var(--tools-danger-line)!important;
+}
+.desktop-tools-dialog.tools-surface:not(.photo-organizer-shell) .desktop-tools-content :is(.feedback-error,.feedback-warning,.desktop-error,.personal-error,.contacts-error,.media-error,.store-error,.laughter-error,.organizer-error) :is(p,span,small,strong,label) { color:var(--tools-danger)!important; }
+.desktop-tools-dialog.tools-surface:not(.photo-organizer-shell) .desktop-tools-content :is(.personal-status,.store-status) { color:var(--tools-accent)!important; background:var(--tools-soft)!important; }
+.desktop-tools-dialog.tools-surface:not(.photo-organizer-shell) .contacts-actions a { color:var(--tools-accent)!important; background:var(--tools-soft)!important; border:1px solid var(--tools-line); border-radius:10px; min-height:44px; padding:10px 12px; text-decoration:none; }
+.desktop-tools-dialog.tools-surface:not(.photo-organizer-shell) label.media-import { color:var(--tools-action-ink)!important; background:var(--tools-accent)!important; border-color:var(--tools-accent)!important; box-shadow:none!important; }
+.desktop-tools-dialog.tools-surface:not(.photo-organizer-shell) .desktop-tools-content .organizer-keep { --tools-button-bg:var(--tools-success-bg); --tools-button-ink:var(--tools-success); --tools-button-line:var(--tools-success); --tools-button-hover:var(--tools-success-bg); }
+.desktop-tools-dialog.tools-surface:not(.photo-organizer-shell) :is(label.laughter-import,label.organizer-import) { color:var(--tools-action-ink)!important; background:var(--tools-accent)!important; border-color:var(--tools-accent)!important; }
+.desktop-tools-dialog.tools-surface:not(.photo-organizer-shell) .organizer-photo :is(.organizer-loading,.organizer-swipe-label) { color:#fff!important; background:#21182fe6!important; }
+.desktop-tools-dialog.tools-surface:not(.photo-organizer-shell) .organizer-photo .organizer-swipe-label.pending { background:#8f2943f2!important; }
+.desktop-tools-dialog.tools-surface:not(.photo-organizer-shell) .organizer-photo .organizer-swipe-label.keep { background:#20614af2!important; }
+/* These are board/image hit areas, not form buttons. Preserve game drawing and photo content. */
+.desktop-tools-dialog.tools-surface:not(.photo-organizer-shell) .gomoku-board button { min-height:0!important; min-width:0; padding:0!important; border:0!important; border-radius:0!important; box-shadow:none!important; transform:none!important; }
+.desktop-tools-dialog.tools-surface:not(.photo-organizer-shell) .media-open { color:var(--tools-ink)!important; background:transparent!important; border:0!important; border-radius:0!important; box-shadow:none!important; padding:0!important; min-height:0!important; }
+.desktop-tools-dialog.tools-surface:not(.photo-organizer-shell) .focus-dial { border-color:var(--tools-soft)!important; box-shadow:none!important; }
+.desktop-tools-dialog.tools-surface:not(.photo-organizer-shell) .laughter-hero { color:var(--tools-ink)!important; background:var(--tools-soft)!important; }
+.desktop-tools-dialog.tools-surface:not(.photo-organizer-shell) .laughter-app :is(.laughter-note,.laughter-empty,small) { opacity:1!important; }
+.desktop-tools-dialog.tools-surface:not(.photo-organizer-shell) :is(.laughter-import,.organizer-import,.media-import):has(input:disabled) { background:var(--tools-disabled)!important; color:var(--tools-muted)!important; opacity:1!important; cursor:not-allowed; }
+/* Constrain native iOS date/month controls to their grid/flex cell. */
+.desktop-tools-dialog.tools-surface:not(.photo-organizer-shell) .desktop-tools-content input:is([type=date],[type=month]) {
+  -webkit-appearance:none; appearance:none; display:block; width:100%!important; inline-size:100%!important;
+  min-width:0!important; min-inline-size:0!important; max-width:100%!important; overflow:hidden;
+}
+.desktop-tools-dialog.tools-surface:not(.photo-organizer-shell) input:is([type=date],[type=month])::-webkit-date-and-time-value { text-align:left; min-width:0; overflow:hidden; text-overflow:ellipsis; }
+/* Keep value-dependent 2048 backgrounds, but use readable ink on their warm palette. */
+.desktop-tools-dialog.tools-surface:not(.photo-organizer-shell) .game2048 .grid2048>div { color:#302316!important; }
+.desktop-tools-dialog.tools-surface:not(.photo-organizer-shell) .desktop-hexagram>div { color:var(--tools-ink)!important; }
+.desktop-tools-dialog.tools-surface:not(.photo-organizer-shell) .desktop-hexagram>div.moving { color:var(--tools-accent)!important; }
+.desktop-tools-dialog.tools-surface:not(.photo-organizer-shell) .desktop-hexagram-set .desktop-hexagram>div { display:grid; grid-template-columns:12px minmax(0,1fr); gap:5px; width:100%; min-width:0; }
+.desktop-tools-dialog.tools-surface:not(.photo-organizer-shell) .desktop-hexagram-set .hexagram-line { width:100%; min-width:0; }
+.desktop-tools-dialog.tools-surface:not(.photo-organizer-shell) .desktop-tools-content :is(p,strong,b,h3,span,small) { overflow-wrap:anywhere; }
+/* Photos intentionally use a dark viewing canvas in either app theme. */
+.desktop-tools-dialog.tools-surface:not(.photo-organizer-shell) .media-photo-viewer { color:#f4f0fa!important; background:#14121a!important; color-scheme:dark; }
+.desktop-tools-dialog.tools-surface:not(.photo-organizer-shell) .media-photo-viewer :is(strong,p,span,small) { color:#f4f0fa!important; }
+.desktop-tools-dialog.tools-surface:not(.photo-organizer-shell) .media-photo-viewer button { color:#f4f0fa!important; background:#2c2735!important; border-color:#514b60!important; box-shadow:none!important; opacity:1!important; }
+.desktop-tools-dialog.tools-surface:not(.photo-organizer-shell) .media-photo-viewer button[aria-pressed=true] { color:#cbb4ff!important; background:#3c3150!important; }
+.desktop-tools-dialog.tools-surface:not(.photo-organizer-shell) .media-photo-viewer button:disabled { color:#c3bccf!important; background:#24212a!important; }
+/* Meal planner retains its own scoped palette and game/timer sizes. */
+.desktop-tools-dialog.tools-surface:not(.photo-organizer-shell) .meal-app button:hover:not(:disabled) { background:var(--meal-accent-soft)!important; }
+.desktop-tools-dialog.tools-surface:not(.photo-organizer-shell) .meal-app button.meal-primary:hover:not(:disabled) { background:var(--tools-action-hover)!important; }
+@media(max-width:420px) {
+  .desktop-tools-dialog.tools-surface:not(.photo-organizer-shell) .extension-form-row { grid-template-columns:minmax(0,1fr) minmax(0,1fr); }
+  .desktop-tools-dialog.tools-surface:not(.photo-organizer-shell) .anniversary-form { grid-template-columns:minmax(0,1fr); }
+  .desktop-tools-dialog.tools-surface:not(.photo-organizer-shell) .wardrobe-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}

@@ -1,17 +1,22 @@
 import { useI18n } from './i18n'
 import { useEffect, useRef, useState } from 'react'
-import { ArrowLeft, Search, Send, Square, Image as ImageIcon, Mic, Quote, X, ChevronDown, ShieldCheck, Plus, Video, Phone, Smile, Ellipsis, Star, Sparkles, Check, CalendarHeart, Gift, Settings2 } from 'lucide-react'
+import { ArrowLeft, Search, Send, Square, Image as ImageIcon, Mic, Quote, Copy, X, ChevronDown, Plus, Video, Phone, Smile, Ellipsis, Star, Sparkles, Check, CalendarHeart, Gift, Settings2 } from 'lucide-react'
 import GiftStorePanel from './GiftStorePanel'
+import AppDataPanel from './AppDataPanel'
+import type { AppDataIdentity, AppDataTicket } from './appDataTypes'
 import PeriodRecordPanel from './PeriodRecordPanel'
 import './chatExtras.css'
 import type { Character } from './data'
 import { MAX_LOCAL_VIDEO_BYTES, LOCAL_VIDEO_MIME_TYPES, type ChatMessage, type ConfirmedMemory } from './chatService'
 import VoicePlayer from './VoicePlayer'
 import VideoPlayer from './VideoPlayer'
-import { REPLY_MODES, REPLY_MODE_LABELS, REPLY_MODE_DESCRIPTIONS, type ReplyMode } from './replyModes'
+import { REPLY_MODES, REPLY_MODE_LABELS, type ReplyMode } from './replyModes'
 import type { CreditGiftId } from './creditGifts'
 import { displaySummary, type ConversationSummary } from './longMemory'
 import './replyModes.css'
+import useMessageLongPress from './useMessageLongPress'
+import { copyMessageText } from './messageClipboard'
+import './messageActions.css'
 
 export type MemoryDraft = { text: string; category: NonNullable<ConfirmedMemory['category']>; sourceMessageId?: number }
 export interface ChatPanelProps {
@@ -20,7 +25,7 @@ export interface ChatPanelProps {
   summaries?: ConversationSummary[]
   draft: string
   setDraft: (text: string) => void
-  send: (options?: { retryId?: number; replyToId?: number; attachment?: ChatMessage['attachment']; kind?: ChatMessage['kind']; text?: string; localActionNote?: string; giftId?: CreditGiftId; rejectOnFailure?: boolean }) => Promise<void>
+  send: (options?: { retryId?: number; replyToId?: number; attachment?: ChatMessage['attachment']; kind?: ChatMessage['kind']; text?: string; localActionNote?: string; giftId?: CreditGiftId; appDataTicket?: AppDataTicket; rejectOnFailure?: boolean }) => Promise<void>
   saveMemory: (memory: MemoryDraft) => Promise<void>
   withdraw: (id: number) => Promise<void>
   close: () => void
@@ -45,6 +50,7 @@ export interface ChatPanelProps {
   relationshipStage?: string
   isPrimary?: boolean
   setPrimary?: () => Promise<void>
+  appDataIdentity?: () => AppDataIdentity
 }
 
 export default function ChatPanel(props: ChatPanelProps) {
@@ -53,6 +59,9 @@ export default function ChatPanel(props: ChatPanelProps) {
   const [search, setSearch] = useState('')
   const [searchOpen, setSearchOpen] = useState(false)
   const [modeOpen, setModeOpen] = useState(false)
+  const modeMenu = useRef<HTMLElement>(null)
+  const modeTrigger = useRef<HTMLButtonElement>(null)
+  const closeMode = () => { setModeOpen(false); modeTrigger.current?.focus({ preventScroll: true }) }
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
   const [primarySaving, setPrimarySaving] = useState(false)
@@ -77,10 +86,10 @@ export default function ChatPanel(props: ChatPanelProps) {
   const videoInput = useRef<HTMLInputElement>(null)
   const moreButton = useRef<HTMLButtonElement>(null)
   const fileRequest = useRef(0)
-  const [extraPanel, setExtraPanel] = useState<'period' | 'gift' | null>(null)
+  const [extraPanel, setExtraPanel] = useState<'period' | 'gift' | 'apps' | null>(null)
   const extraDialog = useRef<HTMLDivElement>(null)
   const extraTrigger = useRef<HTMLElement | null>(null)
-  const openExtra = (panel: 'period' | 'gift', trigger: HTMLElement) => {
+  const openExtra = (panel: 'period' | 'gift' | 'apps', trigger: HTMLElement) => {
     extraTrigger.current = trigger
     setSettingsOpen(false); setModeOpen(false); setExtraPanel(panel)
   }
@@ -135,6 +144,7 @@ export default function ChatPanel(props: ChatPanelProps) {
     const resize = () => {
       screen.current?.style.setProperty('--chat-view-height', `${viewport?.height ?? window.innerHeight}px`)
       screen.current?.style.setProperty('--chat-view-top', `${viewport?.offsetTop ?? 0}px`)
+      if (screen.current) screen.current.dataset.keyboardOpen = String(!!viewport && window.innerHeight - viewport.height - viewport.offsetTop > 120)
     }
     resize()
     viewport?.addEventListener('resize', resize)
@@ -148,19 +158,45 @@ export default function ChatPanel(props: ChatPanelProps) {
   }, [])
   useEffect(() => {
     if (!modeOpen) return
+    modeMenu.current?.querySelector<HTMLButtonElement>('.reply-mode-options button[aria-pressed="true"]:not(:disabled)')?.focus({ preventScroll: true })
     const dismiss = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setModeOpen(false)
-        screen.current?.querySelector<HTMLButtonElement>('[aria-expanded="true"]')?.focus()
-      }
+      if (event.key === 'Escape') { event.preventDefault(); closeMode() }
+    }
+    const outside = (event: PointerEvent) => {
+      const target = event.target
+      if (target instanceof Node && !modeMenu.current?.contains(target) && !modeTrigger.current?.contains(target)) setModeOpen(false)
     }
     document.addEventListener('keydown', dismiss)
-    return () => document.removeEventListener('keydown', dismiss)
+    document.addEventListener('pointerdown', outside, true)
+    return () => { document.removeEventListener('keydown', dismiss); document.removeEventListener('pointerdown', outside, true) }
   }, [modeOpen])
   const [quote, setQuote] = useState<number>()
   const [activeActions, setActiveActions] = useState<number>()
   const [memory, setMemory] = useState<MemoryDraft>()
   const [notice, setNotice] = useState('')
+  const [copying, setCopying] = useState(false)
+  const copyBusy = useRef(false)
+  const copyEpoch = useRef(0)
+  const messageSource = useRef(messages); messageSource.current = messages
+  const longPress = useMessageLongPress(messages, `${character.id}:${!!props.temporary}`, setActiveActions)
+  useEffect(() => { setActiveActions(undefined); copyEpoch.current++ }, [character.id, props.temporary])
+  useEffect(() => {
+    if (activeActions === undefined) return
+    const active = messages.find(message => message.id === activeActions)
+    if (!active || active.withdrawn || active.status === 'sending') { setActiveActions(undefined); return }
+    const outside = (event: PointerEvent) => {
+      const row = screen.current?.querySelector(`[data-message-id="${activeActions}"]`)
+      if (event.target instanceof Node && !row?.contains(event.target)) setActiveActions(undefined)
+    }
+    const dismiss = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      const row = screen.current?.querySelector(`[data-message-id="${activeActions}"]`)
+      if (row?.contains(document.activeElement)) row.querySelector<HTMLElement>('.bubble')?.focus({ preventScroll: true })
+      setActiveActions(undefined)
+    }
+    document.addEventListener('pointerdown', outside, true); document.addEventListener('keydown', dismiss)
+    return () => { document.removeEventListener('pointerdown', outside, true); document.removeEventListener('keydown', dismiss) }
+  }, [activeActions, messages])
   const [recording, setRecording] = useState(false)
   const [attachment, setAttachment] = useState<{ kind: ChatMessage['kind']; data: NonNullable<ChatMessage['attachment']> }>()
   const bottom = useRef<HTMLDivElement>(null)
@@ -180,6 +216,22 @@ export default function ChatPanel(props: ChatPanelProps) {
     playingAudio.current = audio
   }
   const mounted = useRef(false)
+  const copyMessage = async (id: number) => {
+    const source = messageSource.current.find(message => message.id === id && !message.withdrawn && message.status !== 'sending')
+    if (!source?.text || copyBusy.current) return
+    const epoch = copyEpoch.current
+    copyBusy.current = true; setCopying(true)
+    try {
+      await copyMessageText(source.text)
+      const stillAvailable = messageSource.current.some(message => message.id === id && !message.withdrawn && message.status !== 'sending')
+      if (mounted.current && epoch === copyEpoch.current && stillAvailable) {
+        setActiveActions(undefined)
+        setNotice(locale === 'en' ? 'Message copied.' : '消息已复制。')
+      }
+    } catch {
+      if (mounted.current && epoch === copyEpoch.current) setNotice(locale === 'en' ? 'Could not copy. Please retry.' : '复制失败，请重试。')
+    } finally { copyBusy.current = false; if (mounted.current) setCopying(false) }
+  }
   const recordingRequest = useRef(0)
   const acquiringAudio = useRef(false)
   const recordingTimer = useRef<number | undefined>(undefined)
@@ -309,10 +361,10 @@ export default function ChatPanel(props: ChatPanelProps) {
             catch { setNotice('主 Bot 设置未保存，请稍后重试。') }
             finally { setPrimarySaving(false) }
           }}>{props.isPrimary ? <Check size={17} /> : <Star size={17} />}<span>{primarySaving ? t('正在保存…') : props.isPrimary ? t('已设为主 Bot') : t('设为主 Bot')}</span></button>}
+          {props.appDataIdentity && <button disabled={!props.isPrimary || props.temporary || replying || recording || readingFile} onClick={event => openExtra('apps', event.currentTarget)}><Sparkles size={17} /><span>{locale === 'en' ? 'Read app data' : '读取应用数据'}</span></button>}
           {props.openMoments && <button disabled={replying || primarySaving || recording || readingFile} onClick={() => { setSettingsOpen(false); props.openMoments?.() }}><Sparkles size={17} /><span>{t('查看朋友圈')}</span></button>}
           {props.openPreferences && <button disabled={replying || recording || readingFile} onClick={() => { setSettingsOpen(false); props.openPreferences?.() }}><Settings2 size={17} /><span>{t('修改称呼与互动偏好')}</span></button>}
           <button disabled={replying || recording || readingFile} onClick={() => { setSettingsOpen(false); setHistoryOpen(true) }}><CalendarHeart size={17} /><span>{t('对话历史')}</span></button>
-          {props.toggleTemporary && <button disabled={replying || recording || readingFile} onClick={async () => { if (!props.temporary) await props.recordActivity?.('你开启了临时会话'); setMemory(undefined); setQuote(undefined); setSearch(''); setAttachment(undefined); setSettingsOpen(false); props.toggleTemporary?.() }}><ShieldCheck size={17} /><span>{props.temporary ? t('结束临时会话') : t('临时会话')}</span></button>}
           <button onClick={() => { toggleSearch(); setSettingsOpen(false); settingsTrigger.current?.focus() }}><Search size={17} /><span>{t('搜索消息')}</span></button>
         </section>}
       </div>
@@ -327,11 +379,11 @@ export default function ChatPanel(props: ChatPanelProps) {
         <div className="chat-starters">{['你好，很高兴认识你。', '今天有点累，想和你聊聊。', '想听你介绍一下自己。'].map(text => <button key={text} disabled={replying} onClick={() => { setDraft(t(text)); composerInput.current?.focus() }}>{t(text)}</button>)}</div>
       </div>}
       {query && <p className="chat-empty">{t('找到 {count} 条消息', { count: visible.length })}</p>}
-      {visible.map(message => <div key={message.id} className={`message-row ${message.from === 'user' ? 'mine' : ''}`}>
+      {visible.map(message => <div key={message.id} data-message-id={message.id} className={`message-row ${message.from === 'user' ? 'mine' : ''}`}>
         {message.from === 'character' && <span className="avatar" style={{ '--accent': character.accent } as React.CSSProperties}>{t(character.avatar)}</span>}
         <div className="message-content">
           {!message.withdrawn && message.replyToId !== undefined && <blockquote>{quoteText(messages.find(item => item.id === message.replyToId))}</blockquote>}
-          <div className={`bubble ${message.status === 'sending' ? 'streaming' : ''} ${message.attachment && message.kind !== 'text' ? 'attachment-bubble' : ''} ${activeActions === message.id ? 'actions-open' : ''}`} tabIndex={!message.withdrawn && message.status !== 'sending' ? 0 : undefined} role={!message.withdrawn && message.status !== 'sending' ? 'button' : undefined} aria-expanded={!message.withdrawn && message.status !== 'sending' ? activeActions === message.id : undefined} aria-label={!message.withdrawn && message.status !== 'sending' ? t('消息操作') : undefined} onClick={event => { if ((event.target as HTMLElement).closest('button,input,audio,video')) return; if (!message.withdrawn && message.status !== 'sending') setActiveActions(activeActions === message.id ? undefined : message.id) }} onKeyDown={event => { if ((event.key === 'Enter' || event.key === ' ') && !message.withdrawn && message.status !== 'sending') { event.preventDefault(); setActiveActions(activeActions === message.id ? undefined : message.id) } }}>
+          <div className={`bubble ${message.status === 'sending' ? 'streaming' : ''} ${message.attachment && message.kind !== 'text' ? 'attachment-bubble' : ''} ${activeActions === message.id ? 'actions-open' : ''}`} tabIndex={!message.withdrawn && message.status !== 'sending' ? 0 : undefined} role={!message.withdrawn && message.status !== 'sending' ? 'button' : undefined} aria-expanded={!message.withdrawn && message.status !== 'sending' ? activeActions === message.id : undefined} aria-label={!message.withdrawn && message.status !== 'sending' ? t('消息操作') : undefined} aria-description={locale === 'en' ? 'Hold to open message actions. Enter or Space also opens actions.' : '长按打开消息操作，也可按 Enter 或空格。'} onPointerDown={event => longPress.pointerDown(message.id, event)} onPointerMove={longPress.pointerMove} onPointerUp={longPress.cancel} onPointerCancel={longPress.cancel} onPointerLeave={longPress.cancel} onContextMenu={event => longPress.contextMenu(message.id, event)} onClick={event => { if (event.nativeEvent.isTrusted && event.detail === 0 && !message.withdrawn && message.status !== 'sending' && !(event.target instanceof Element && event.target.closest('button,input,audio,video,a'))) setActiveActions(message.id) }} onKeyDown={event => longPress.keyDown(message.id, event)}>
             {message.withdrawn ? <em>{t('你撤回了一条消息')}</em> : <>
               {message.kind === 'image' && message.attachment && <img className="chat-image" src={message.attachment.dataUrl} alt={message.attachment.name} />}
               {message.kind === 'video' && (message.attachment ? <VideoPlayer src={message.attachment.dataUrl} onPlay={playAudio} /> : <em>{t('视频附件不可用')}</em>)}
@@ -339,13 +391,15 @@ export default function ChatPanel(props: ChatPanelProps) {
               {renderMessageText(message.text) || (message.status === 'sending' ? t('正在回复…') : '')}
             </>}
           </div>
+          {message.appDataReply && <span className="app-data-answer-note">{locale === 'en' ? 'App-based answer · saved locally, excluded from future AI context' : '应用数据回答 · 本机保留，不进入后续 AI 上下文'}</span>}
           <time>{message.createdAt ? new Date(message.createdAt).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' }) : message.time}</time>
-          {!message.withdrawn && message.status !== 'sending' && activeActions === message.id && <div className="message-actions">
-            <button aria-label={t('引用消息 {id}', { id: message.id })} onClick={() => setQuote(message.id)}><Quote size={12} />{t('引用')}</button>
-            {message.text && !message.localOnly && !props.temporary && <button onClick={() => setMemory({ text: message.text, category: 'profile', sourceMessageId: message.id })}>{t('记住这条')}</button>}
-            {message.from === 'user' && <button disabled={replying} onClick={() => props.withdraw(message.id)}>{t('撤回')}</button>}
+          {!message.withdrawn && message.status !== 'sending' && activeActions === message.id && <div className="message-actions" role="group" aria-label={locale === 'en' ? 'Message actions' : '消息操作菜单'}>
+            {!!message.text && <button type="button" disabled={copying} aria-label={locale === 'en' ? `Copy message ${message.id}` : `复制消息 ${message.id}`} onClick={() => void copyMessage(message.id)}><Copy size={12} />{copying ? (locale === 'en' ? 'Copying…' : '复制中…') : (locale === 'en' ? 'Copy' : '复制')}</button>}
+            <button aria-label={t('引用消息 {id}', { id: message.id })} onClick={() => { setQuote(message.id); setActiveActions(undefined); composerInput.current?.focus() }}><Quote size={12} />{t('引用')}</button>
+            {message.text && !message.localOnly && !props.temporary && <button onClick={() => { setMemory({ text: message.text, category: 'profile', sourceMessageId: message.id }); setActiveActions(undefined) }}>{t('记住这条')}</button>}
+            {message.from === 'user' && <button disabled={replying} onClick={() => { setActiveActions(undefined); void props.withdraw(message.id) }}>{t('撤回')}</button>}
           </div>}
-          {!message.withdrawn && message.status === 'failed' && message.from === 'user' && <button disabled={replying} className="retry" onClick={() => props.send({ retryId: message.id })}>{t('回复未完成 · 重试')}</button>}
+          {!message.withdrawn && message.status === 'failed' && message.from === 'user' && <button disabled={replying} className="retry" onClick={event => { if (message.appDataRequest && props.appDataIdentity) { setDraft(message.text); openExtra('apps', event.currentTarget) } else void props.send({ retryId: message.id }) }}>{message.appDataRequest ? (locale === 'en' ? 'App data needs a fresh preview' : '应用数据需重新预览授权') : t('回复未完成 · 重试')}</button>}
         </div>
       </div>)}<div ref={bottom} />
     </section>
@@ -356,16 +410,18 @@ export default function ChatPanel(props: ChatPanelProps) {
       <div>{t('待发送：')}<span>{attachment.data.name}</span>{attachment.kind === 'image' && <img className="chat-image attachment-preview-image" src={attachment.data.dataUrl} alt={attachment.data.name} />}{attachment.kind === 'video' && <VideoPlayer src={attachment.data.dataUrl} preview onPlay={playAudio} />}{attachment.kind === 'audio' && <VoicePlayer src={attachment.data.dataUrl} preview onPlay={playAudio} />}</div>
       <button onClick={() => setAttachment(undefined)}>{t('移除')}</button>
     </div>}
-    <div className="quick-replies">{props.setReplyMode && <div className="inline-mode"><button className="chat-mode-trigger" aria-label={t('回复模式：{mode}', { mode: t(REPLY_MODE_LABELS[props.replyMode || 'brief']) })} aria-expanded={modeOpen} aria-controls="chat-reply-modes" onClick={() => setModeOpen(!modeOpen)}>{t(REPLY_MODE_LABELS[props.replyMode || 'brief'])}<ChevronDown size={14} /></button></div>}<button onClick={() => { void props.recordActivity?.('你发起了共同故事'); props.openStory() }}>{t('📖 共同故事')}</button><button onClick={() => { void props.recordActivity?.('你发起了猜拳'); props.openGame() }}>{t('✊ 猜拳')}</button>{props.openMoments && <button disabled={replying || recording} onClick={() => { void props.recordActivity?.('你查看了 TA 的朋友圈'); props.openMoments?.() }}>{t('✨ 朋友圈')}</button>}<button onClick={() => { const topic=randomRelationshipTopic(props.relationshipStage); setDraft(t(topic)); composerInput.current?.focus() }}><Sparkles size={14}/>{t('随机话题')}</button></div>
-    {modeOpen && <section id="chat-reply-modes" className="reply-mode-picker quick-mode-popover" aria-label={t('回复模式')}><div className="reply-mode-options" role="group" aria-label={t('选择回复模式')}>{REPLY_MODES.map(mode => <button key={mode} type="button" aria-pressed={(props.replyMode || 'brief') === mode} disabled={replying || props.modeSaving} onClick={async () => { try { await props.setReplyMode?.(mode); await props.recordActivity?.(`你将聊天模式切换为「${t(REPLY_MODE_LABELS[mode])}」`); setModeOpen(false) } catch { setNotice('回复模式未切换，请停止回复或检查本机存储后重试。') } }}>{t(REPLY_MODE_LABELS[mode])}</button>)}</div><p>{props.modeSaving ? t('正在保存回复模式…') : t(REPLY_MODE_DESCRIPTIONS[props.replyMode || 'brief'])}<span>{t('仅影响下一次回复')}{props.temporary ? t(' · 本次临时会话有效') : ''}</span></p></section>}
+    <div className="chat-controls">
+    <div className="quick-replies">{props.setReplyMode && <div className="inline-mode"><button ref={modeTrigger} className="chat-mode-trigger" aria-label={t('回复模式：{mode}', { mode: t(REPLY_MODE_LABELS[props.replyMode || 'brief']) })} aria-expanded={modeOpen} aria-controls="chat-reply-modes" onClick={() => { const open = !modeOpen; setModeOpen(open); if (open) { closeMore(); setSettingsOpen(false); setActiveActions(undefined); composerInput.current?.blur() } }}><Settings2 size={15} aria-hidden="true" /><span>{t(REPLY_MODE_LABELS[props.replyMode || 'brief'])}</span><ChevronDown className="mode-chevron" size={12} aria-hidden="true" /></button></div>}<button onClick={() => { void props.recordActivity?.('你发起了共同故事'); props.openStory() }}>{t('📖 共同故事')}</button><button onClick={() => { void props.recordActivity?.('你发起了猜拳'); props.openGame() }}>{t('✊ 猜拳')}</button>{props.openMoments && <button disabled={replying || recording} onClick={() => { void props.recordActivity?.('你查看了 TA 的朋友圈'); props.openMoments?.() }}>{t('✨ 朋友圈')}</button>}<button onClick={() => { const topic=randomRelationshipTopic(props.relationshipStage); setDraft(t(topic)); composerInput.current?.focus() }}><Sparkles size={14}/>{t('随机话题')}</button></div>
+    {modeOpen && <section ref={modeMenu} id="chat-reply-modes" className="reply-mode-picker quick-mode-popover compact-mode-menu" aria-label={t('回复模式')}><div className="reply-mode-options" role="group" aria-label={t('选择回复模式')}>{REPLY_MODES.map(mode => <button key={mode} type="button" aria-label={t(REPLY_MODE_LABELS[mode])} aria-pressed={(props.replyMode || 'brief') === mode} disabled={replying || props.modeSaving} onClick={async () => { setNotice(''); setModeOpen(false); try { await props.setReplyMode?.(mode); try { await props.recordActivity?.(`你将聊天模式切换为「${t(REPLY_MODE_LABELS[mode])}」`) } catch { setNotice(locale === 'en' ? 'Mode changed, but the activity record could not be saved.' : '模式已切换，但操作记录未保存。') } } catch { setNotice('回复模式未切换，请停止回复或检查本机存储后重试。') } }}><span className="mode-option-copy"><span>{t(REPLY_MODE_LABELS[mode])}</span><small>{locale === 'en' ? ({ brief: 'A little everyday company', deep: 'Listen and reflect together', story: 'Step into a shared scene' })[mode] : ({ brief: '轻松聊几句', deep: '认真倾听，一起梳理', story: '进入角色与场景' })[mode]}</small></span>{(props.replyMode || 'brief') === mode && <Check size={16} aria-hidden="true" />}</button>)}</div></section>}
     <input hidden ref={imageInput} aria-label={t('选择照片文件')} type="file" accept="image/png,image/jpeg,image/webp,image/gif" disabled={replying || recording || readingFile} onChange={event => { void chooseFile('image', event.target.files?.[0]); event.target.value = '' }} />
     <input hidden ref={videoInput} aria-label={t('选择视频文件')} type="file" accept="video/mp4,video/webm,video/quicktime" disabled={replying || recording || readingFile} onChange={event => { void chooseFile('video', event.target.files?.[0]); event.target.value = '' }} />
     <footer className={`composer glass ${moreOpen ? 'composer-expanded' : ''}`}>
       <button aria-label={recording ? t('结束录音') : t('录制语音')} onClick={() => { closeMore(); void record() }} disabled={replying || readingFile}>{recording ? <Square color="#ff7e8b" /> : <Mic />}</button>
-      <input ref={composerInput} aria-label={t('发消息')} value={draft} onChange={event => setDraft(event.target.value)} onFocus={closeMore} onKeyDown={event => { if (event.key === 'Enter' && !event.nativeEvent.isComposing) { event.preventDefault(); void submit() } }} placeholder={t('发消息…')} disabled={replying} />
+      <input ref={composerInput} aria-label={t('发消息')} value={draft} onChange={event => setDraft(event.target.value)} onFocus={() => { closeMore(); setModeOpen(false) }} onKeyDown={event => { if (event.key === 'Enter' && !event.nativeEvent.isComposing) { event.preventDefault(); void submit() } }} placeholder={t('发消息…')} disabled={replying} />
       <button ref={moreButton} className="chat-more-trigger" aria-label={t('更多发送选项')} aria-expanded={moreOpen} aria-controls="chat-more-panel" disabled={replying || recording || readingFile} onClick={() => { setMoreOpen(!moreOpen); setEmojiOpen(false); composerInput.current?.blur(); setModeOpen(false) }}><Plus size={22} /></button>
       {replying ? <button className="send" aria-label={t('停止回复')} onClick={props.stop}><Square /></button> : <button className="send" aria-label={t('发送消息')} disabled={recording || readingFile || (!draft.trim() && !attachment)} onClick={submit}><Send /></button>}
     </footer>
+    </div>
     {moreOpen && <section id="chat-more-panel" className="chat-more-panel" aria-label={t('更多发送选项')}>
       {emojiOpen ? <>
         <div className="chat-more-heading"><button onClick={() => setEmojiOpen(false)}><ArrowLeft size={14} />{t('返回选项')}</button><span>{t('表情')}</span><button aria-label={t('关闭更多选项')} onClick={() => { closeMore(); moreButton.current?.focus() }}><X size={16} /></button></div>
@@ -377,11 +433,12 @@ export default function ChatPanel(props: ChatPanelProps) {
         <button disabled={replying || recording || readingFile} onClick={() => setEmojiOpen(true)}><span><Smile size={25} /></span>{t('表情')}</button>
         <button disabled={replying || recording || readingFile} onClick={event => openExtra('period', event.currentTarget)}><span><CalendarHeart size={25} /></span>{t('经期记录')}</button>
         <button disabled={replying || recording || readingFile} onClick={event => openExtra('gift', event.currentTarget)}><span><Gift size={25} /></span>{t('送礼物')}</button>
+        {props.appDataIdentity && <button disabled={!props.isPrimary || props.temporary || replying || recording || readingFile} onClick={event => openExtra('apps', event.currentTarget)}><span><Sparkles size={25} /></span>{locale === 'en' ? 'Read app data' : '读取应用数据'}</button>}
       </div>}
     </section>}
     {extraPanel && <div className="chat-extra-overlay"><div ref={extraDialog} className="chat-extra-dialog" role="dialog" aria-modal="true" aria-labelledby="chat-extra-heading">
-      <header><h2 id="chat-extra-heading">{t(extraPanel === 'period' ? '经期记录' : '送礼物')}</h2><button aria-label={t('返回聊天')} onClick={() => setExtraPanel(null)}><X /></button></header>
-      <div className="chat-extra-body">{extraPanel === 'period' ? <PeriodRecordPanel temporary={props.temporary} onSaved={record => void props.recordActivity?.(`🌸 已记录经期：${record.startDate}${record.endDate ? ` 至 ${record.endDate}` : ''}${record.note ? ` · ${record.note}` : ''}`, true)} /> : <GiftStorePanel selected={character.id} sending={replying} onOpenBilling={props.openBilling} onSendGift={giftId => props.send({ giftId, rejectOnFailure: true })} />}</div>
+      <header><h2 id="chat-extra-heading">{extraPanel === 'apps' ? (locale === 'en' ? 'Main Bot app data' : '主 Bot 应用数据') : t(extraPanel === 'period' ? '经期记录' : '送礼物')}</h2><button aria-label={t('返回聊天')} onClick={() => { if (extraPanel === 'apps' && replying) props.stop(); setExtraPanel(null) }}><X /></button></header>
+      <div className="chat-extra-body">{extraPanel === 'apps' && props.appDataIdentity ? <AppDataPanel identity={props.appDataIdentity} text={draft} modelAvailable={!props.demo} send={props.send} stop={props.stop} close={() => setExtraPanel(null)} /> : extraPanel === 'period' ? <PeriodRecordPanel temporary={props.temporary} onSaved={record => void props.recordActivity?.(`🌸 已记录经期：${record.startDate}${record.endDate ? ` 至 ${record.endDate}` : ''}${record.note ? ` · ${record.note}` : ''}`, true)} /> : <GiftStorePanel selected={character.id} sending={replying} onOpenBilling={props.openBilling} onSendGift={giftId => props.send({ giftId, rejectOnFailure: true })} />}</div>
     </div></div>}
     {readingFile && <div className="chat-notice" role="status">{t('正在读取附件…')}</div>}
     {historyOpen && <div className="chat-history-overlay"><section className="chat-history-dialog" role="dialog" aria-modal="true" aria-labelledby="chat-history-title"><header><div><small>{t(character.name)} · AI</small><h2 id="chat-history-title">{t('对话历史')}</h2></div><button aria-label={t('关闭')} onClick={() => setHistoryOpen(false)}><X /></button></header><div className="chat-history-body">

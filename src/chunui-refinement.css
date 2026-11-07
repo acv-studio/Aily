@@ -34,7 +34,9 @@ textarea{line-height:1.55}.memory-page label,.proactive-settings label,.smart-re
 .memory-page .managed-memory{padding:16px!important}.memory-entry-meta{gap:8px}.memory-category-tag{border-radius:8px!important}.memory-details>summary{padding:10px 0!important}.memory-modal{border-radius:var(--cu-radius-sheet)!important}.memory-modal-header{border-bottom:1px solid var(--cc-hairline)}.memory-modal-actions{border-top:1px solid var(--cc-hairline)}
 /* Secondary pages and tool sheets retain orientation while scrolling. */
 .screen>.text-button:first-child,.screen>.secondary:first-child{backdrop-filter:blur(16px)}
-.desktop-tools-dialog{border-radius:var(--cu-radius-sheet)!important}.desktop-tools-header{padding:18px 20px!important}.desktop-tools-content{padding:18px!important}.desktop-file-label{border-radius:14px!important;min-height:48px!important}
+/* Full-screen tools are page chrome, not rounded modal sheets. Their header
+   spacing is owned by desktopTools.css, including the iOS safe-area inset. */
+.desktop-tools-dialog{border:0!important;border-radius:0!important;box-shadow:none!important}.desktop-tools-content{padding:18px 18px calc(18px + env(safe-area-inset-bottom))!important}.desktop-file-label{border-radius:14px!important;min-height:48px!important}
 /* Alerts communicate status without becoming visual noise. */
 :is(.chat-error,.feed-error,.desktop-error,[role=alert]){border-radius:14px!important;line-height:1.55}.reminder-banner{border-radius:16px!important;box-shadow:0 10px 28px rgba(0,0,0,.22)}
 /* Light theme preserves the same elevation and contrast language. */
@@ -56,3 +58,5 @@ html[data-theme=light] .chat-extra-dialog{background:linear-gradient(160deg,#fff
 @media (prefers-reduced-motion:reduce){.bottom-nav button.active:before{box-shadow:none}}
 /* Tab bar is page chrome, never an Apple-card surface. */
 .bottom-nav.glass{border-radius:0!important;box-shadow:none!important}
+/* The input bar joins the screen/keyboard edge; only inner controls are rounded. */
+.chat-screen .composer.glass{border-radius:0!important;box-shadow:none!important;border-left-width:0;border-right-width:0}

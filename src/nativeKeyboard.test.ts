@@ -1,0 +1,16 @@
+import { beforeEach, expect, it, vi } from 'vitest'
+const mocks=vi.hoisted(()=>({native:true,platform:'ios',accessory:vi.fn(),listen:vi.fn(),handlers:new Map<string,(info?:{keyboardHeight:number})=>void>()}))
+vi.mock('@capacitor/core',()=>({Capacitor:{isNativePlatform:()=>mocks.native,getPlatform:()=>mocks.platform}}))
+vi.mock('@capacitor/keyboard',()=>({Keyboard:{setAccessoryBarVisible:mocks.accessory,addListener:mocks.listen}}))
+beforeEach(()=>{vi.resetModules();mocks.native=true;mocks.platform='ios';mocks.accessory.mockReset().mockResolvedValue(undefined);mocks.handlers.clear();mocks.listen.mockReset().mockImplementation(async(name,handler)=>{mocks.handlers.set(name,handler);return{remove:async()=>{}}});delete document.documentElement.dataset.keyboardOpen})
+it('hides the iPhone accessory bar and updates soft keyboard state only once',async()=>{
+ const module=await import('./nativeKeyboard')
+ await vi.waitFor(()=>expect(mocks.listen).toHaveBeenCalledTimes(3))
+ expect(mocks.accessory).toHaveBeenCalledExactlyOnceWith({isVisible:false})
+ await module.initializeNativeKeyboard()
+ expect(mocks.accessory).toHaveBeenCalledTimes(1)
+ mocks.handlers.get('keyboardWillShow')!({keyboardHeight:330});expect(document.documentElement.dataset.keyboardOpen).toBe('true')
+ mocks.handlers.get('keyboardDidHide')!();expect(document.documentElement.dataset.keyboardOpen).toBe('false')
+ mocks.handlers.get('keyboardDidShow')!({keyboardHeight:0});expect(document.documentElement.dataset.keyboardOpen).toBe('false')
+})
+it.each(['web','android'])('does not call iOS keyboard APIs on %s',async platform=>{mocks.platform=platform;mocks.native=platform!=='web';const module=await import('./nativeKeyboard');await module.initializeNativeKeyboard();expect(mocks.accessory).not.toHaveBeenCalled();expect(mocks.listen).not.toHaveBeenCalled()})

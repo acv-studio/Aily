@@ -5,3 +5,9 @@
 .reply-mode-options button:disabled{opacity:.55;cursor:default}
 .reply-mode-picker p{margin:8px 0 0;font-size:11px;line-height:1.5;color:#c4cada}
 .reply-mode-picker p span{display:block;color:#9da3b4;font-size:10px}
+.reply-mode-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px;position:sticky;top:0;background:inherit;z-index:1}
+.reply-mode-heading strong{font-size:13px}
+.reply-mode-heading .reply-mode-close{width:44px;min-height:44px;display:grid;place-items:center;padding:0;border-radius:11px;border:1px solid var(--line);background:#ffffff08;color:#d7cce2;box-shadow:none}
+.chat-screen .quick-mode-popover .reply-mode-options button{box-shadow:none}
+.chat-screen .quick-mode-popover button:focus-visible{outline:2px solid var(--cc-primary,#b99bcf)!important;outline-offset:2px;box-shadow:none!important}
+.chat-screen .quick-mode-popover .reply-mode-options button:disabled{opacity:1;color:#b6adbf;background:#ffffff04;cursor:not-allowed}

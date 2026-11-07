@@ -6,12 +6,17 @@ import { Capacitor } from '@capacitor/core'
 import { useI18n } from './i18n'
 import { interpretDivination } from './chatService'
 import ExtensionStore, { ExtensionAppView } from './ExtensionStore'
-import type { ExtensionAppId } from './extensionApps'
+import { extensionApps, type ExtensionAppId } from './extensionApps'
 import './desktopTools.css'
+import MediaLibraryApp from './MediaLibraryApp'
+import ContactsApp from './ContactsApp'
+import LedgerApp from './LedgerApp'
+import DiaryApp from './DiaryApp'
+import PhotoOrganizerApp from './PhotoOrganizerApp'
 
 export type DesktopTool = 'ledger' | 'album' | 'contacts' | 'music' | 'diary' | 'divination' | 'app-store' | ExtensionAppId
 type Copy = (zh: string, en: string) => string
-const titles: Record<DesktopTool, [string, string]> = { ledger: ['记账', 'Ledger'], album: ['相册', 'Album'], contacts: ['通讯录', 'Contacts'], music: ['音乐', 'Music'], diary: ['日记', 'Diary'], divination: ['易之书 · 梅花易数', 'Yizhishu Divination'], 'app-store':['应用商店','App Store'], 'meal-planner':['吃什么','What to Eat'], 'focus-timer':['专注时钟','Focus Timer'], 'skincare-diary':['护肤日记','Skincare Diary'], wardrobe:['穿搭衣橱','Wardrobe'], anniversary:['纪念日助手','Anniversary'], gomoku:['五子棋','Gomoku'], 'game-2048':['2048','2048'] }
+const titles: Partial<Record<DesktopTool, [string, string]>> = { ledger: ['记账', 'Ledger'], album: ['相册', 'Album'], contacts: ['通讯录', 'Contacts'], music: ['音乐', 'Music'], diary: ['日记', 'Diary'], divination: ['易之书 · 梅花易数', 'Yizhishu Divination'], 'app-store':['应用商店','App Store'], 'photo-organizer':['相册整理','Photo Organizer'], 'laughter-collector':['笑声收集器','Laughter Collector'], 'meal-planner':['吃什么','What to Eat'], 'focus-timer':['专注时钟','Focus Timer'], 'skincare-diary':['护肤日记','Skincare Diary'], wardrobe:['穿搭衣橱','Wardrobe'], anniversary:['纪念日助手','Anniversary'], gomoku:['五子棋','Gomoku'], 'game-2048':['2048','2048'] }
 const today = () => { const now = new Date(); return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}` }
 const newId = () => globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`
 const isRecord = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object'
@@ -50,6 +55,8 @@ export default function DesktopTools({ tool, onClose, modelConfig, onOpenTool }:
   const { locale } = useI18n()
   const copy: Copy = (zh, en) => locale === 'en' ? en : zh
   const titleId = useId()
+  const registeredApp = extensionApps.find(app => app.id === tool)
+  const title: [string, string] = titles[tool] || (registeredApp ? [registeredApp.name, registeredApp.english] : ['应用暂不可用', 'App unavailable'])
   const dialog = useRef<HTMLElement>(null)
   const closeRef = useRef(onClose); closeRef.current = onClose
   useEffect(() => {
@@ -58,9 +65,9 @@ export default function DesktopTools({ tool, onClose, modelConfig, onOpenTool }:
     document.body.style.overflow = 'hidden'
     const node = dialog.current
     node?.focus()
-    const focusable = () => Array.from(node?.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), audio[controls], [tabindex="0"]') ?? []).filter(element => !element.hidden)
+    const focusable = () => Array.from((node?.querySelector<HTMLElement>('.media-photo-viewer, .organizer-expanded, .organizer-delete-confirm') || node)?.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), audio[controls], a[href], [tabindex="0"]') ?? []).filter(element => !element.closest('[hidden]') && element.getAttribute('tabindex') !== '-1')
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); closeRef.current(); return }
+      if (event.key === 'Escape') { if (node?.querySelector('.media-photo-viewer, .organizer-expanded, .organizer-delete-confirm')) return; event.preventDefault(); event.stopPropagation(); closeRef.current(); return }
       if (event.key !== 'Tab') return
       const elements = focusable(), first = elements[0], last = elements.at(-1)
       if (!first) { event.preventDefault(); node?.focus(); return }
@@ -72,9 +79,9 @@ export default function DesktopTools({ tool, onClose, modelConfig, onOpenTool }:
     document.addEventListener('focusin', guardFocus)
     return () => { document.body.style.overflow = oldOverflow; document.removeEventListener('keydown', onKey, true); document.removeEventListener('focusin', guardFocus); if (previous?.isConnected) previous.focus() }
   }, [])
-  return createPortal(<div className="desktop-tools-overlay"><section ref={dialog} className="desktop-tools-dialog" role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1}>
-    <header className="desktop-tools-header"><div><small>{copy('AILY · 本地生活工具', 'AILY · Local tools')}</small><h2 id={titleId}>{copy(...titles[tool])}</h2></div><button type="button" className="desktop-close" onClick={onClose} aria-label={copy('关闭工具', 'Close tool')}>×</button></header>
-    <div className="desktop-tools-content" key={tool}>{tool === 'ledger' ? <Ledger copy={copy} /> : tool === 'contacts' ? <Contacts copy={copy} /> : tool === 'diary' ? <Diary copy={copy} /> : tool === 'album' ? <LocalMedia kind="album" copy={copy} /> : tool === 'music' ? <LocalMedia kind="music" copy={copy} /> : tool === 'divination' ? <Divination copy={copy} modelConfig={modelConfig} /> : tool === 'app-store' ? <ExtensionStore locale={locale} openApp={id=>onOpenTool?.(id)} /> : <ExtensionAppView id={tool as ExtensionAppId} locale={locale} />}</div>
+  return createPortal(<div className="desktop-tools-overlay"><section ref={dialog} className={`desktop-tools-dialog tools-surface${tool === 'photo-organizer' ? ' photo-organizer-shell' : ''}`} role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1}>
+    <header className="desktop-tools-header" hidden={tool === 'photo-organizer'}><button type="button" className="desktop-close" onClick={onClose} aria-label={copy('返回', 'Back')}>{'<'}</button><div><h2 id={titleId}>{copy(...title)}</h2></div></header>
+    <div className="desktop-tools-content" key={tool}>{tool === 'ledger' ? <LedgerApp copy={copy} /> : tool === 'contacts' ? <ContactsApp locale={locale} /> : tool === 'diary' ? <DiaryApp copy={copy} /> : tool === 'album' ? <MediaLibraryApp kind="album" copy={copy} /> : tool === 'music' ? <MediaLibraryApp kind="music" copy={copy} /> : tool === 'divination' ? <Divination copy={copy} modelConfig={modelConfig} /> : tool === 'photo-organizer' ? <PhotoOrganizerApp locale={locale} onClose={onClose} /> : tool === 'app-store' ? <ExtensionStore locale={locale} openApp={id=>onOpenTool?.(id)} /> : <ExtensionAppView id={tool as ExtensionAppId} locale={locale} />}</div>
   </section></div>, document.body)
 }
 

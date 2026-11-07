@@ -1,6 +1,10 @@
 import { t } from './i18n'
 import { clearAllData } from './db'
 import { demoDb } from './giftDemo'
+import { clearMediaLibrary } from './mediaLibrary'
+import { clearLaughterLibrary } from './laughterStorage'
+import { invalidateAppDataAccess } from './appDataGateway'
+import { clearRegisteredMiniAppData } from './extensionRuntime'
 
 export const consentKey = 'aily-safety-consent-v1'
 const usageLock = 'aily-privacy-usage-v1'
@@ -24,9 +28,13 @@ export async function deleteLocalProfile(): Promise<void> {
     if (!lock) throw new Error(t('请关闭其他 Aily 标签页或窗口，再重试删除。尚未删除数据。'))
     // Separate databases cannot share a transaction. A failure is surfaced and retryable,
     // never reported as success. Clear credentials first even when later storage fails.
+    invalidateAppDataAccess()
     for (const key of ['aily-api-key']) sessionStorage.removeItem(key)
-    for (const key of [consentKey, 'aily-api-endpoint', 'aily-api-model', 'aily-demo-state', 'aily.locale', 'aily.chatLocale', 'aily-desktop-ledger', 'aily-desktop-contacts', 'aily-desktop-diary', 'aily.ext.meal.v1']) localStorage.removeItem(key)
+    await clearRegisteredMiniAppData()
+    for (const key of [consentKey, 'aily-api-endpoint', 'aily-api-model', 'aily-demo-state', 'aily.locale', 'aily.chatLocale', 'aily-desktop-ledger', 'aily-desktop-contacts', 'aily-desktop-diary', 'aily.ext.meal.v1', 'aily.extension-apps.v1', 'aily.extension-apps.incarnation.v1', 'aily.extension-defaults.v1', 'aily.ext.feedback.v1', 'aily.ext.skincare', 'aily.ext.wardrobe', 'aily.ext.anniversary', 'aily.ext.2048.grid', 'aily.ext.2048.score', 'aily.app-data-access.v1']) localStorage.removeItem(key)
     await clearAllData()
+    await clearMediaLibrary()
+    await clearLaughterLibrary()
     await demoDb.transaction('rw', demoDb.wallet, demoDb.transactions, demoDb.storyEvents, async () => {
       await demoDb.wallet.clear()
       await demoDb.transactions.clear()

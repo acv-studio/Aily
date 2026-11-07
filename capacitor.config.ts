@@ -1,4 +1,5 @@
 import type { CapacitorConfig } from '@capacitor/cli'
+import { KeyboardResize } from '@capacitor/keyboard'
 
 const config: CapacitorConfig = {
   // Keep this stable after installing: changing the origin/app ID strands local data.
@@ -13,6 +14,13 @@ const config: CapacitorConfig = {
   ios: {
     contentInset: 'never',
     preferredContentMode: 'mobile',
+  },
+  plugins: {
+    Keyboard: {
+      // ChatPanel already tracks visualViewport; avoid a second native resize.
+      resize: KeyboardResize.None,
+      autoBackdropColor: 'dom',
+    },
   },
 }
 

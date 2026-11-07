@@ -23,8 +23,14 @@ body{height:100dvh;overflow:hidden;-webkit-text-size-adjust:100%;overscroll-beha
 .game-sheet,.story-sheet{width:min(100%,480px);max-height:calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px);overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;flex-shrink:0;}
 .memory-modal{max-height:calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 32px);-webkit-overflow-scrolling:touch;}
 .chat-history-dialog{max-height:calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px);}
+/* The keyboard replaces the home-indicator area; do not reserve that inset twice. */
+html[data-keyboard-open=true] .chat-screen .composer,
+.chat-screen[data-keyboard-open=true] .composer{padding-bottom:8px!important;}
 /* Fixed mode menu must use the keyboard-aware chat viewport, not Safari's layout viewport. */
 .chat-screen .quick-mode-popover{position:absolute;left:max(12px,env(safe-area-inset-left));right:max(12px,env(safe-area-inset-right));bottom:calc(74px + env(safe-area-inset-bottom));width:auto;max-height:min(46dvh,300px);overflow-y:auto;transform:none;}
+/* Anchor above the actual toolbar/composer height, so the trigger stays tappable. */
+.chat-screen .chat-controls{position:relative;flex:0 0 auto;min-width:0;}
+.chat-screen .chat-controls .quick-mode-popover{bottom:calc(100% + 8px);}
 /* Call layout must compact before a short visible viewport clips hang-up controls. */
 .call-screen{height:100dvh;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding-left:max(18px,env(safe-area-inset-left));padding-right:max(18px,env(safe-area-inset-right));}
 /* Keep the tab bar attached to the home indicator; its glass background fills the

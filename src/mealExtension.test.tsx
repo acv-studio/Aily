@@ -26,18 +26,19 @@ it('installs, reloads, opens and uninstalls meal planner without deleting its us
   const userData = '{"preserve":"user meal data"}'
   localStorage.setItem(MEAL_KEY, userData)
   fireEvent.click(within(card()).getByRole('button', { name: '卸载 吃什么' }))
+  expect(installedExtensionIds()).toContain('meal-planner')
+  fireEvent.click(screen.getByRole('button', { name: '确认卸载' }))
   expect(installedExtensionIds()).not.toContain('meal-planner')
   expect(localStorage.getItem(MEAL_KEY)).toBe(userData)
   expect(within(card()).getByRole('button', { name: '安装 吃什么' })).toBeInTheDocument()
 })
 
 it('failed installation leaves registry and store UI unchanged', () => {
-  const alert = vi.spyOn(window, 'alert').mockImplementation(() => {})
   render(<ExtensionStore locale="en" />)
   const card = screen.getByRole('heading', { name: 'What to Eat' }).closest('article')!
   vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('QuotaExceededError') })
   fireEvent.click(within(card).getByRole('button', { name: 'Install What to Eat' }))
-  expect(alert).toHaveBeenCalledWith('Installation failed because local storage is unavailable.')
+  expect(screen.getByRole('alert')).toHaveTextContent('Could not update installation.')
   expect(localStorage.getItem(INSTALL_KEY)).toBeNull()
   expect(within(card).getByRole('button', { name: 'Install What to Eat' })).toBeInTheDocument()
   expect(within(card).queryByRole('button', { name: 'Uninstall What to Eat' })).toBeNull()

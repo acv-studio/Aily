@@ -1,0 +1,29 @@
+/* Photo organizer keeps its cream/forest identity, with explicit readable states. */
+.desktop-tools-dialog.photo-organizer-shell .photo-organizer {
+  --organizer-muted:#62695e; --po-bg:#f8f5ee; --po-card:#fffefb; --po-ink:#294c3b; --po-soft:#f2f0e8; --po-line:#d9dfd2;
+  color:var(--po-ink)!important; background:var(--po-bg)!important;
+}
+.desktop-tools-dialog.photo-organizer-shell .organizer-hero { background:#294c3b!important; color:#fffefb!important; }
+.desktop-tools-dialog.photo-organizer-shell .organizer-hero h3 { color:#fffefb!important; }
+.desktop-tools-dialog.photo-organizer-shell .organizer-hero p { color:#dce5d8!important; }
+.desktop-tools-dialog.photo-organizer-shell :is(.organizer-greeting time,.organizer-total,.organizer-stat span,.organizer-review-meta>span,.organizer-gesture-hint span,.organizer-source-chips>span,.organizer-review-caption) { color:var(--organizer-muted)!important; }
+.desktop-tools-dialog.photo-organizer-shell .photo-organizer .organizer-greeting time { color:var(--organizer-muted)!important; }
+.desktop-tools-dialog.photo-organizer-shell .organizer-stat strong { color:var(--po-ink)!important; }
+.desktop-tools-dialog.photo-organizer-shell .photo-organizer button:disabled { opacity:1!important; }
+.desktop-tools-dialog.photo-organizer-shell .organizer-bottom-nav button { color:var(--organizer-muted)!important; }
+.desktop-tools-dialog.photo-organizer-shell .organizer-bottom-nav button[aria-current=page] { color:var(--po-ink)!important; }
+.desktop-tools-dialog.photo-organizer-shell .organizer-round-flag>span { color:#914631!important; }
+.desktop-tools-dialog.photo-organizer-shell .organizer-source-chips button { color:var(--organizer-muted)!important; }
+.desktop-tools-dialog.photo-organizer-shell .organizer-source-chips button[aria-pressed=true] { color:#294c3b!important; }
+html[data-theme=dark] .desktop-tools-dialog.photo-organizer-shell,
+html[data-theme=dark] .desktop-tools-dialog.photo-organizer-shell .photo-organizer {
+  --po-bg:#18261f; --po-card:#24392c; --po-ink:#edf3e5; --po-soft:#314835; --po-line:#506457; --organizer-muted:#c0caba;
+  background:var(--po-bg)!important; color:var(--po-ink)!important; color-scheme:dark;
+}
+html[data-theme=dark] .desktop-tools-dialog.photo-organizer-shell .organizer-icon-button:not(.organizer-brand-mark) { color:var(--po-ink)!important; }
+html[data-theme=dark] .desktop-tools-dialog.photo-organizer-shell .organizer-stat { background:var(--po-card)!important; }
+html[data-theme=dark] .desktop-tools-dialog.photo-organizer-shell .organizer-bottom-nav { background:var(--po-bg)!important; border-color:var(--po-line)!important; }
+html[data-theme=dark] .desktop-tools-dialog.photo-organizer-shell :is(.organizer-source-chips button,.organizer-source-chips>span) { background:var(--po-card)!important; border-color:var(--po-line)!important; }
+html[data-theme=dark] .desktop-tools-dialog.photo-organizer-shell .organizer-source-chips button[aria-pressed=true] { background:var(--po-soft)!important; color:#d6e99d!important; }
+html[data-theme=dark] .desktop-tools-dialog.photo-organizer-shell .organizer-round-flag>span { color:#efb4a1!important; }
+html[data-theme=dark] .desktop-tools-dialog.photo-organizer-shell .organizer-status.has-message { background:var(--po-card)!important; color:var(--po-ink)!important; }

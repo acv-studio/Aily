@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import DesktopTools, { calculatePlumBlossom } from './DesktopTools'
+import DesktopTools, { calculatePlumBlossom, castYizhishuDivination } from './DesktopTools'
+import { mediaDb } from './mediaLibrary'
 import { setLocale } from './i18n'
 
 beforeEach(() => { localStorage.clear(); setLocale('zh-CN') })
@@ -17,6 +18,8 @@ describe('desktop local tools', () => {
     view.unmount(); render(<DesktopTools tool="ledger" onClose={vi.fn()} />)
     expect(screen.getByText('午餐')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '删除记录：午餐' }))
+    expect(JSON.parse(localStorage.getItem('aily-desktop-ledger')!)).toHaveLength(2)
+    fireEvent.click(screen.getByRole('button', { name: '确认删除' }))
     expect(screen.queryByText('午餐')).toBeNull()
     expect(JSON.parse(localStorage.getItem('aily-desktop-ledger')!)).toHaveLength(1)
   })
@@ -32,7 +35,7 @@ describe('desktop local tools', () => {
   })
   it('saves dated diary entries, keeps data on tool switches and deletes entries', () => {
     const view = render(<DesktopTools tool="diary" onClose={vi.fn()} />)
-    change('日记日期', '2026-11-04'); change('今天想记下什么', '今天走了很远。')
+    change('日记日期', '2026-11-04'); change('日记内容', '今天走了很远。')
     fireEvent.click(screen.getByRole('button', { name: '保存日记' }))
     expect(screen.getByText('今天走了很远。')).toBeInTheDocument()
     view.rerender(<DesktopTools tool="contacts" onClose={vi.fn()} />)
@@ -41,6 +44,7 @@ describe('desktop local tools', () => {
     view.rerender(<DesktopTools tool="diary" onClose={vi.fn()} />)
     expect(screen.getByText('今天走了很远。')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '删除日记：2026-11-04' }))
+    fireEvent.click(screen.getByRole('button', { name: '确认删除' }))
     expect(JSON.parse(localStorage.getItem('aily-desktop-diary')!)).toEqual([])
   })
   it('protects corrupt stored data from overwrites and offers retry', () => {
@@ -89,6 +93,7 @@ describe('desktop local tools', () => {
     render(<DesktopTools tool="diary" onClose={vi.fn()} />)
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('Storage denied') })
     fireEvent.click(screen.getByRole('button', { name: '删除日记：2026-11-04' }))
+    fireEvent.click(screen.getByRole('button', { name: '确认删除' }))
     expect(screen.getByText('保留这篇')).toBeInTheDocument()
     expect(screen.getByRole('alert')).toHaveTextContent('原数据保持不变')
     expect(JSON.parse(localStorage.getItem('aily-desktop-diary')!)).toHaveLength(1)
@@ -104,9 +109,9 @@ describe('desktop local tools', () => {
     const view = render(<DesktopTools tool="contacts" onClose={onClose} />)
     expect(screen.getByRole('dialog')).toHaveFocus()
     fireEvent.keyDown(document, { key: 'Tab' })
-    expect(screen.getByRole('button', { name: '关闭工具' })).toHaveFocus()
+    expect(screen.getByRole('button', { name: '返回' })).toHaveFocus()
     fireEvent.keyDown(document, { key: 'Tab', shiftKey: true })
-    expect(screen.getByRole('button', { name: '添加联系人' })).toHaveFocus()
+    expect(screen.getByRole('button', { name: '仅收藏' })).toHaveFocus()
     trigger.focus(); expect(screen.getByRole('dialog')).toHaveFocus()
     fireEvent.keyDown(document, { key: 'Escape' }); expect(onClose).toHaveBeenCalledTimes(1)
     view.unmount(); expect(trigger).toHaveFocus(); trigger.remove()
@@ -119,35 +124,45 @@ describe('desktop local tools', () => {
   })
 })
 
-describe('session-only media', () => {
-  function urls() {
-    Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: vi.fn(() => 'blob:local-test') })
-    Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: vi.fn() })
-  }
-  it('previews chosen images only and revokes on removal', () => {
-    urls(); render(<DesktopTools tool="album" onClose={vi.fn()} />)
-    expect(screen.queryByRole('img')).toBeNull()
-    fireEvent.change(screen.getByLabelText('选择图片'), { target: { files: [new File(['image'], 'mine.png', { type: 'image/png' })] } })
-    expect(screen.getByRole('img', { name: 'mine.png' })).toHaveAttribute('src', 'blob:local-test')
-    fireEvent.click(screen.getByRole('button', { name: '移除：mine.png' }))
-    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:local-test')
+// Persistent import, favorites, collections, playback and URL ownership are
+// exercised in MediaLibraryApp.test.tsx / mediaLibrary.test.ts. These tests
+// intentionally cover the actual DesktopTools routing and shell, not LocalMedia.
+describe('persistent media tool integration', () => {
+  beforeEach(async () => { await mediaDb.delete(); await mediaDb.open() })
+  afterEach(async () => { cleanup(); await mediaDb.delete() })
+  it('renders and loads the album library with a real photo file picker', async () => {
+    render(<DesktopTools tool="album" onClose={vi.fn()} />)
+    expect(screen.getByRole('dialog', { name: '相册' })).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('正在读取媒体库')
+    expect(screen.getByLabelText('添加照片')).toHaveAttribute('type', 'file')
+    expect(screen.getByLabelText('添加照片')).toHaveAttribute('accept', 'image/*')
+    expect(screen.getByText(/关闭后仍保留/)).toBeInTheDocument()
+    expect(await screen.findByText('添加你喜欢的照片或音乐，建立自己的媒体库。')).toBeInTheDocument()
+    expect(screen.queryByRole('status')).toBeNull()
     expect(screen.queryByRole('img')).toBeNull()
     expect(localStorage.getItem('aily-desktop-album')).toBeNull()
   })
-  it('uses a real local audio player and revokes its URL on tool change', () => {
-    urls(); const view = render(<DesktopTools tool="music" onClose={vi.fn()} />)
-    fireEvent.change(screen.getByLabelText('选择音频'), { target: { files: [new File(['audio'], 'mine.mp3', { type: 'audio/mpeg' })] } })
-    expect(screen.getByLabelText('mine.mp3')).toHaveAttribute('controls')
-    expect(screen.getByLabelText('mine.mp3')).toHaveAttribute('src', 'blob:local-test')
-    view.rerender(<DesktopTools tool="album" onClose={vi.fn()} />)
-    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:local-test')
+  it('renders and loads music without requesting protected tracks or auto-starting playback', async () => {
+    setLocale('en'); render(<DesktopTools tool="music" onClose={vi.fn()} />)
+    expect(screen.getByRole('dialog', { name: 'Music' })).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('Loading library')
+    expect(screen.getByLabelText('Add local music')).toHaveAttribute('type', 'file')
+    expect(screen.getByLabelText('Add local music')).toHaveAttribute('accept', expect.stringContaining('audio/*'))
+    expect(screen.getByText(/protected Apple Music tracks cannot be imported/)).toBeInTheDocument()
+    expect(await screen.findByText('Add your favorite photos or music to build your library.')).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Now playing' })).toBeNull()
     expect(localStorage.getItem('aily-desktop-music')).toBeNull()
   })
-  it('reports unsupported selected file types', () => {
-    urls(); render(<DesktopTools tool="album" onClose={vi.fn()} />)
-    fireEvent.change(screen.getByLabelText('选择图片'), { target: { files: [new File(['txt'], 'notes.txt', { type: 'text/plain' })] } })
-    expect(screen.getByRole('alert')).toHaveTextContent('部分文件无法打开')
-    expect(URL.createObjectURL).not.toHaveBeenCalled()
+  it('switches media routes with independent searches and the correct localized shell', async () => {
+    const view = render(<DesktopTools tool="album" onClose={vi.fn()} />)
+    await screen.findByText('添加你喜欢的照片或音乐，建立自己的媒体库。')
+    change('搜索媒体', '海边')
+    view.rerender(<DesktopTools tool="music" onClose={vi.fn()} />)
+    expect(screen.getByRole('dialog', { name: '音乐' })).toBeInTheDocument()
+    expect(screen.getByLabelText('搜索媒体')).toHaveValue('')
+    expect(screen.getByLabelText('添加本地音乐')).toBeInTheDocument()
+    expect(screen.queryByLabelText('添加照片')).toBeNull()
+    await screen.findByText('添加你喜欢的照片或音乐，建立自己的媒体库。')
   })
 })
 
@@ -160,14 +175,17 @@ describe('deterministic cultural divination', () => {
     expect(() => calculatePlumBlossom(0, 1)).toThrow()
     expect(() => calculatePlumBlossom(1.5, 1)).toThrow()
   })
-  it('renders result with entertainment-only warning and explains simplified time method', () => {
-    render(<DesktopTools tool="divination" onClose={vi.fn()} />)
-    expect(screen.getByText(/不提供财务、投资或健康建议/)).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: '起卦' }))
-    expect(screen.getByRole('heading', { name: '本卦 · 乾' })).toBeInTheDocument()
-    change('起卦方式', 'time'); change('本地日期时间', '2026-11-04T12:00')
-    fireEvent.click(screen.getByRole('button', { name: '起卦' }))
-    expect(screen.getByText(/非农历法/)).toBeInTheDocument()
+  // The old time-method UI no longer exists; cover the current random-cast
+  // calculation with controlled entropy rather than asserting obsolete controls.
+  it('calculates the current Yizhishu random cast deterministically under controlled entropy', () => {
+    vi.spyOn(crypto, 'getRandomValues').mockImplementation(((array: Uint32Array) => {
+      array[0] = 0
+      return array
+    }) as typeof crypto.getRandomValues)
+    const result = castYizhishuDivination()
+    expect(result).toMatchObject({ key0: 1, key1: 1, key2: 2, bengua: '110110', hugua: '101011', biangua: '111110' })
+    expect(castYizhishuDivination()).toEqual(result)
+    expect(crypto.getRandomValues).toHaveBeenCalledTimes(4)
     expect(localStorage.getItem('aily-desktop-divination')).toBeNull()
   })
 })
