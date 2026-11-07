@@ -10,7 +10,7 @@ beforeEach(() => { localStorage.clear(); setLocale('zh-CN') })
 afterEach(() => { cleanup(); vi.useRealTimers() })
 
 describe('companion desktop home', () => {
-  it('puts device time and weather above one main bot, bundled tools and default feedback app', () => {
+  it('puts device time and weather above one main bot, bundled tools without the retired feedback app', () => {
     const openChat = vi.fn()
     render(<HomeScreen selected="chen" primaryId="lu" primaryName="阿澜" conversations={{}} openChat={openChat} />)
     expect(screen.getByLabelText('系统时间')).toBeInTheDocument()
@@ -18,8 +18,8 @@ describe('companion desktop home', () => {
     fireEvent.click(screen.getByRole('button', { name: '与阿澜聊天' }))
     expect(openChat).toHaveBeenLastCalledWith('lu')
     const apps = within(screen.getByRole('group', { name: '日常小应用' }))
-    expect(apps.getAllByRole('button').map(button => button.textContent)).toEqual(['记账', '相册', '通讯录', '音乐', '日记', '应用商店', '梅花易数', '💌反馈'])
-    for (const [label, id] of [['记账', 'ledger'], ['相册', 'album'], ['通讯录', 'contacts'], ['音乐', 'music'], ['日记', 'diary'], ['应用商店', 'app-store'], ['梅花易数', 'divination'], ['反馈', 'feedback']]) {
+    expect(apps.getAllByRole('button').map(button => button.textContent)).toEqual(['记账', '相册', '通讯录', '音乐', '日记', '应用商店', '梅花易数'])
+    for (const [label, id] of [['记账', 'ledger'], ['相册', 'album'], ['通讯录', 'contacts'], ['音乐', 'music'], ['日记', 'diary'], ['应用商店', 'app-store'], ['梅花易数', 'divination']]) {
       fireEvent.click(apps.getByRole('button', { name: new RegExp(`${label}$`) }))
       expect(screen.getByRole('dialog', { name: id })).toBeInTheDocument()
       fireEvent.click(screen.getByRole('button', { name: '关闭工具' }))

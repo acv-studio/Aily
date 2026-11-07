@@ -1,5 +1,5 @@
 import type { AppDataIdentity, AppDataManifest, AppDataPreview, AppDataProvider, AppDataQuery, AppDataResult, AppDataSelection, AppDataTicket, AppDataValue, AppDataView } from './appDataTypes'
-import { extensionApps, extensionInstallationSnapshot, installedExtensionIds, isSafeExtensionAppId, isReservedBuiltinAppId, subscribeExtensionAppChanges } from './extensionApps'
+import { extensionApps, extensionInstallationSnapshot, installedExtensionIds, isSafeExtensionAppId, isReservedBuiltinAppId, isRetiredExtensionAppId, subscribeExtensionAppChanges } from './extensionApps'
 export type * from './appDataTypes'
 
 export const APP_DATA_TIMEOUT_MS = 5000
@@ -43,7 +43,7 @@ function checkProvider(provider: Registered) {
 }
 export function registerAppDataProvider(provider: AppDataProvider): () => void {
   const manifest = provider?.manifest
-  if (!manifest || !isSafeExtensionAppId(manifest.id) || providers.has(manifest.id) || (manifest.availability === 'installable' && isReservedBuiltinAppId(manifest.id)) || typeof provider.read !== 'function' || !Number.isInteger(manifest.schemaVersion) || manifest.schemaVersion < 1 || !['builtin', 'installable'].includes(manifest.availability) || typeof manifest.name !== 'string' || typeof manifest.english !== 'string' || Array.from(manifest.name).length > 300 || Array.from(manifest.english).length > 300 || !Array.isArray(manifest.scopes) || manifest.scopes.length > 20 || (manifest.availability === 'builtin' && extensionApps.some(app => app.id === manifest.id))) throw error('Invalid or duplicate app data provider')
+  if (!manifest || !isSafeExtensionAppId(manifest.id) || isRetiredExtensionAppId(manifest.id) || providers.has(manifest.id) || (manifest.availability === 'installable' && isReservedBuiltinAppId(manifest.id)) || typeof provider.read !== 'function' || !Number.isInteger(manifest.schemaVersion) || manifest.schemaVersion < 1 || !['builtin', 'installable'].includes(manifest.availability) || typeof manifest.name !== 'string' || typeof manifest.english !== 'string' || Array.from(manifest.name).length > 300 || Array.from(manifest.english).length > 300 || !Array.isArray(manifest.scopes) || manifest.scopes.length > 20 || (manifest.availability === 'builtin' && extensionApps.some(app => app.id === manifest.id))) throw error('Invalid or duplicate app data provider')
   if (manifest.aliases !== undefined && (!Array.isArray(manifest.aliases) || manifest.aliases.length > 20 || manifest.aliases.some(alias => typeof alias !== 'string' || !alias.trim() || Array.from(alias).length > 80))) throw error('Invalid app data aliases')
   const localizedLabel = (value: unknown): boolean => !!value && typeof value === 'object' && ['zh', 'en'].every(key => { const text = (value as Record<string, unknown>)[key]; return typeof text === 'string' && text.length > 0 && Array.from(text).length <= 300 })
   if (manifest.dataBoundary !== undefined && !localizedLabel(manifest.dataBoundary)) throw error('Invalid app data boundary')

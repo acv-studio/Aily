@@ -1,0 +1,48 @@
+import assert from 'node:assert/strict'
+import { mkdir } from 'node:fs/promises'
+process.env.PLAYWRIGHT_BROWSERS_PATH ||= new URL('../.toolchains/playwright/', import.meta.url).pathname
+const { webkit } = await import('playwright')
+const url = process.env.AILY_THEME_URL || 'http://127.0.0.1:5174'
+const out = new URL('../.mobile-build/feedback-removal/', import.meta.url)
+await mkdir(out, { recursive: true })
+const browser = await webkit.launch({ headless: true })
+try {
+  const context = await browser.newContext({ viewport: { width: 402, height: 874 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true, reducedMotion: 'reduce' })
+  const page = await context.newPage()
+  const errors = []
+  page.on('pageerror', error => errors.push(error.message))
+  await page.goto(url)
+  await page.evaluate(async () => {
+    const { finishOnboarding } = await import('/src/db.ts')
+    const { defaultOnboardingProfile } = await import('/src/onboarding.ts')
+    const { acceptSafetyConsent } = await import('/src/privacy.ts')
+    const { setThemePreference } = await import('/src/theme.ts')
+    await finishOnboarding(defaultOnboardingProfile('lu'), [])
+    acceptSafetyConsent(); setThemePreference('light')
+    localStorage.setItem('aily.locale', 'zh-CN')
+    localStorage.setItem('aily.extension-apps.v1', '["feedback","wardrobe"]')
+    localStorage.setItem('aily.extension-defaults.v1', '["feedback"]')
+    localStorage.setItem('aily.ext.feedback.v1', 'ISOLATED-LEGACY-DRAFT')
+    localStorage.setItem('aily.ext.wardrobe', '[]')
+  })
+  await page.reload()
+  await page.getByRole('button', { name: /与陆听澜聊天/ }).waitFor()
+  assert.equal(await page.getByRole('button', { name: /反馈$/ }).count(), 0)
+  assert.equal(await page.getByRole('button', { name: /穿搭衣橱$/ }).count(), 1)
+  assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('aily.extension-apps.v1'))), ['wardrobe'])
+  assert.equal(await page.evaluate(() => localStorage.getItem('aily.ext.feedback.v1')), 'ISOLATED-LEGACY-DRAFT')
+  await page.getByRole('button', { name: '应用商店', exact: true }).click()
+  const store = page.getByRole('region', { name: '应用商店目录', exact: true })
+  await store.waitFor()
+  assert.equal(await store.getByRole('heading', { name: '反馈', exact: true }).count(), 0)
+  assert.equal(await store.getByRole('button', { name: '安装 反馈', exact: true }).count(), 0)
+  await store.getByRole('searchbox', { name: '搜索应用', exact: true }).fill('反馈')
+  await store.getByText('没有匹配的应用，请更换搜索词或筛选。', { exact: true }).waitFor()
+  await page.screenshot({ path: new URL('store-no-feedback.png', out).pathname })
+  await page.reload()
+  await page.getByRole('button', { name: /与陆听澜聊天/ }).waitFor()
+  assert.equal(await page.getByRole('button', { name: /反馈$/ }).count(), 0)
+  assert.equal(await page.evaluate(() => localStorage.getItem('aily.ext.feedback.v1')), 'ISOLATED-LEGACY-DRAFT')
+  assert.deepEqual(errors, [])
+  console.log('PASS: legacy feedback installation removed, desktop/store/reload have no feedback entry, other app installation and legacy draft preserved.')
+} finally { await browser.close() }

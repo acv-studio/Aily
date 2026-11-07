@@ -1,11 +1,13 @@
 export type ExtensionAppId = string
+/** Retired bundled IDs remain reserved and may appear in legacy installation metadata. */
+export const retiredExtensionIds: readonly string[] = Object.freeze(['feedback'])
+export function isRetiredExtensionAppId(id: string): boolean { return retiredExtensionIds.includes(id) }
 /** Permanent host tool ids are reserved even before their data providers initialize. */
 export const BUILTIN_APP_IDS: readonly string[] = Object.freeze(['ledger', 'contacts', 'diary', 'album', 'music', 'app-store', 'divination'])
 export function isReservedBuiltinAppId(id: string): boolean { return BUILTIN_APP_IDS.includes(id) }
 export function isSafeExtensionAppId(id: unknown): id is string { return typeof id === 'string' && /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/.test(id) && id.length <= 80 && !['constructor', 'prototype', '__proto__'].includes(id) }
 export type ExtensionApp = { id:ExtensionAppId; name:string; english:string; description:string; englishDescription:string; icon:string; color:string; category:'life'|'game' }
 export const extensionApps:ExtensionApp[]=[
- {id:'feedback',name:'反馈',english:'Feedback',description:'写下建议、吐槽或感谢，通过系统邮件发送给 Aily，默认安装',englishDescription:'Share suggestions, complaints or thanks by email; installed by default',icon:'💌',color:'#c9b7e8',category:'life'},
  {id:'photo-organizer',name:'相册整理',english:'Photo Organizer',description:'随机翻看本地照片，上滑待删除、下滑保留，左右浏览，随时撤销',englishDescription:'Review local photos randomly: swipe up to flag, down to keep, sideways to browse, and undo anytime',icon:'🖼️',color:'#a8cbb7',category:'life'},
  {id:'laughter-collector',name:'笑声收集器',english:'Laughter Collector',description:'按人物录下笑声，本机保存、多段剪辑与导出，留住开心的瞬间',englishDescription:'Record laughter by person, save locally, edit multiple segments and export joyful moments',icon:'😆',color:'#f4bd75',category:'life'},
  {id:'meal-planner',name:'吃什么',english:'What to Eat',description:'按人数与口味选餐，用冰箱库存和预算买菜，接着备菜、做菜和分配洗碗',englishDescription:'Plan meals for your household, shop from pantry gaps and budget, cook and share cleanup',icon:'🍳',color:'#eca76e',category:'life'},
@@ -31,10 +33,22 @@ function emitChange() { if (typeof window !== 'undefined') window.dispatchEvent(
 export function extensionInstallationSnapshot(): { ids: string[]; revision: string } {
   const raw = localStorage.getItem(extensionInstallationKey)
   const value: unknown = raw === null ? [] : JSON.parse(raw)
-  if (!Array.isArray(value) || value.some(id => !isSafeExtensionAppId(id) || !extensionApps.some(app => app.id === id)) || new Set(value).size !== value.length) throw new Error('Invalid extension installation data')
-  return { ids: value as string[], revision: JSON.stringify([raw, localStorage.getItem(incarnationKey), incarnation]) }
+  if (!Array.isArray(value) || value.some(id => !isSafeExtensionAppId(id) || !extensionApps.some(app => app.id === id) && !isRetiredExtensionAppId(id)) || new Set(value).size !== value.length) throw new Error('Invalid extension installation data')
+  return { ids: (value as string[]).filter(id => !isRetiredExtensionAppId(id)), revision: JSON.stringify([raw, localStorage.getItem(incarnationKey), incarnation]) }
 }
 export function installedExtensionIds(): ExtensionAppId[] { try { const value = JSON.parse(localStorage.getItem(extensionInstallationKey) || '[]'); return Array.isArray(value) ? value.filter(id => extensionApps.some(app => app.id === id)) : [] } catch { return [] } }
+/** Remove retired entries from installation metadata only; retain every business-data key. */
+export function pruneRetiredExtensionInstallations(): string[] {
+  const raw = localStorage.getItem(extensionInstallationKey)
+  const current = extensionInstallationSnapshot().ids
+  if (raw !== null && (JSON.parse(raw) as string[]).some(isRetiredExtensionAppId)) {
+    if (localStorage.getItem(extensionInstallationKey) !== raw) throw new Error('Extension installation data changed')
+    localStorage.setItem(incarnationKey, `${Date.now()}:${Math.random()}:${++incarnation}`)
+    localStorage.setItem(extensionInstallationKey, JSON.stringify(current))
+    emitChange()
+  }
+  return current
+}
 export function setExtensionInstalled(id: ExtensionAppId, installed: boolean) {
   if (!isSafeExtensionAppId(id) || !extensionApps.some(app => app.id === id) || typeof installed !== 'boolean') throw new Error('Unknown extension app')
   const current = extensionInstallationSnapshot().ids
@@ -46,7 +60,7 @@ export function setExtensionInstalled(id: ExtensionAppId, installed: boolean) {
   return next
 }
 export function registerExtensionApp(app: ExtensionApp): () => void {
-  if (!app || !isSafeExtensionAppId(app.id) || isReservedBuiltinAppId(app.id) || extensionApps.some(item => item.id === app.id)) throw new Error('Invalid or duplicate extension app')
+  if (!app || !isSafeExtensionAppId(app.id) || isReservedBuiltinAppId(app.id) || isRetiredExtensionAppId(app.id) || extensionApps.some(item => item.id === app.id)) throw new Error('Invalid or duplicate extension app')
   if (!['life', 'game'].includes(app.category) || ['name', 'english', 'description', 'englishDescription', 'icon', 'color'].some(key => typeof app[key as keyof ExtensionApp] !== 'string')) throw new Error('Invalid extension metadata')
   const captured = Object.freeze({ ...app })
   extensionApps.push(captured)

@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		A17B11102FEA000300000002 /* FeedbackMailPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = A17B11102FEA000300000001 /* FeedbackMailPlugin.swift */; };
 		A17B11102FEA000200000002 /* PhotoOrganizerPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = A17B11102FEA000200000001 /* PhotoOrganizerPlugin.swift */; };
 		A17B11102FEA000100000002 /* StoreKitBillingPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = A17B11102FEA000100000001 /* StoreKitBillingPlugin.swift */; };
 		2FAD9763203C412B000D30F8 /* config.xml in Resources */ = {isa = PBXBuildFile; fileRef = 2FAD9762203C412B000D30F8 /* config.xml */; };
@@ -22,7 +21,6 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		A17B11102FEA000300000001 /* FeedbackMailPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedbackMailPlugin.swift; sourceTree = "<group>"; };
 		A17B11102FEA000200000001 /* PhotoOrganizerPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoOrganizerPlugin.swift; sourceTree = "<group>"; };
 		A17B11102FEA000100000001 /* StoreKitBillingPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreKitBillingPlugin.swift; sourceTree = "<group>"; };
 		2FAD9762203C412B000D30F8 /* config.xml */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = config.xml; sourceTree = "<group>"; };
@@ -73,7 +71,6 @@
 				9582B6822FE993A50072D4E8 /* SceneDelegate.swift */,
 				A17B11102FEA000100000001 /* StoreKitBillingPlugin.swift */,
 				A17B11102FEA000200000001 /* PhotoOrganizerPlugin.swift */,
-				A17B11102FEA000300000001 /* FeedbackMailPlugin.swift */,
 				50379B222058CBB4000EE86E /* capacitor.config.json */,
 				504EC3071FED79650016851F /* AppDelegate.swift */,
 				504EC30B1FED79650016851F /* Main.storyboard */,
@@ -171,7 +168,6 @@
 				9582B6832FE993A70072D4E8 /* SceneDelegate.swift in Sources */,
 				A17B11102FEA000100000002 /* StoreKitBillingPlugin.swift in Sources */,
 				A17B11102FEA000200000002 /* PhotoOrganizerPlugin.swift in Sources */,
-				A17B11102FEA000300000002 /* FeedbackMailPlugin.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

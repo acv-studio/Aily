@@ -6,7 +6,7 @@ html body :is(#root, .desktop-tools-overlay) :is(
   [role="tablist"], [role="tab"],
   .bottom-nav, .wardrobe-bottom-nav, .sk-bottom-nav,
   .organizer-bottom-nav, .ledger-bottom-nav,
-  .meal-tabs, .feed-role-tabs, .feedback-kind-tabs,
+  .meal-tabs, .feed-role-tabs,
   .ledger-segmented, .ledger-chart-kind,
   .memory-view-switch, .journal-period,
   .media-filter-row, .wardrobe-filters
@@ -18,7 +18,7 @@ html body :is(#root, .desktop-tools-overlay) :is(
   [role="tablist"],
   .bottom-nav, .wardrobe-bottom-nav, .sk-bottom-nav,
   .organizer-bottom-nav, .ledger-bottom-nav,
-  .meal-tabs, .feed-role-tabs, .feedback-kind-tabs,
+  .meal-tabs, .feed-role-tabs,
   .ledger-segmented, .ledger-chart-kind,
   .memory-view-switch, .journal-period,
   .media-filter-row, .wardrobe-filters
