@@ -1,0 +1,28 @@
+{
+  "repo": "jsuyanyong/Aily",
+  "fetchedAt": "2026-11-08T06:31:00Z",
+  "repoInfo": {
+    "name": "Aily",
+    "description": "主打角色扮演的 AI 应用",
+    "htmlUrl": "https://github.com/jsuyanyong/Aily",
+    "language": "TypeScript",
+    "topics": [],
+    "createdAt": "2026-11-01T15:38:21Z",
+    "licenseName": "",
+    "ownerLogin": "jsuyanyong",
+    "ownerAvatarUrl": "https://avatars.githubusercontent.com/u/13819929?v=4",
+    "homepage": "",
+    "defaultBranch": "main",
+    "visibility": "private"
+  },
+  "stats": {
+    "contributorsCount": 2,
+    "countriesCount": 0,
+    "pullRequestsCount": 26,
+    "starsCount": 1,
+    "forksCount": 0,
+    "commitsCount": 135,
+    "trackedFilesCount": 710
+  },
+  "contributors": []
+}
