@@ -4,9 +4,9 @@ import type {BaseSceneProps} from "../types/scene";
 import {createStaggerAnimation,fadeIn} from "../utils/animations";
 
 const cards=[
- {tag:"MEMORY",title:"确认后再记住",text:"偏好、计划和重要话语，由你确认、修改、归档或删除。",color:ailyColors.purple},
- {tag:"APPS",title:"AI 也能装应用",text:"衣橱、护肤、音乐、相册整理、笑声收集器与小游戏。",color:ailyColors.mint},
- {tag:"PRIVACY",title:"临时会话隔离",text:"不落盘，不读取长期记忆；媒体内容默认只留在本机。",color:ailyColors.violet},
+ {tag:"MEMORY",title:"自动整理长期记忆",text:"聊天里的偏好、计划和重要话语，会自动沉淀为可管理的记忆。",color:ailyColors.purple},
+ {tag:"APPS",title:"AI 也能装应用",text:"衣橱、护肤、音乐、相册整理和笑声收集器，按需安装。",color:ailyColors.mint},
+ {tag:"GAMES",title:"随时玩一局",text:"和角色猜拳，也可以玩五子棋与 2048。",color:ailyColors.violet},
 ];
 export const Scene2Growth=({monoFontFamily}:BaseSceneProps)=>{
  const frame=useCurrentFrame();const {fps}=useVideoConfig();const items=createStaggerAnimation(frame,cards.length,{baseStartFrame:18,staggerDelay:9,duration:22,offsetDistance:24});

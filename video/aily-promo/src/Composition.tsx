@@ -1,4 +1,4 @@
-import {AbsoluteFill,interpolate,staticFile} from "remotion";
+import {AbsoluteFill,interpolate,Sequence,staticFile} from "remotion";
 import {Audio} from "@remotion/media";
 import {TransitionSeries,linearTiming} from "@remotion/transitions";
 import {fade} from "@remotion/transitions/fade";
@@ -14,8 +14,9 @@ export const CompositionSchema=z.object({fontFamily:z.string(),monoFontFamily:z.
 export type CompositionProps=z.infer<typeof CompositionSchema>;
 const DURATIONS={scene1:105,scene2:150,scene3:150,scene4:135,scene5:120};
 const TRANSITION=15;
+const VoiceOver=()=> <><Sequence from={8}><Audio src={staticFile("audio/voice/scene-1.mp3")} volume={1}/></Sequence><Sequence from={108}><Audio src={staticFile("audio/voice/scene-2.mp3")} volume={1}/></Sequence><Sequence from={235}><Audio src={staticFile("audio/voice/scene-3.mp3")} volume={1}/></Sequence><Sequence from={380}><Audio src={staticFile("audio/voice/scene-4.mp3")} volume={1}/></Sequence><Sequence from={525}><Audio src={staticFile("audio/voice/scene-5.mp3")} volume={1}/></Sequence></>;
 const Grain=()=> <div style={{position:"absolute",inset:0,zIndex:50,pointerEvents:"none",opacity:.025}}><svg width="100%" height="100%"><filter id="noise"><feTurbulence type="fractalNoise" baseFrequency=".7" numOctaves={3} stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(#noise)"/></svg></div>;
-export const MyComposition=({fontFamily,monoFontFamily,repoUrl,createdAt,snapshotAt,contributors,pullRequests,commits,trackedFiles}:CompositionProps)=>{const metrics:AilyMetrics={visibility:"private",createdAt,snapshotAt,contributors,pullRequests,commits,trackedFiles};const timing=linearTiming({durationInFrames:TRANSITION});const sceneProps={monoFontFamily,metrics,repoUrl};return <AbsoluteFill style={{fontFamily,background:"#110f16"}}><Audio src={staticFile("audio/aily-ambient.wav")} volume={frame=>interpolate(frame,[0,30,540,600],[0,.14,.14,0],{extrapolateLeft:"clamp",extrapolateRight:"clamp"})}/><Grain/><TransitionSeries>
+export const MyComposition=({fontFamily,monoFontFamily,repoUrl,createdAt,snapshotAt,contributors,pullRequests,commits,trackedFiles}:CompositionProps)=>{const metrics:AilyMetrics={visibility:"private",createdAt,snapshotAt,contributors,pullRequests,commits,trackedFiles};const timing=linearTiming({durationInFrames:TRANSITION});const sceneProps={monoFontFamily,metrics,repoUrl};return <AbsoluteFill style={{fontFamily,background:"#110f16"}}><Audio src={staticFile("audio/aily-ambient.wav")} volume={frame=>interpolate(frame,[0,30,540,600],[0,.055,.055,0],{extrapolateLeft:"clamp",extrapolateRight:"clamp"})}/><VoiceOver/><Grain/><TransitionSeries>
  <TransitionSeries.Sequence durationInFrames={DURATIONS.scene1}><Scene1Origin monoFontFamily={monoFontFamily}/></TransitionSeries.Sequence><TransitionSeries.Transition presentation={fade()} timing={timing}/>
  <TransitionSeries.Sequence durationInFrames={DURATIONS.scene2}><Scene2Growth monoFontFamily={monoFontFamily}/></TransitionSeries.Sequence><TransitionSeries.Transition presentation={fade()} timing={timing}/>
  <TransitionSeries.Sequence durationInFrames={DURATIONS.scene3}><Scene3Philosophy monoFontFamily={monoFontFamily}/></TransitionSeries.Sequence><TransitionSeries.Transition presentation={fade()} timing={timing}/>

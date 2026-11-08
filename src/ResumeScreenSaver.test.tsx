@@ -2,6 +2,8 @@ import { act, cleanup, fireEvent, render, screen, within } from '@testing-librar
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import ResumeScreenSaver, { type ResumeScreenSaverProps } from './ResumeScreenSaver'
 import { characters } from './data'
+import { resumeScenes } from './resumeScenes'
+const currentScene = (character = characters[0]) => resumeScenes[character.id].find(scene => scene.id === screen.getByRole('dialog').getAttribute('data-scene'))!
 import { setLocale } from './i18n'
 
 const extraNodes: HTMLElement[] = []
@@ -28,6 +30,15 @@ afterEach(() => {
 })
 
 describe('ResumeScreenSaver', () => {
+  it('changes the presentation scene on the next return without repeating it or adding actions', () => {
+    const view = render(<ResumeScreenSaver {...props()} />)
+    const first = screen.getByRole('dialog').getAttribute('data-scene')
+    view.unmount()
+    render(<ResumeScreenSaver {...props()} />)
+    expect(screen.getByRole('dialog').getAttribute('data-scene')).not.toBe(first)
+    expect(screen.getAllByRole('button')).toHaveLength(1)
+    expect(document.querySelector('.resume-screensaver-scene-icon svg')).not.toBeNull()
+  })
   it('portals an accessible full-screen cover to body with one explicit enter action', () => {
     const onEnter = vi.fn()
     const view = render(<ResumeScreenSaver {...props({ onEnter })} />)
@@ -45,9 +56,9 @@ describe('ResumeScreenSaver', () => {
     expect(onEnter).toHaveBeenCalledOnce()
   })
 
-  it.each(characters)('shows the static scene verbatim for $name with an explicit non-human demo disclaimer', character => {
+  it.each(characters)('shows a role-appropriate scene for $name with an explicit non-human demo disclaimer', character => {
     render(<ResumeScreenSaver {...props({ character })} />)
-    expect(screen.getByText(character.status)).toBeInTheDocument()
+    expect(screen.getByText(currentScene(character).activity)).toBeInTheDocument()
     expect(screen.getByText('AI角色场景 · 本机演示/非真人')).toBeInTheDocument()
     expect(screen.getByText('角色设定展示，不代表真实后台任务。')).toBeInTheDocument()
     expect(screen.queryByText('正在回复你的消息')).not.toBeInTheDocument()
@@ -61,7 +72,7 @@ describe('ResumeScreenSaver', () => {
     expect(screen.queryByText(characters[0].status)).not.toBeInTheDocument()
     expect(screen.queryByText('AI角色场景 · 本机演示/非真人')).not.toBeInTheDocument()
     view.rerender(<ResumeScreenSaver {...props({ replying: false })} />)
-    expect(screen.getByText(characters[0].status)).toBeInTheDocument()
+    expect(screen.getByText(currentScene().activity)).toBeInTheDocument()
     expect(screen.queryByText('正在回复你的消息')).not.toBeInTheDocument()
   })
 
@@ -84,13 +95,13 @@ describe('ResumeScreenSaver', () => {
     expect(screen.getByRole('button').querySelector('.resume-screensaver-spinner')).toBeNull()
   })
 
-  it('localizes UI live in English without translating character scene or supplied errors', () => {
+  it('localizes scene copy live in English without changing the selected scene or supplied errors', () => {
     const view = render(<ResumeScreenSaver {...props({ error: '原始错误' })} />)
     act(() => setLocale('en'))
     expect(screen.getByText('Welcome back')).toBeInTheDocument()
     expect(screen.getByText('AI character scene · Local demo / Not a real person')).toBeInTheDocument()
     expect(screen.getByText('A character scene, not a real background task.')).toBeInTheDocument()
-    expect(screen.getByText(characters[0].status)).toBeInTheDocument()
+    expect(screen.getByText(currentScene().english)).toBeInTheDocument()
     expect(screen.getByText('Device time')).toBeInTheDocument()
     expect(screen.getByRole('alert')).toHaveTextContent('原始错误')
     expect(screen.getByRole('button', { name: 'Enter chat' })).toBeInTheDocument()
@@ -215,11 +226,13 @@ describe('ResumeScreenSaver', () => {
     const fetch = vi.spyOn(globalThis, 'fetch')
     const view = render(<ResumeScreenSaver {...props()} />)
     const time = document.querySelector('.resume-screensaver-clock time')!
+    const sceneBefore = screen.getByRole('dialog').getAttribute('data-scene')
     expect(time).toHaveAttribute('datetime', '2026-11-07T10:24:00.000Z')
     expect(vi.getTimerCount()).toBe(1)
     act(() => vi.advanceTimersByTime(60_000))
     expect(time).toHaveAttribute('datetime', '2026-11-07T10:25:00.000Z')
-    expect(screen.getByText(characters[0].status)).toBeInTheDocument()
+    expect(screen.getByRole('dialog')).toHaveAttribute('data-scene', sceneBefore)
+    expect(screen.getByText(currentScene().activity)).toBeInTheDocument()
     expect(storage).not.toHaveBeenCalled()
     expect(fetch).not.toHaveBeenCalled()
     const focusHandler = add.mock.calls.find(([name]) => name === 'focusin')?.[1]

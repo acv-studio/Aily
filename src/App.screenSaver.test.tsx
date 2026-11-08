@@ -6,6 +6,7 @@ import { defaultOnboardingProfile } from './onboarding'
 import { acceptSafetyConsent } from './privacy'
 import { streamReply, type StreamRequest } from './chatService'
 import { characters, type CharacterId } from './data'
+import { resumeScenes } from './resumeScenes'
 
 const resume = vi.hoisted(() => ({ callback: () => {} }))
 const androidBack = vi.hoisted(() => ({ callback: (): boolean => false }))
@@ -114,7 +115,8 @@ describe('resume screen saver host integration', () => {
   it('shows the configured primary, not the currently selected companion, and switches safely on entry', async () => {
     await setup('gu', 'chen'); triggerResume()
     expect(within(saver()).getByRole('heading', { name: '顾辰泽' })).toBeInTheDocument()
-    expect(within(saver()).getByText('正在阅读')).toBeInTheDocument()
+    expect(resumeScenes.gu.some(scene => scene.id === saver().getAttribute('data-scene'))).toBe(true)
+    expect(within(saver()).getByText('AI角色场景 · 本机演示/非真人')).toBeInTheDocument()
     await enter()
     expect(screen.getByRole('textbox', { name: '发消息' })).toBeInTheDocument()
     expect((await db.settings.get('selected'))?.value).toBe('gu')

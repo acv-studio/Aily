@@ -417,7 +417,7 @@ export default function ChatPanel(props: ChatPanelProps) {
               {message.kind === 'image' && message.attachment && <img className="chat-image" src={message.attachment.dataUrl} alt={message.attachment.name} />}
               {message.kind === 'video' && (message.attachment ? <VideoPlayer src={message.attachment.dataUrl} onPlay={playAudio} /> : <em>{t('视频附件不可用')}</em>)}
               {message.kind === 'audio' && (message.attachment ? <VoicePlayer src={message.attachment.dataUrl} onPlay={playAudio} /> : <em>{t('语音附件不可用')}</em>)}
-              {renderMessageText(message.text) || (message.status === 'sending' ? t('正在回复…') : '')}
+              {renderMessageText(message.from === 'character' ? message.text.trim() : message.text) || (message.status === 'sending' ? t('正在回复…') : '')}
             </>}
           </div>
           {message.appDataReply && <span className="app-data-answer-note">{locale === 'en' ? 'App-based answer · saved locally, excluded from future AI context' : '应用数据回答 · 本机保留，不进入后续 AI 上下文'}</span>}

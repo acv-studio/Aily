@@ -197,6 +197,18 @@ describe('chat privacy controls', () => {
   })
 })
 
+describe('model response whitespace rendering', () => {
+  it('removes legacy outer blank lines from character bubbles while preserving internal paragraphs', () => {
+    const view = panel({ messages: [{ id: 1, from: 'character', text: '\n\n【虚构场景】\n第一段。\n\n第二段。  \n', time: '21:05', status: 'sent' }] })
+    const bubble = view.container.querySelector('.bubble')
+    expect(bubble?.textContent).toBe('【虚构场景】\n第一段。\n\n第二段。')
+  })
+  it('does not rewrite user-authored whitespace', () => {
+    const view = panel({ messages: [{ id: 1, from: 'user', text: '\n用户原文\n', time: '21:05', status: 'sent' }] })
+    expect(view.container.querySelector('.bubble')?.textContent).toBe('\n用户原文\n')
+  })
+})
+
 describe('empty conversation introduction', () => {
   it('shows the character introduction and three starter buttons that only populate the draft', () => {
     const messages: ChatPanelProps['messages'] = []

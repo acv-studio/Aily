@@ -2,6 +2,8 @@ import { useEffect, useId, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
 import type { Character } from './data'
+import { BookOpen, Coffee, Dumbbell, Footprints, Headphones, Moon, NotebookPen, CookingPot } from 'lucide-react'
+import { nextResumeScene } from './resumeScenes'
 import { useI18n } from './i18n'
 import './resumeScreenSaver.css'
 
@@ -30,6 +32,10 @@ export default function ResumeScreenSaver({ character, name, replying, entering,
   const coverRef = useRef<HTMLElement>(null)
   const enterRef = useRef<HTMLButtonElement>(null)
   const [now, setNow] = useState(() => new Date())
+  const [scene, setScene] = useState(() => nextResumeScene(character.id))
+  const sceneCharacter = useRef(character.id)
+  useEffect(() => { if (sceneCharacter.current !== character.id) { sceneCharacter.current = character.id; setScene(nextResumeScene(character.id)) } }, [character.id])
+  const SceneIcon = { tea: Coffee, walk: Footprints, book: BookOpen, music: Headphones, rest: Moon, write: NotebookPen, train: Dumbbell, cook: CookingPot }[scene.icon]
 
   useEffect(() => {
     const cover = coverRef.current
@@ -104,7 +110,7 @@ export default function ResumeScreenSaver({ character, name, replying, entering,
   return createPortal(
     <section ref={coverRef} className="resume-screensaver" role="dialog" aria-modal="true"
       aria-labelledby={titleId} aria-describedby={statusId} tabIndex={-1}
-      style={{ '--resume-accent': character.accent } as CSSProperties}>
+      data-scene={replying ? 'replying' : scene.id} style={{ '--resume-accent': character.accent } as CSSProperties}>
       <header className="resume-screensaver-header">
         <span>Aily</span>
         <div className="resume-screensaver-clock">
@@ -117,11 +123,13 @@ export default function ResumeScreenSaver({ character, name, replying, entering,
         <div className="resume-screensaver-orb" aria-hidden="true">
           <div className="resume-screensaver-halo" />
           <span className="resume-screensaver-avatar">{character.avatar}</span>
+          {!replying && <span className="resume-screensaver-scene-icon"><SceneIcon size={22} strokeWidth={1.5}/></span>}
         </div>
         <h1 id={titleId}>{name.trim() || character.name}</h1>
         <div id={statusId} className="resume-screensaver-status" aria-live="polite" aria-atomic="true">
           <p className="resume-screensaver-state-label">{copy(replying ? '当前会话状态' : 'AI角色场景 · 本机演示/非真人', replying ? 'Current conversation status' : 'AI character scene · Local demo / Not a real person')}</p>
-          <p className="resume-screensaver-activity">{replying ? copy('正在回复你的消息', 'Replying to your message') : character.status}</p>
+          <p className="resume-screensaver-activity">{replying ? copy('正在回复你的消息', 'Replying to your message') : copy(scene.activity, scene.english)}</p>
+          {!replying && <p className="resume-screensaver-scene-detail">{copy(scene.detail, scene.englishDetail)}</p>}
           {!replying && <p className="resume-screensaver-disclosure">{copy('角色设定展示，不代表真实后台任务。', 'A character scene, not a real background task.')}</p>}
         </div>
         <button ref={enterRef} type="button" className="resume-screensaver-enter" disabled={entering}

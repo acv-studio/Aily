@@ -422,11 +422,15 @@ export async function streamReply(request: StreamRequest) {
       const payload = await abortable(response.json(), run.signal)
       const output = messagesApi ? payload?.content?.filter((item: { type?: string; text?: string }) => item?.type === 'text').map((item: { text: string }) => item.text).join('') : payload?.choices?.[0]?.message?.content
       if (payload?.error || typeof output !== 'string' || !output.trim()) throw new Error(t('DeepSeek 返回空响应，请重试'))
-      const outputSafety = assessAssistantOutput(output)
+      // OpenAI-compatible gateways may wrap otherwise valid content in leading
+      // or trailing blank lines. The UI preserves intentional internal newlines,
+      // so normalize only the outer whitespace before safety checks and storage.
+      const completedOutput = output.trim()
+      const outputSafety = assessAssistantOutput(completedOutput)
       if (outputSafety) request.onLocalSafety?.()
       await points.commit()
       if (run.signal.aborted) throw run.signal.reason
-      request.onDelta(outputSafety ? localSafeReply(outputSafety, latest, request.locale) : output)
+      request.onDelta(outputSafety ? localSafeReply(outputSafety, latest, request.locale) : completedOutput)
       return
     }
     await appData?.assertValid()
@@ -501,12 +505,13 @@ export async function streamReply(request: StreamRequest) {
     if (!output.trim()) throw new Error(t('DeepSeek 返回空响应，请重试'))
     if (run.signal.aborted) throw run.signal.reason
     // Preserve onDelta's append-only API, but emit only the complete assessed text.
-    // This intentionally trades live token rendering for no unchecked partial output.
-    const outputSafety = assessAssistantOutput(output)
+    // Keep internal formatting while removing gateway-added outer blank lines.
+    const completedOutput = output.trim()
+    const outputSafety = assessAssistantOutput(completedOutput)
     if (outputSafety) request.onLocalSafety?.()
     await points.commit()
     if (run.signal.aborted) throw run.signal.reason
-    request.onDelta(outputSafety ? localSafeReply(outputSafety, latest, request.locale) : output)
+    request.onDelta(outputSafety ? localSafeReply(outputSafety, latest, request.locale) : completedOutput)
   } finally {
     unsubscribe()
     if (request.appDataTicket) discardAppDataTicket(request.appDataTicket)
