@@ -4,8 +4,8 @@
 
 ## GitHub 仓库
 
-- 仓库：`jsuyanyong/Aily`
-- URL：https://github.com/jsuyanyong/Aily
+- 仓库：`acv-studio/Aily`
+- URL：https://github.com/acv-studio/Aily
 - 可见性：私有
 - 创建时间：2026-11-01T15:38:21Z
 - 默认分支：`main`
