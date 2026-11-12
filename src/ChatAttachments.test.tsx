@@ -84,7 +84,7 @@ describe('chat plus attachment menu', () => {
     for (const file of [oversized, new File([], 'empty.mp4', { type: 'video/mp4' }), new File(['x'], 'bad.html', { type: 'text/html' })]) {
       await selectFile('视频', file)
       expect(screen.getByText('请选择 20MB 以内的 MP4、WebM 或 MOV 视频')).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: '发送消息' })).toBeDisabled()
+      expect(screen.queryByRole('button', { name: '发送消息' })).not.toBeInTheDocument()
     }
   })
 
