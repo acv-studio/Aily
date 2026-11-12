@@ -38,11 +38,11 @@
 .laughter-timeline-cursor { position: absolute; top: -12px; bottom: -12px; width: 2px; background: #9c344c; pointer-events: none; z-index: 4; }
 .laughter-timeline-cursor::before { content: ''; position: absolute; top: 0; left: -5px; width: 12px; height: 10px; background: #9c344c; border-radius: 3px; }
 .laughter-app .laughter-playhead input { accent-color: #b86b47; padding: 0; height: 32px; border: 0; }
-.laughter-timeline-ruler { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; font-size: 11px; font-variant-numeric: tabular-nums; }
+.laughter-timeline-ruler { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; font-size: 12px; font-variant-numeric: tabular-nums; }
 .laughter-timeline-clips { display: flex; flex-wrap: wrap; gap: 8px; }
 .laughter-app .laughter-timeline-clips button { display: grid; gap: 4px; min-width: 92px; text-align: left; }
 .laughter-timeline-clips button[aria-pressed='true'] { background: #fff0d8; border: 2px solid #b86b47; color: #6b422d; }
-.laughter-timeline-clips span { font-size: 11px; }
+.laughter-timeline-clips span { font-size: 12px; }
 .laughter-fine-adjust { border-top: 1px solid var(--border-color, #e5dcd5); padding-top: 14px; }
 .laughter-fine-adjust summary { cursor: pointer; min-height: 44px; line-height: 44px; }
 .laughter-fine-adjust[open] > :not(summary) { margin-top: 12px; }

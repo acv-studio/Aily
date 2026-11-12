@@ -1,0 +1,17 @@
+/* Design tokens (design.md v1): one accent, solid surfaces, 12px minimum text */
+:root{
+  --bg:#0B0D17;--surface-1:#151827;--surface-2:#1D2133;--hairline:rgba(255,255,255,.08);
+  --text:#F4F2F6;--text-2:#B4B9C9;--text-3:#8F95A8;
+  --brand:#B8A1FF;--accent:#B8A1FF;--on-accent:#14111F;--danger:#FF8A95;--success:#8EE7C4;
+  --r-sm:8px;--r-md:12px;--r-lg:20px;--r-pill:999px;
+  --font-ui:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC",sans-serif;
+  --cc-primary:var(--accent);--cc-bg:var(--bg);--cc-card:var(--surface-1);--cc-muted:var(--text-2);
+  --cc-fg:var(--text);--cc-border:var(--hairline);--cc-danger:var(--danger);
+  --muted:var(--text-2);--line:var(--hairline);
+}
+/* Light theme (design: Colo) */
+html[data-theme=light]{
+  --bg:#F5F5F7;--surface-1:#FFFFFF;--surface-2:#EEEEF2;--hairline:rgba(30,35,45,.09);
+  --text:#202124;--text-2:#50535C;--text-3:#686A72;
+  --brand:#74549B;--accent:#74549B;--on-accent:#FFFFFF;--danger:#C0392B;--success:#1E8E5A;
+}

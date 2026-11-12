@@ -37,7 +37,7 @@ html[data-theme='light'] .resume-screensaver {
 .resume-screensaver-header > span { font-size: 20px; font-weight: 650; letter-spacing: -.6px; }
 .resume-screensaver-clock { display: flex; flex-direction: column; gap: 4px; text-align: right; color: var(--resume-muted); }
 .resume-screensaver-clock time { font-size: 20px; font-variant-numeric: tabular-nums; letter-spacing: .04em; }
-.resume-screensaver-clock small { font-size: 11px; }
+.resume-screensaver-clock small { font-size: 12px; }
 .resume-screensaver-content { flex: 1 0 auto; display: flex; flex-direction: column; align-items: center; justify-content: center; width: min(100%, 460px); margin: 0 auto; padding: 28px 0; text-align: center; }
 .resume-screensaver-eyebrow { margin: 0 0 24px; font-size: 13px; color: var(--resume-muted); letter-spacing: .12em; }
 .resume-screensaver-orb { position: relative; display: grid; place-items: center; width: clamp(150px, 25vh, 224px); aspect-ratio: 1; margin-bottom: 22px; }
@@ -56,7 +56,7 @@ html[data-theme='light'] .resume-screensaver {
 .resume-screensaver-spinner { width: 17px; height: 17px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: resume-spinner-turn .8s linear infinite; flex-shrink: 0; }
 .resume-screensaver-error { width: 100%; margin: 16px 0 0; font-size: 13px; line-height: 1.7; color: #ffbcc6; overflow-wrap: anywhere; }
 html[data-theme='light'] .resume-screensaver-error { color: #943444; }
-.resume-screensaver-footer { flex-shrink: 0; text-align: center; font-size: 11px; line-height: 1.7; color: var(--resume-muted); }
+.resume-screensaver-footer { flex-shrink: 0; text-align: center; font-size: 12px; line-height: 1.7; color: var(--resume-muted); }
 @keyframes resume-orb-breathe { 0%, 100% { transform: scale(.92); opacity: .65; } 50% { transform: scale(1.08); opacity: 1; } }
 @keyframes resume-spinner-turn { to { transform: rotate(360deg); } }
 @media (max-height: 650px) {

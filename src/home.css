@@ -1,41 +1,41 @@
 .message-home.screen { padding-bottom: calc(210px + env(safe-area-inset-bottom)); }
 .desktop-home { padding-top: 9px; }
-.dashboard-widget{overflow:hidden;border-radius:24px}.dashboard-widget .desktop-widgets { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:0; align-items:stretch; }.dashboard-widget .clock-widget,.dashboard-widget .weather-widget{height:172px;min-height:172px;max-height:172px;border:0!important;border-radius:0;box-shadow:none!important;background:transparent!important}.dashboard-widget .weather-widget{border-left:1px solid rgba(255,255,255,.025)!important}.dashboard-widget .weather-widget:has(.weather-current) :is(.weather-actions,.weather-updated,.weather-source,.weather-place,.weather-condition){display:none!important}.dashboard-widget .weather-widget .weather-current{padding-top:12px}.dashboard-widget .weather-widget .weather-metrics span:first-child{display:none!important}.dashboard-widget .clock-widget{padding:16px}.dashboard-widget .weather-widget{padding:12px}.dashboard-widget .clock-widget>small{display:none}.dashboard-widget .weather-updated{display:none}.dashboard-widget .weather-widget:has(.weather-current) .weather-actions{display:none}.dashboard-widget .weather-placeholder{min-height:40px;gap:4px;padding:4px 0}.dashboard-widget .weather-disclosure{display:none}.dashboard-widget .weather-source{margin-top:4px;font-size:8px}.dashboard-widget .weather-actions{margin-top:4px}.dashboard-widget .weather-actions>button{min-height:30px;padding:4px;font-size:9px}.dashboard-widget .weather-metrics{font-size:9px;gap:3px 6px}.dashboard-widget .weather-temperature strong{font-size:30px}.dashboard-widget .weather-place{font-size:11px}
+.dashboard-widget{overflow:hidden;border-radius:24px}.dashboard-widget .desktop-widgets { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:0; align-items:stretch; }.dashboard-widget .clock-widget,.dashboard-widget .weather-widget{height:172px;min-height:172px;max-height:172px;border:0!important;border-radius:0;box-shadow:none!important;background:transparent!important}.dashboard-widget .weather-widget{border-left:1px solid rgba(255,255,255,.025)!important}.dashboard-widget .weather-widget:has(.weather-current) :is(.weather-actions,.weather-updated,.weather-source,.weather-place,.weather-condition){display:none!important}.dashboard-widget .weather-widget .weather-current{padding-top:12px}.dashboard-widget .weather-widget .weather-metrics span:first-child{display:none!important}.dashboard-widget .clock-widget{padding:16px}.dashboard-widget .weather-widget{padding:12px}.dashboard-widget .clock-widget>small{display:none}.dashboard-widget .weather-updated{display:none}.dashboard-widget .weather-widget:has(.weather-current) .weather-actions{display:none}.dashboard-widget .weather-placeholder{min-height:40px;gap:4px;padding:4px 0}.dashboard-widget .weather-disclosure{display:none}.dashboard-widget .weather-source{margin-top:4px;font-size:12px}.dashboard-widget .weather-actions{margin-top:4px}.dashboard-widget .weather-actions>button{min-height:30px;padding:4px;font-size:12px}.dashboard-widget .weather-metrics{font-size:12px;gap:3px 6px}.dashboard-widget .weather-temperature strong{font-size:30px}.dashboard-widget .weather-place{font-size:12px}
 .clock-widget { min-width: 0; height: 190px; min-height: 190px; max-height: 190px; border-radius: 24px; padding: 15px 14px; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; text-align: left; background: radial-gradient(ellipse at 5% 5%, #bea1ff1f, transparent 75%), #ffffff08; }
-.clock-widget-label { display: flex; align-items: center; gap: 7px; font-size: 10px; letter-spacing: .12em; color: #c7bddb; }
+.clock-widget-label { display: flex; align-items: center; gap: 7px; font-size: 12px; letter-spacing: .12em; color: #c7bddb; }
 .clock-live-dot { margin-left: auto; width: 5px; height: 5px; border-radius: 50%; background: #a8e6cf; box-shadow: 0 0 8px #a8e6cf50; }
 .clock-widget :is(time,p,small) { width: 100%; text-align: left; }.clock-widget time { display: block; width: calc(100% + 10px); margin-top: 9px; margin-left: -10px; font-size: clamp(30px, 8vw, 42px); font-weight: 300; letter-spacing: -.055em; font-variant-numeric: tabular-nums; line-height: 1.2; }
-.clock-widget p { font-size: 11px; color: #ded7e9; margin: 7px 0 0; line-height: 1.6; }
-.clock-widget > small { font-size: 9px; margin-top: 7px; color: #9ba0b5; }
-.desktop-section-heading { display: flex; align-items: center; gap: 14px; margin: 18px 4px 9px; font-size: 10px; letter-spacing: .12em; color: #a8a6bd; }
+.clock-widget p { font-size: 12px; color: #ded7e9; margin: 7px 0 0; line-height: 1.6; }
+.clock-widget > small { font-size: 12px; margin-top: 7px; color: #9ba0b5; }
+.desktop-section-heading { display: flex; align-items: center; gap: 14px; margin: 18px 4px 9px; font-size: 12px; letter-spacing: .12em; color: #a8a6bd; }
 .desktop-section-line { height: 1px; background: linear-gradient(90deg, #ffffff13, transparent); flex: 1; }
 .desktop-bot { position: relative; display: flex; align-items: center; gap: 15px; padding: 20px 17px; width: 100%; min-height: 104px; border-radius: 23px; text-align: left; overflow: hidden; background: radial-gradient(ellipse at 0 50%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 80%), #ffffff06; }
 .desktop-bot > .avatar { width: 64px; height: 64px; flex: none; border-radius: 21px; font-size: 27px; box-shadow: 0 8px 24px #00000024; }
 .desktop-bot-copy { flex: 1; min-width: 0; }
 .desktop-bot-title { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .desktop-bot-title strong { font-size: 16px; font-weight: 600; }
-.desktop-bot-title > span { border: 1px solid #ffffff17; padding: 3px 5px; font-size: 8px; color: #c9c5d6; border-radius: 6px; }
-.desktop-bot-copy p { font-size: 11px; color: #b1b8c9; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; margin: 9px 0; }
-.desktop-bot-copy > small { color: var(--accent); display: flex; align-items: center; gap: 5px; font-size: 9px; }
+.desktop-bot-title > span { border: 1px solid #ffffff17; padding: 3px 5px; font-size: 12px; color: #c9c5d6; border-radius: 6px; }
+.desktop-bot-copy p { font-size: 12px; color: #b1b8c9; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; margin: 9px 0; }
+.desktop-bot-copy > small { color: var(--accent); display: flex; align-items: center; gap: 5px; font-size: 12px; }
 .desktop-bot-chevron { color: #b5bfcc; flex: none; }
 .desktop-tools-heading { margin-top: 20px; margin-bottom: 12px; }
 .desktop-app-pages { display:flex; width:100%; overflow-x:auto; overscroll-behavior-x:contain; scroll-snap-type:x mandatory; scrollbar-width:none; -webkit-overflow-scrolling:touch; }
 .desktop-app-pages::-webkit-scrollbar { display:none; }
 .desktop-app-grid { flex:0 0 100%; min-width:100%; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-content:start; gap: 17px 14px; padding: 1px 5px; scroll-snap-align:start; }
-.desktop-app { display: flex; align-items: center; flex-direction: column; gap: 10px; min-width: 0; background: transparent; padding: 2px 0; font-size: 11px; color: #dad9e5; }
+.desktop-app { display: flex; align-items: center; flex-direction: column; gap: 10px; min-width: 0; background: transparent; padding: 2px 0; font-size: 12px; color: #dad9e5; }
 .desktop-app-icon { width: 57px; height: 57px; display: grid; place-items: center; border-radius: 21px; color: var(--tool-color); border: 1px solid color-mix(in srgb, var(--tool-color) 24%, transparent); background: linear-gradient(145deg, color-mix(in srgb, var(--tool-color) 17%, #222638), color-mix(in srgb, var(--tool-color) 4%, #171b2b)); box-shadow: inset 0 1px #ffffff0d, 0 8px 20px #00000026; transition: transform .18s ease, border-color .18s ease; }
 .extension-installed-icon { font-size:27px; line-height:1; }
 .desktop-app:hover .desktop-app-icon { transform: translateY(-3px); border-color: color-mix(in srgb, var(--tool-color) 60%, transparent); }
 .desktop-app:active .desktop-app-icon { transform: scale(.96); }
-.desktop-partners-toggle { display: flex; align-items: center; justify-content: center; gap: 5px; margin: 29px auto 14px; padding: 8px 12px; min-height: 36px; background: transparent; color: #a6a5bc; font-size: 10px; }
+.desktop-partners-toggle { display: flex; align-items: center; justify-content: center; gap: 5px; margin: 29px auto 14px; padding: 8px 12px; min-height: 36px; background: transparent; color: #a6a5bc; font-size: 12px; }
 .desktop-partners-toggle .expanded { transform: rotate(90deg); }
 .companion-strip { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
 .companion-tile { min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 9px; border-radius: 22px; padding: 18px 7px 14px; text-align: center; }
 .companion-tile.selected { border-color: color-mix(in srgb, var(--accent) 55%, transparent); background: color-mix(in srgb, var(--accent) 8%, #1c2031); }
 .companion-tile .avatar { width: 48px; height: 48px; border-radius: 16px; font-size: 23px; flex: none; }
 .companion-tile strong { font-size: 12px; line-height: 1.4; overflow-wrap: anywhere; }
-.companion-tile > small { font-size: 9px; line-height: 1.5; color: #b2b9cb; }
-.desktop-home-note { font-size: 9px; color: #777e98; text-align: center; letter-spacing: .1em; margin: 18px 0 0; }
+.companion-tile > small { font-size: 12px; line-height: 1.5; color: #b2b9cb; }
+.desktop-home-note { font-size: 12px; color: #777e98; text-align: center; letter-spacing: .1em; margin: 18px 0 0; }
 @media (max-width: 350px) {
   .message-home.screen { padding-left: 16px; padding-right: 16px; }
   .desktop-widgets { gap: 9px; }

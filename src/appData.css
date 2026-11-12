@@ -14,7 +14,7 @@ html[data-theme=light] .app-data-panel { color-scheme:light; }
 .app-data-scope:has(input:checked),.app-data-consent:has(input:checked) { background:var(--cc-primary-soft,#b99bcf24); border-color:var(--cc-primary,#b99bcf); }
 .app-data-scope input,.app-data-consent input { flex:none; width:22px; height:22px; margin:0; accent-color:var(--cc-primary,#b99bcf); }
 .app-data-scope span { min-width:0; }
-.app-data-scope small { display:block; margin-top:2px; font-size:11px; font-weight:400; color:var(--cc-muted,#aa9fa7); }
+.app-data-scope small { display:block; margin-top:2px; font-size:12px; font-weight:400; color:var(--cc-muted,#aa9fa7); }
 .app-data-toolbar { position:sticky; top:0; z-index:2; display:grid; gap:8px; padding:12px; border:1px solid var(--cc-border,rgba(255,255,255,.15)); border-radius:12px; background:var(--cc-panel,#241e29); box-shadow:var(--cc-shadow-1,0 4px 12px #0003); }
 .app-data-panel .app-data-selection-status { font-size:12px; }
 .app-data-actions { display:flex; flex-wrap:wrap; gap:8px; }
@@ -25,7 +25,7 @@ html[data-theme=light] .app-data-panel { color-scheme:light; }
 .app-data-preview { display:grid; gap:12px; min-width:0; border-top:1px solid var(--cc-border,rgba(255,255,255,.15)); padding-top:16px; scroll-margin-top:160px; }
 .app-data-preview h3,.app-data-preview h4 { margin:0; font-size:15px; }
 .app-data-preview article { min-width:0; border:1px solid var(--cc-border,rgba(255,255,255,.15)); border-radius:12px; padding:12px; display:grid; gap:8px; }
-.app-data-preview pre { margin:0; max-height:230px; overflow:auto; white-space:pre-wrap; overflow-wrap:anywhere; font-size:11px; line-height:1.5; padding:10px; border-radius:8px; background:var(--cc-card,#1c1821); }
+.app-data-preview pre { margin:0; max-height:230px; overflow:auto; white-space:pre-wrap; overflow-wrap:anywhere; font-size:12px; line-height:1.5; padding:10px; border-radius:8px; background:var(--cc-card,#1c1821); }
 .app-data-error { color:var(--cc-danger,#ef8c98); }
-.app-data-answer-note { display:block; font-size:11px; opacity:.72; line-height:1.5; padding:5px 0; }
+.app-data-answer-note { display:block; font-size:12px; opacity:.72; line-height:1.5; padding:5px 0; }
 @media(max-width:440px) { .app-data-dates { grid-template-columns:minmax(0,1fr); } .app-data-actions button { flex:1; padding-inline:10px; } }

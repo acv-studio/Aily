@@ -378,7 +378,7 @@ export default function ChatPanel(props: ChatPanelProps) {
     <header className="chat-header glass">
       <button className="icon-button" aria-label={t('返回消息')} onClick={props.close}><ArrowLeft /></button>
       <span className="avatar" style={{ '--accent': character.accent } as React.CSSProperties}>{t(character.avatar)}</span>
-      <div className="chat-identity"><strong>{t(character.name)}</strong></div>
+      <div className="chat-identity"><strong>{t(character.name)}</strong><small>AI</small></div>
       <div ref={settingsMenu} className="chat-settings">
         <button ref={settingsTrigger} className="icon-button" aria-label={t('聊天设置')} aria-expanded={settingsOpen} aria-controls="chat-settings-options" onClick={() => { setSettingsOpen(!settingsOpen); setModeOpen(false); closeMore() }}><Ellipsis /></button>
         {settingsOpen && <section id="chat-settings-options" className="chat-settings-options" aria-label={t('聊天设置')}>
@@ -445,10 +445,11 @@ export default function ChatPanel(props: ChatPanelProps) {
     <input hidden ref={imageInput} aria-label={t('选择照片文件')} type="file" accept="image/png,image/jpeg,image/webp,image/gif" disabled={replying || recording || readingFile} onChange={event => { void chooseFile('image', event.target.files?.[0]); event.target.value = '' }} />
     <input hidden ref={videoInput} aria-label={t('选择视频文件')} type="file" accept="video/mp4,video/webm,video/quicktime" disabled={replying || recording || readingFile} onChange={event => { void chooseFile('video', event.target.files?.[0]); event.target.value = '' }} />
     <footer className={`composer glass ${moreOpen ? 'composer-expanded' : ''}`}>
-      <button aria-label={recording ? t('结束录音') : t('录制语音')} onClick={() => { closeMore(); void record() }} disabled={replying || readingFile}>{recording ? <Square color="#ff7e8b" /> : <Mic />}</button>
-      <input ref={composerInput} aria-label={t('发消息')} value={draft} onChange={event => setDraft(event.target.value)} onFocus={() => { closeMore(); setModeOpen(false) }} onKeyDown={event => { if (event.key === 'Enter' && !event.nativeEvent.isComposing) { event.preventDefault(); void submit() } }} placeholder={t('发消息…')} disabled={replying} />
       <button ref={moreButton} className="chat-more-trigger" aria-label={t('更多发送选项')} aria-expanded={moreOpen} aria-controls="chat-more-panel" disabled={replying || recording || readingFile} onClick={() => { setMoreOpen(!moreOpen); setEmojiOpen(false); composerInput.current?.blur(); setModeOpen(false) }}><Plus size={22} /></button>
-      {replying ? <button className="send" aria-label={t('停止回复')} onClick={props.stop}><Square /></button> : <button className="send" aria-label={t('发送消息')} disabled={recording || readingFile || (!draft.trim() && !attachment)} onClick={submit}><Send /></button>}
+      <input ref={composerInput} aria-label={t('发消息')} value={draft} onChange={event => setDraft(event.target.value)} onFocus={() => { closeMore(); setModeOpen(false) }} onKeyDown={event => { if (event.key === 'Enter' && !event.nativeEvent.isComposing) { event.preventDefault(); void submit() } }} placeholder={t('发消息…')} disabled={replying} />
+      {replying ? <button className="send" aria-label={t('停止回复')} onClick={props.stop}><Square /></button> : (!draft.trim() && !attachment) ? (
+      <button className="mic-slot" aria-label={recording ? t('结束录音') : t('录制语音')} onClick={() => { closeMore(); void record() }} disabled={replying || readingFile}>{recording ? <Square color="#ff7e8b" /> : <Mic />}</button>
+      ) : <button className="send" aria-label={t('发送消息')} disabled={recording || readingFile} onClick={submit}><Send /></button>}
     </footer>
     </div>
     {moreOpen && <section id="chat-more-panel" className="chat-more-panel" aria-label={t('更多发送选项')}>

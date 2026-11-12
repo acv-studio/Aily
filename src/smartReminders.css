@@ -16,7 +16,7 @@
 .smart-reminders input:focus-visible,.smart-reminders select:focus-visible,.smart-reminders button:focus-visible,.reminder-banner button:focus-visible{outline:2px solid #62d8e8;outline-offset:3px}
 .reminder-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 .reminder-primary{height:48px;margin-top:16px;border-radius:14px}
-.smart-reminders .reminder-hint{font-size:11px;line-height:1.7;color:#aab4c9;overflow-wrap:anywhere;margin:10px 0}
+.smart-reminders .reminder-hint{font-size:12px;line-height:1.7;color:#aab4c9;overflow-wrap:anywhere;margin:10px 0}
 .reminder-inline{display:flex;gap:8px;align-items:center}
 .reminder-inline input{flex:1}
 .reminder-inline button,.reminder-moods button,.reminder-steps button,.reminder-actions button{min-height:40px;padding:9px 12px;border:1px solid #ffffff16;border-radius:11px;background:#ffffff0b;color:#d6c6f7;font-size:12px}
@@ -28,8 +28,8 @@
 .reminder-steps{display:grid;gap:12px;margin-top:14px}
 .reminder-steps article{background:#ffffff04;padding:14px;border:1px solid #ffffff10;border-radius:14px}
 .reminder-steps strong{font-size:13px;overflow-wrap:anywhere}
-.reminder-steps p{font-size:11px;line-height:1.6;color:#aab4c9}
-.reminder-steps small{display:block;color:#9dcdd9;font-size:11px;margin-bottom:10px}
+.reminder-steps p{font-size:12px;line-height:1.6;color:#aab4c9}
+.reminder-steps small{display:block;color:#9dcdd9;font-size:12px;margin-bottom:10px}
 .reminder-check{display:flex!important;gap:9px;align-items:center}
 .reminder-check input{accent-color:#a889ff;width:18px;height:18px}
 .reminder-list{display:grid;gap:12px;margin-bottom:22px}
@@ -39,11 +39,11 @@
 .reminder-item-title{display:flex;gap:9px;align-items:flex-start}
 .reminder-item-title>svg{color:#bba5f1;flex-shrink:0}
 .reminder-item-title strong{flex:1;min-width:0;font-size:13px;line-height:1.6}
-.reminder-status{flex-shrink:0;color:#b3bbcd;font-size:10px;line-height:2}
+.reminder-status{flex-shrink:0;color:#b3bbcd;font-size:12px;line-height:2}
 .reminder-item.due .reminder-status{color:#ffc99e}
 .reminder-item>p{font-size:12px;color:#c6cfe3;line-height:1.6}
 .reminder-actions{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}
-.reminder-actions button{display:flex;gap:5px;align-items:center;padding:8px;font-size:11px}
+.reminder-actions button{display:flex;gap:5px;align-items:center;padding:8px;font-size:12px}
 .reminder-actions button:last-child{margin-left:auto;color:#ffabb5}
 .reminder-empty{text-align:center;padding:24px;color:#a8b2c6;border:1px dashed #ffffff20;border-radius:20px;margin-bottom:20px}
 .smart-reminders button:disabled,.smart-reminders fieldset:disabled,.reminder-banner button:disabled{opacity:.5;cursor:not-allowed}
@@ -51,8 +51,8 @@
 .reminder-banner>svg{color:#d9bcff;flex-shrink:0}
 .reminder-banner>div{flex:1;min-width:0;overflow-wrap:anywhere}
 .reminder-banner strong{font-size:12px;line-height:1.6}
-.reminder-banner small{display:block;font-size:10px;color:#b6bdd0;margin-top:4px}
-.reminder-banner p{font-size:11px;margin:5px 0;line-height:1.6}
-.reminder-banner button{min-height:40px;padding:7px;background:#a889ff24;color:#d9ccf7;border-radius:10px;font-size:11px;flex-shrink:0}
+.reminder-banner small{display:block;font-size:12px;color:#b6bdd0;margin-top:4px}
+.reminder-banner p{font-size:12px;margin:5px 0;line-height:1.6}
+.reminder-banner button{min-height:40px;padding:7px;background:#a889ff24;color:#d9ccf7;border-radius:10px;font-size:12px;flex-shrink:0}
 .reminder-chat-overlay{position:fixed;z-index:60;left:50%;transform:translateX(-50%);bottom:calc(145px + env(safe-area-inset-bottom));width:min(100%,480px);pointer-events:none}.reminder-chat-overlay .reminder-banner{pointer-events:auto;background:#242237ed;box-shadow:0 10px 30px #0005;margin-bottom:0}
 @media(max-width:360px){.reminder-presets{grid-template-columns:repeat(2,minmax(0,1fr))}.reminder-heading h2{font-size:20px}.reminder-grid{grid-template-columns:1fr}.reminder-banner{flex-wrap:wrap}.reminder-banner>div{flex-basis:75%}}

@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react'
 import { Capacitor } from '@capacitor/core'
 import { StatusBar, Style } from '@capacitor/status-bar'
+import { App } from '@capacitor/app'
 import { Keyboard, KeyboardStyle } from '@capacitor/keyboard'
 
 export type ThemePreference = 'system' | 'light' | 'dark'
@@ -25,4 +26,11 @@ export function getThemePreference(){ return preference }
 function subscribe(listener:()=>void){ listeners.add(listener); return()=>listeners.delete(listener) }
 export function useTheme(){ const value=useSyncExternalStore(subscribe,getThemePreference,getThemePreference); return { preference:value, resolved:resolvedTheme(value), setTheme:setThemePreference } }
 media?.addEventListener('change',()=>{ if(preference==='system'){ void apply(); listeners.forEach(listener=>listener()) } })
-if(typeof document!=='undefined') void apply()
+const resync=()=>{ if(preference==='system'){ void apply(); listeners.forEach(listener=>listener()) } }
+if(typeof document!=='undefined'){
+  void apply()
+  document.addEventListener('visibilitychange',()=>{ if(!document.hidden) resync() })
+  window.addEventListener('focus',resync)
+  window.addEventListener('pageshow',resync)
+  if(Capacitor.isNativePlatform()){ try { void App.addListener('appStateChange',state=>{ if(state.isActive) resync() }) } catch {} }
+}

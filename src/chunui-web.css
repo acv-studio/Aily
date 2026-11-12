@@ -10,7 +10,7 @@
   --coral:var(--cc-primary);--violet:var(--cc-primary);--cyan:#b9adf2;--muted:var(--cc-muted);--line:var(--cc-border);
 }
 html,body,#root{background:var(--cc-bg)}
-body{color:var(--cc-fg);font-family:Manrope,-apple-system,BlinkMacSystemFont,"SF Pro Display","PingFang SC",sans-serif}
+body{color:var(--cc-fg);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","PingFang SC",sans-serif}
 .app-shell,.onboarding,.chat-screen{background:radial-gradient(circle at 92% -5%,rgba(206,158,183,.13),transparent 31%),radial-gradient(circle at 4% 74%,rgba(155,121,169,.07),transparent 34%),linear-gradient(180deg,#17131c 0%,var(--cc-bg) 72%)}
 .ambient{opacity:.09;filter:blur(90px)}
 .glass{background:linear-gradient(145deg,rgba(255,244,249,.085),rgba(255,232,241,.027));border:1px solid var(--cc-border);box-shadow:var(--cc-shadow-1);backdrop-filter:blur(24px) saturate(115%)}

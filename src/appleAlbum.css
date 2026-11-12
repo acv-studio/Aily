@@ -151,7 +151,7 @@ html[data-theme=light] .desktop-tools-dialog.album-shell {
   flex-basis: 100%;
   margin: 0 0 3px;
   color: var(--album-muted) !important;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: .1em;
 }
@@ -548,7 +548,7 @@ html[data-theme=light] .desktop-tools-dialog.album-shell {
 }
 .desktop-tools-dialog.album-shell .album-photo-viewer > header > :is(div, strong) { min-width: 0; text-align: center; overflow: hidden; text-overflow: ellipsis; }
 .desktop-tools-dialog.album-shell .album-photo-viewer > header :is(strong, time) { display: block; font-size: 14px; font-weight: 600; }
-.desktop-tools-dialog.album-shell .album-photo-viewer > header small { display: block; margin-top: 2px; color: #b5b5ba !important; font-size: 11px; font-weight: 400; }
+.desktop-tools-dialog.album-shell .album-photo-viewer > header small { display: block; margin-top: 2px; color: #b5b5ba !important; font-size: 12px; font-weight: 400; }
 .desktop-tools-dialog.album-shell.album-shell .media-photo-viewer.album-photo-viewer button {
   min-width: 44px;
   min-height: 44px;
@@ -606,8 +606,8 @@ html[data-theme=light] .desktop-tools-dialog.album-shell {
   background: rgba(16, 16, 18, .8) !important;
 }
 .desktop-tools-dialog.album-shell .album-viewer-toolbar { display: flex; align-items: center; justify-content: center; gap: clamp(12px, 7vw, 44px); width: 100%; min-height: 44px; }
-.desktop-tools-dialog.album-shell .album-viewer-counter { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 9px; margin: 0; color: #b5b5ba !important; font-size: 11px; line-height: 1.4; text-align: center; }
-.desktop-tools-dialog.album-shell .album-viewer-counter :is(span, small, time) { color: #b5b5ba !important; font-size: 11px; }
+.desktop-tools-dialog.album-shell .album-viewer-counter { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 9px; margin: 0; color: #b5b5ba !important; font-size: 12px; line-height: 1.4; text-align: center; }
+.desktop-tools-dialog.album-shell .album-viewer-counter :is(span, small, time) { color: #b5b5ba !important; font-size: 12px; }
 /* Keep disabled paint authoritative over import/pressed/danger variants. */
 .desktop-tools-dialog.album-shell button:disabled:disabled:not(:where(.album-photo-viewer *)),
 .desktop-tools-dialog.album-shell label.media-import:has(input:disabled) {

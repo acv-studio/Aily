@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowLeft, Mic, MicOff, PhoneOff, Volume2 } from 'lucide-react'
+import { ArrowLeft, Mic, MicOff, Phone, Square, Volume2 } from 'lucide-react'
 import type { Character } from './data'
 import type { ChatMessage } from './chatService'
 
@@ -60,8 +60,8 @@ export default function CallScreen({ character, messages, replying, send, close 
     <button className="call-back" aria-label="返回聊天" onClick={hangup}><ArrowLeft/></button>
     <div className="call-glow"/><section className="call-person"><span className="call-avatar">{character.avatar}</span><p>与 AI 角色通话中</p><h1>{character.name}</h1><time>{time}</time></section>
     <section className="call-caption" aria-live="polite"><span>{notice}</span><p>{transcript||'你说的话和角色回答会显示在这里'}</p>{replying&&<i className="call-dots">•••</i>}</section>
-    <footer className="call-controls"><button onClick={()=>setMuted(value=>!value)} className={muted?'active':''}>{muted?<MicOff/>:<Mic/>}<span>{muted?'已静音':'静音'}</span></button><button className={`call-mic ${listening?'listening':''}`} onClick={toggleListen} disabled={replying}>{listening?<MicOff/>:<Mic/>}<span>{listening?'停止':'说话'}</span></button><button onClick={()=>{setNotice('声音将通过当前设备播放')}}><Volume2/><span>扬声器</span></button></footer>
-    <button className="hangup" onClick={hangup}><PhoneOff/><span>挂断</span></button>
+    <footer className="call-controls"><button onClick={()=>setMuted(value=>!value)} className={muted?'active':''}><MicOff/><span>{muted?'已静音':'静音'}</span></button><button className={`call-mic ${listening?'listening':''}`} onClick={toggleListen} disabled={replying}>{listening?<Square/>:<Mic/>}<span>{listening?'停止':'说话'}</span></button><button onClick={()=>{setNotice('声音将通过当前设备播放')}}><Volume2/><span>扬声器</span></button></footer>
+    <button className="hangup" onClick={hangup}><Phone className="hangup-icon"/><span>挂断</span></button>
     <p className="call-disclosure">语音由浏览器识别，回答由已配置的 AI 模型生成</p>
   </main>
 }

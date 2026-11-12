@@ -7,7 +7,6 @@ const config: CapacitorConfig = {
   appId: 'com.aily.app',
   appName: 'Aily',
   webDir: 'dist',
-  backgroundColor: '#090b14',
   server: {
     // Ship bundled assets, never a remote/live-reload URL or cleartext transport.
     androidScheme: 'https',

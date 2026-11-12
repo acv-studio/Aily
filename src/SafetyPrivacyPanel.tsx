@@ -15,11 +15,11 @@ export function SafetyConsent({ onAccepted, returning = false }: { onAccepted: (
     <p>{t("记录优先保存在本机；配置模型后，文字和相关上下文会发送给所选服务，附件不发送。外部服务的数据政策由其提供方负责。")}</p>
     <label><input type="checkbox" checked={adult} onChange={event => { setAdult(event.target.checked); setBlocked(false) }} />{t("我已年满 18 周岁")}</label>
     <label><input type="checkbox" checked={understood} onChange={event => setUnderstood(event.target.checked)} />{t("我理解 AI 身份与数据说明")}</label>
-    <button className="text-button" onClick={() => { setAdult(false); setBlocked(true) }}>{t("我未满 18 周岁")}</button>
     {blocked && <p role="alert">{t("暂不能使用本原型。需要支持时，请联系可信任的成年人。")}</p>}
     {error && <p role="alert">{t(error)}</p>}
     {returning && <button className="primary" disabled={!adult || !understood || blocked} onClick={() => { try { onAccepted() } catch { setError("无法保存确认，请允许浏览器存储后重试") } }}>{t("确认并继续")}</button>}
     {!returning && <button className="primary" disabled={!adult || !understood || blocked} onClick={() => { try { onAccepted() } catch { setError("无法保存确认，请允许浏览器存储后重试") } }}>{t("遇见 TA")}</button>}
+    <button className="text-button decline-link" onClick={() => { setAdult(false); setBlocked(true) }}>{t("我未满 18 周岁")}</button>
   </section>
 }
 

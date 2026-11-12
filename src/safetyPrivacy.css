@@ -24,8 +24,8 @@
 .safety-panel input { min-width: 0; padding: 12px; border: 1px solid #777; border-radius: 10px; background: #171925; color: white; }
 .danger-action { padding: 12px 16px; border: 1px solid #f09caa; border-radius: 12px; color: #ffc0c9; background: #392230; }
 .safety-panel [role=alert], .safety-consent [role=alert] { color: #ffc0c9; }
-.provider-choice-stack{display:grid;gap:10px;margin:16px 0}.provider-choice-stack button{display:grid;gap:5px;text-align:left;padding:16px;border:1px solid rgba(255,255,255,.13);border-radius:18px;background:rgba(255,255,255,.045)}.provider-choice-stack button.selected{border-color:#c6a9d8;background:linear-gradient(135deg,rgba(201,172,207,.2),rgba(185,155,207,.07));box-shadow:0 0 0 1px rgba(201,172,207,.12) inset}.provider-choice-stack strong{font-size:16px}.provider-choice-stack span{color:#c8c1d0;font-size:12px}.provider-choice-stack small{color:#9d93a5;font-size:10px}.language-welcome { margin: auto 0; display: grid; gap: 18px; }
-.language-welcome h1 { margin: 4px 0; font: 400 38px/1.1 "DM Serif Display",serif; }
+.provider-choice-stack{display:grid;gap:10px;margin:16px 0}.provider-choice-stack button{display:grid;gap:5px;text-align:left;padding:16px;border:1px solid rgba(255,255,255,.13);border-radius:18px;background:rgba(255,255,255,.045)}.provider-choice-stack button.selected{border-color:#c6a9d8;background:linear-gradient(135deg,rgba(201,172,207,.2),rgba(185,155,207,.07));box-shadow:0 0 0 1px rgba(201,172,207,.12) inset}.provider-choice-stack strong{font-size:16px}.provider-choice-stack span{color:#c8c1d0;font-size:12px}.provider-choice-stack small{color:#9d93a5;font-size:12px}.language-welcome { margin: auto 0; display: grid; gap: 18px; }
+.language-welcome h1 { margin: 4px 0; font: 400 38px/1.1 -apple-system,"PingFang SC",sans-serif; }
 .language-welcome .language-settings { margin: 4px 0; }
 @media (max-height: 850px) {
   .onboarding-flow .welcome { padding-top: 12px; }
@@ -35,8 +35,8 @@
   .onboarding-flow .welcome .disclosure { margin: 8px; }
   .onboarding-flow .safety-consent { margin-top: 10px; padding: 14px 16px; }
   .onboarding-flow .safety-consent h2 { font-size: 17px; margin-bottom: 7px; }
-  .onboarding-flow .safety-consent p { font-size: 11px; line-height: 1.5; margin: 7px 0; }
+  .onboarding-flow .safety-consent p { font-size: 12px; line-height: 1.5; margin: 7px 0; }
   .onboarding-flow .safety-consent label { margin: 9px 0; font-size: 12px; }
-  .onboarding-flow .safety-consent .text-button { min-height: 34px; margin-bottom: 2px; padding: 5px 9px; font-size: 11px; }
+  .onboarding-flow .safety-consent .text-button { min-height: 34px; margin-bottom: 2px; padding: 5px 9px; font-size: 12px; }
   .onboarding-flow .safety-consent .primary { min-height: 46px; height: 46px; margin-top: 8px; }
 }

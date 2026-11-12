@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { t, useI18n } from './i18n'
 import LanguageSettings from './LanguageSettings'
 import { ArrowLeft, ChevronRight } from 'lucide-react'
@@ -83,6 +83,7 @@ export default function Onboarding({ selected, setSelected, finish, apiKey, setA
   const serviceReady = provider === 'magpie' || provider === 'deepseek' && !!apiKey.trim() || provider === 'openai' && !!gateway.endpoint && !!gatewayModel.trim() && !!apiKey.trim()
   const character = characters.find(c => c.id === profile.characterId)!
   const change = (patch: Partial<OnboardingProfile>) => { setProfile(current => ({ ...current, ...patch })); setTrial([]) }
+  useEffect(() => { window.scrollTo(0, 0); document.querySelectorAll('.onboarding, .onboarding-flow').forEach(el => { (el as HTMLElement).scrollTop = 0 }) }, [step])
   const next = () => { setError(''); setStep(current => current + 1) }
   const labels = ['初遇', '选择角色', '自我介绍', '你的称呼', 'TA 的称呼', '互动偏好', '边界与同意', '称呼试聊', '数据说明']
   return <main className="onboarding onboarding-flow"><div className="ambient ambient-one"/><div className="brand"><span className="brand-mark">A</span><span>Aily</span></div>{step >= 0 && <><p className="step-indicator" aria-live="polite">{t('第 {step} / 9 步 · {label}', { step: step + 1, label: t(labels[step]) })}</p><progress max={9} value={step + 1} aria-label={t('首次引导进度')}/></>}{step > 0 && <button className="text-button" disabled={busy} onClick={() => { setError(''); setStep(current => current - 1) }}><ArrowLeft size={18}/>{t('返回')}</button>}

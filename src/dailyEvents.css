@@ -2,13 +2,13 @@
 .daily-event header { display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; color: #d4c5fa; font-size: 12px; }
 .daily-event header span { display: flex; align-items: center; gap: 6px; }
 .daily-event time { color: #b6bdce; }
-.daily-event .daily-event-kind { display: inline-block; margin-top: 14px; color: #b6bdce; font-size: 11px; }
+.daily-event .daily-event-kind { display: inline-block; margin-top: 14px; color: #b6bdce; font-size: 12px; }
 .daily-event h2 { font-size: 19px; line-height: 1.4; margin: 6px 0 14px; }
 .daily-event label { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; color: #c2c5d4; font-size: 12px; }
 .daily-event select { min-width: 0; max-width: 100%; border: 1px solid var(--line); border-radius: 10px; padding: 8px; background: #1e2133; color: #f7f4f2; font: inherit; }
 .daily-event .daily-event-invitation { font-size: 13px; line-height: 1.7; margin: 14px 0; color: #eee8f5; }
 .daily-event-choices { display: grid; gap: 8px; }
 .daily-event-choices button { text-align: left; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: #302a45; color: #eee8f5; font-size: 12px; line-height: 1.5; }
-.daily-event .daily-event-note { font-size: 11px; color: #b6bdce; line-height: 1.6; margin: 12px 0 0; }
+.daily-event .daily-event-note { font-size: 12px; color: #b6bdce; line-height: 1.6; margin: 12px 0 0; }
 .daily-event p, .daily-event h2, .daily-event button { overflow-wrap: anywhere; }
 .daily-event select:focus-visible, .daily-event button:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }

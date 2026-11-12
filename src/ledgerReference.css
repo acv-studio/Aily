@@ -64,7 +64,7 @@ html[data-theme='dark'] .ledger-reference-app :is(button,input,select,textarea,s
 .ledger-reference-app .ledger-header button:hover { background: #0000000a !important; }
 .ledger-reference-app .ledger-header button:disabled { color: var(--lr-header-muted) !important; background: transparent !important; }
 .ledger-reference-app .ledger-topline { display: flex; align-items: center; gap: 12px; min-height: 44px; }
-.ledger-reference-app .ledger-topline > span { font-size: 11px; letter-spacing: .12em; font-weight: 600; margin-left: auto; }
+.ledger-reference-app .ledger-topline > span { font-size: 12px; letter-spacing: .12em; font-weight: 600; margin-left: auto; }
 .ledger-reference-app .ledger-back { padding-left: 0; font-size: 12px; white-space: nowrap; }
 .ledger-reference-app .ledger-header-actions { display: flex; gap: 2px; margin-left: auto; }
 .ledger-reference-app .ledger-header-actions button { padding: 9px; }
@@ -73,7 +73,7 @@ html[data-theme='dark'] .ledger-reference-app :is(button,input,select,textarea,s
 .ledger-reference-app .ledger-month-title small { font-size: 12px; color: var(--lr-header-muted); }
 .ledger-reference-app .ledger-month-title strong { display: flex; align-items: center; gap: 6px; font-size: 32px; font-weight: 650; line-height: 1.4; }
 .ledger-reference-app .ledger-header-total { min-width: 0; }
-.ledger-reference-app .ledger-header-total > span { color: var(--lr-header-muted); display: block; font-size: 11px; letter-spacing: .04em; margin-bottom: 5px; }
+.ledger-reference-app .ledger-header-total > span { color: var(--lr-header-muted); display: block; font-size: 12px; letter-spacing: .04em; margin-bottom: 5px; }
 .ledger-reference-app .ledger-header-total > strong { display: block; font-size: clamp(17px,2.8vw,28px); line-height: 1.4; font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .ledger-reference-app .ledger-shortcuts { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:8px; padding:8px 5px!important; margin:0 0 -18px; border-radius:16px; background:var(--lr-card); box-shadow:0 5px 18px #00000009; position:relative; z-index:1; }
 .ledger-reference-app .ledger-shortcuts button { color:var(--lr-fg)!important; }
@@ -86,14 +86,14 @@ html[data-theme='dark'] .ledger-reference-app .ledger-shortcuts svg, html[data-t
 .ledger-reference-app .ledger-section-heading h2 { flex: 1; font-size: 17px; }
 .ledger-reference-app .ledger-section-heading > span { color: var(--lr-muted); font-size: 12px; }
 .ledger-reference-app .ledger-section-heading > button { border: 0; padding: 8px; background: transparent !important; }
-.ledger-reference-app .ledger-filter-note { color: var(--lr-muted) !important; font-size: 11px; margin-bottom: 18px; }
+.ledger-reference-app .ledger-filter-note { color: var(--lr-muted) !important; font-size: 12px; margin-bottom: 18px; }
 .ledger-reference-app .ledger-card { padding: 22px; background: var(--lr-card) !important; border: 1px solid var(--lr-border); border-radius: 17px; margin: 0 0 18px; }
 .ledger-reference-app .ledger-card > :is(h2,h3,p) + :is(p,button,form) { margin-top: 12px; }
 .ledger-reference-app .ledger-filters { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 14px; }
 .ledger-reference-app .ledger-calendar { display: grid; align-items: end; grid-template-columns: 44px minmax(0,1fr) 44px; gap: 12px; padding: 15px; }
 .ledger-reference-app .ledger-calendar-presets { grid-column: 1/-1; display: flex; gap: 8px; }
 .ledger-reference-app .ledger-day { margin-bottom: 15px; }
-.ledger-reference-app .ledger-day-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px; padding: 10px 0; color: var(--lr-muted); font-size: 11px; border-bottom: 1px solid var(--lr-border); }
+.ledger-reference-app .ledger-day-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px; padding: 10px 0; color: var(--lr-muted); font-size: 12px; border-bottom: 1px solid var(--lr-border); }
 .ledger-reference-app .ledger-day-heading time { color: var(--lr-fg); font-weight: 550; font-size: 12px; }
 .ledger-reference-app .ledger-day ul { list-style: none; padding: 0; margin: 0; }
 .ledger-reference-app .ledger-row { display: flex; align-items: center; gap: 6px; border-bottom: 1px solid var(--lr-border); }
@@ -103,7 +103,7 @@ html[data-theme='dark'] .ledger-reference-app .ledger-shortcuts svg, html[data-t
 .ledger-reference-app .ledger-category-icon.income { color: var(--lr-income); }
 .ledger-reference-app .ledger-row-copy { flex: 1; min-width: 0; }
 .ledger-reference-app .ledger-row-copy strong { display: block; font-size: 14px; line-height: 1.5; font-weight: 550; white-space: pre-wrap; }
-.ledger-reference-app .ledger-row-copy small { display: block; font-size: 11px; color: var(--lr-muted); margin-top: 5px; }
+.ledger-reference-app .ledger-row-copy small { display: block; font-size: 12px; color: var(--lr-muted); margin-top: 5px; }
 .ledger-reference-app .ledger-row-main b { font-size: 16px; font-weight: 550; font-variant-numeric: tabular-nums; max-width: 42%; overflow-wrap: anywhere; text-align: right; }
 .ledger-reference-app .ledger-income { color: var(--lr-income) !important; }
 .ledger-reference-app .ledger-row-actions { display: flex; flex: none; }
@@ -113,7 +113,7 @@ html[data-theme='dark'] .ledger-reference-app .ledger-shortcuts svg, html[data-t
 .ledger-reference-app .ledger-empty > span { display: inline-flex; padding: 18px; color: var(--lr-fg); background: var(--lr-soft); border-radius: 50%; margin-bottom: 18px; }
 .ledger-reference-app .ledger-empty p { color: var(--lr-muted) !important; font-size: 13px; margin-top: 12px; line-height: 1.8; }
 .ledger-reference-app .ledger-bottom-nav { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); align-items: center; gap: 8px; flex: none; padding: 10px clamp(12px,3vw,30px); padding-bottom: max(10px,env(safe-area-inset-bottom,0px)); background: var(--lr-card); border-top: 1px solid var(--lr-border); z-index: 2; }
-.ledger-reference-app .ledger-bottom-nav button { flex-direction: column; gap: 4px; border: 0; background: transparent !important; padding: 6px 2px; min-height: 52px; color: var(--lr-muted) !important; font-size: 10px; }
+.ledger-reference-app .ledger-bottom-nav button { flex-direction: column; gap: 4px; border: 0; background: transparent !important; padding: 6px 2px; min-height: 52px; color: var(--lr-muted) !important; font-size: 12px; }
 .ledger-reference-app .ledger-bottom-nav button[aria-current='page'] { color: var(--lr-fg) !important; font-weight: 650; }
 .ledger-reference-app .ledger-bottom-nav button[aria-current='page'] svg { color: #a8870c; }
 html[data-theme='dark'] .ledger-reference-app .ledger-bottom-nav button[aria-current='page'] svg { color: var(--lr-yellow); }
@@ -133,7 +133,7 @@ html[data-theme='dark'] .ledger-reference-app .ledger-bottom-nav button[aria-cur
 .ledger-reference-app .ledger-chart-line { stroke: #b79616; stroke-width: 3; fill: none; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
 html[data-theme='dark'] .ledger-reference-app .ledger-chart-line { stroke: var(--lr-yellow); }
 .ledger-reference-app .ledger-chart-dot { fill: #b79616; }
-.ledger-reference-app .ledger-chart-labels { display: flex; justify-content: space-between; color: var(--lr-muted); font-size: 11px; }
+.ledger-reference-app .ledger-chart-labels { display: flex; justify-content: space-between; color: var(--lr-muted); font-size: 12px; }
 .ledger-reference-app .ledger-chart-data { margin-top: 14px; font-size: 12px; }
 .ledger-reference-app .ledger-chart-data summary { min-height: 44px; padding: 12px 0; cursor: pointer; color: var(--lr-muted); }
 .ledger-reference-app .ledger-chart-data ul { list-style: none; margin: 0; padding: 0; }
@@ -142,13 +142,13 @@ html[data-theme='dark'] .ledger-reference-app .ledger-chart-line { stroke: var(-
 .ledger-reference-app .ledger-ranking > div { flex: 1; min-width: 0; }
 .ledger-reference-app .ledger-ranking-label { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; font-size: 12px; }
 .ledger-reference-app .ledger-ranking-label strong { font-weight: 550; }
-.ledger-reference-app .ledger-ranking-label span { color: var(--lr-muted); font-size: 11px; }
+.ledger-reference-app .ledger-ranking-label span { color: var(--lr-muted); font-size: 12px; }
 .ledger-reference-app .ledger-ranking-label b { margin-left: auto; font-weight: 550; }
 .ledger-reference-app .ledger-progress { height: 7px; border-radius: 10px; overflow: hidden; background: var(--lr-input); border: 1px solid var(--lr-border); }
 .ledger-reference-app .ledger-progress span { display: block; height: 100%; background: var(--lr-yellow); border-radius: 10px; }
 .ledger-reference-app .ledger-progress.is-over span { background: var(--lr-error); }
 .ledger-reference-app .ledger-budget { margin-top: 5px; }
-.ledger-reference-app .ledger-eyebrow { display: block; color: var(--lr-muted); font-size: 10px; letter-spacing: .1em; margin-bottom: 12px; }
+.ledger-reference-app .ledger-eyebrow { display: block; color: var(--lr-muted); font-size: 12px; letter-spacing: .1em; margin-bottom: 12px; }
 .ledger-reference-app .ledger-budget-summary { margin-top: 28px; }
 .ledger-reference-app .ledger-budget form { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: end; gap: 12px; margin: 25px 0 15px; }
 .ledger-reference-app .ledger-budget .ledger-progress + p { margin-top: 10px; }
@@ -172,11 +172,11 @@ html[data-theme='dark'] .ledger-reference-app .ledger-chart-line { stroke: var(-
   .ledger-reference-app .ledger-month-summary { gap: 10px; grid-template-columns: minmax(72px,.8fr) minmax(0,1fr) minmax(0,1fr) 36px; padding: 15px 0 16px; }
   .ledger-reference-app .ledger-month-title { padding-right: 9px; }
   .ledger-reference-app .ledger-month-title strong { font-size: 26px; }
-  .ledger-reference-app .ledger-month-title small { font-size: 11px; }
+  .ledger-reference-app .ledger-month-title small { font-size: 12px; }
   .ledger-reference-app .ledger-header-total > strong { font-size: 18px; }
   .ledger-reference-app .ledger-eye { min-width: 36px; padding: 6px; }
   .ledger-reference-app .ledger-shortcuts { padding-bottom: 10px; gap: 4px; }
-  .ledger-reference-app .ledger-shortcuts button { min-height: 62px; font-size: 11px; }
+  .ledger-reference-app .ledger-shortcuts button { min-height: 62px; font-size: 12px; }
   .ledger-reference-app .ledger-card { padding: 17px; }
   .ledger-reference-app .ledger-row { gap: 0; }
   .ledger-reference-app .ledger-row-main { gap: 10px; }

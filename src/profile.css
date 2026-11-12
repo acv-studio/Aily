@@ -18,7 +18,7 @@
 .profile-screen .profile-card > div:nth-child(2) { min-width: 0; }
 .profile-screen .profile-card > .profile-chevron { margin-left: auto; width: 18px; height: 18px; color: #9298ae; }
 .profile-screen .profile-card h2 { font-family: inherit; font-weight: 600; font-size: 23px; line-height: 1.3; overflow-wrap: anywhere; }
-.profile-screen .profile-card p { font-size: 11px; line-height: 1.5; color: #b0b4c6; margin-top: 5px; }
+.profile-screen .profile-card p { font-size: 12px; line-height: 1.5; color: #b0b4c6; margin-top: 5px; }
 .profile-screen .profile-avatar { flex: none; }
 .profile-screen .plan-card {
   margin: 0;
@@ -27,7 +27,7 @@
   background: radial-gradient(ellipse at top left, #65508766, transparent 70%), linear-gradient(120deg, #302b4b, #193b47);
 }
 .profile-plan-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
-.profile-plan-top > small { font-size: 10px; color: #d2d4e5; padding: 4px 9px; border: 1px solid #ffffff20; border-radius: 20px; }
+.profile-plan-top > small { font-size: 12px; color: #d2d4e5; padding: 4px 9px; border: 1px solid #ffffff20; border-radius: 20px; }
 .profile-screen .plan-card h3 {
   font-family: inherit;
   font-size: clamp(20px, 5.5vw, 24px);
@@ -44,7 +44,7 @@ html[data-theme=dark] .profile-screen .plan-card > button { background:#b99bcf24
 html[data-theme=dark] .profile-plan-top > small { background:#b99bcf0a; color:#cdbdd8; border-color:#b99bcf25; }
 html[data-theme=light] .profile-screen .plan-card > button { background:#eeebf5!important; color:#624a7b!important; border-color:#74549b20; box-shadow:none; }
 .profile-membership-note { font-size: 12px; line-height: 1.7; color: #d8d6e7; margin: 14px 0 14px; }
-.profile-group > h3 { display:block; width:auto; padding:0; border:0; border-radius:0; background:transparent!important; box-shadow:none!important; color: #a9aec2; font-size: 11px; font-weight: 500; letter-spacing: .06em; margin: 0 0 9px 6px; }
+.profile-group > h3 { display:block; width:auto; padding:0; border:0; border-radius:0; background:transparent!important; box-shadow:none!important; color: #a9aec2; font-size: 12px; font-weight: 500; letter-spacing: .06em; margin: 0 0 9px 6px; }
 .profile-settings { border-radius: 22px; padding: 0 14px; }
 .profile-setting-row {
   display: grid;
@@ -61,11 +61,11 @@ html[data-theme=light] .profile-screen .plan-card > button { background:#eeebf5!
 .profile-setting-row:last-child { border-bottom: 0; }
 .profile-setting-row > svg:first-child { width: 18px; height: 18px; color: #b5a4e7; }
 .profile-setting-row > span { font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
-.profile-setting-row > small { max-width: 90px; font-size: 10px; line-height: 1.5; color: #a2a8bc; text-align: right; overflow-wrap: anywhere; }
+.profile-setting-row > small { max-width: 90px; font-size: 12px; line-height: 1.5; color: #a2a8bc; text-align: right; overflow-wrap: anywhere; }
 .profile-setting-row > .profile-chevron { grid-column: 4; width: 14px; height: 14px; color: #9298ae; transition: transform .2s; }
 .profile-setting-row[aria-expanded=true] > .profile-chevron { transform: rotate(90deg); }
 .profile-inline-panel { padding: 12px 0 18px; border-bottom: 1px solid #ffffff0d; }
-.profile-primary-panel > p { margin: 0 0 12px; color: #b0b7cc; font-size: 11px; line-height: 1.7; }
+.profile-primary-panel > p { margin: 0 0 12px; color: #b0b7cc; font-size: 12px; line-height: 1.7; }
 .profile-primary-options { display: grid; gap: 8px; }
 .profile-primary-option {
   display: flex;
@@ -84,19 +84,19 @@ html[data-theme=light] .profile-screen .plan-card > button { background:#eeebf5!
 .profile-primary-avatar { display: grid; place-items: center; flex: none; width: 38px; height: 38px; border-radius: 12px; background: #ffffff0d; color: var(--accent); font-size: 18px; }
 .profile-primary-copy { display: grid; gap: 4px; min-width: 0; overflow-wrap: anywhere; }
 .profile-primary-copy strong { color: #eef0fa; font-size: 12px; font-weight: 600; }
-.profile-primary-copy small { color: #b0b7cc; font-size: 10px; line-height: 1.5; }
+.profile-primary-copy small { color: #b0b7cc; font-size: 12px; line-height: 1.5; }
 .profile-primary-panel > .profile-primary-feedback { margin: 12px 0 0; color: #c2eadc; }
 .profile-primary-panel > .profile-primary-error { color: #ffc5c5; }
 .profile-screen .profile-inline-panel.api-settings { border-radius: 0; margin: 0; }
-.provider-switch{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:14px 0}.provider-switch button{min-height:42px;border:1px solid var(--line);border-radius:12px;background:#ffffff08;color:#c9cbd5}.provider-switch button.selected{border-color:#c6a9d8;background:#b99bcf25;color:#f4ecfa;box-shadow:0 0 0 1px #b99bcf18 inset}.api-provider-detail{margin:10px 0;color:#9e98a7;font-size:10px;overflow-wrap:anywhere}
+.provider-switch{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:14px 0}.provider-switch button{min-height:42px;border:1px solid var(--line);border-radius:12px;background:#ffffff08;color:#c9cbd5}.provider-switch button.selected{border-color:#c6a9d8;background:#b99bcf25;color:#f4ecfa;box-shadow:0 0 0 1px #b99bcf18 inset}.api-provider-detail{margin:10px 0;color:#9e98a7;font-size:12px;overflow-wrap:anywhere}
 .appearance-settings{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.appearance-settings button{min-height:42px;border:1px solid var(--line);border-radius:11px;background:#ffffff07;color:inherit}.appearance-settings button.selected{border-color:var(--cc-primary,#b99bcf);background:var(--cc-primary-soft,#b99bcf24);color:var(--cc-primary,#b99bcf);font-weight:700}.profile-inline-panel .language-settings { background: transparent; border: 0; box-shadow: none; padding: 0; margin: 0; border-radius: 0; backdrop-filter: none; }
-.profile-inline-panel .language-settings label { font-size: 11px; }
+.profile-inline-panel .language-settings label { font-size: 12px; }
 .profile-inline-panel .language-settings select { font-size: 12px; }
 .profile-screen .data-transfer { margin-top: 0; }
 .memory-settings-profile { margin-top: 10px; }
-.memory-settings-profile .profile-inline-panel>p { margin-top:0; color:#aeb5c8; font-size:11px; line-height:1.6; }
+.memory-settings-profile .profile-inline-panel>p { margin-top:0; color:#aeb5c8; font-size:12px; line-height:1.6; }
 .memory-settings-profile .policy-categories { margin-top:4px; }
-.profile-screen .ai-note { margin: 0; font-size: 10px; line-height: 1.7; color: #9299af; }
+.profile-screen .ai-note { margin: 0; font-size: 12px; line-height: 1.7; color: #9299af; }
 @media (max-width: 350px) {
   .profile-screen.screen { padding-left: 16px; padding-right: 16px; }
   .profile-setting-row { gap: 8px; }

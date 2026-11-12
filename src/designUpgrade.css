@@ -1,0 +1,264 @@
+/* Loaded last: unified look per design.md */
+html{-webkit-text-size-adjust:100%}
+:root,body,button,input,textarea,select{font-family:var(--font-ui)}
+body,html,#root{background:var(--bg);color:var(--text)}
+.app-shell,.onboarding,.chat-screen,.call-screen{background:var(--bg)}
+.ambient{opacity:.1}
+:focus-visible{outline:2px solid var(--accent)!important;outline-offset:2px}
+/* cards: solid, no blur */
+.glass{background:var(--surface-1);border:1px solid var(--hairline);box-shadow:none;backdrop-filter:none}
+.bottom-nav,.composer,.chat-header{backdrop-filter:blur(20px) saturate(120%)}
+.bottom-nav{background:color-mix(in srgb,var(--surface-1) 94%,transparent);border-radius:0;left:0;transform:none;width:100%;max-width:480px;margin:0 auto;right:0;bottom:0;padding:6px 8px calc(6px + env(safe-area-inset-bottom));border:0;border-top:1px solid var(--hairline);box-shadow:none}
+.bottom-nav button{color:var(--text-3)}
+.bottom-nav button svg{width:24px;height:24px}
+.bottom-nav button span{font-size:12px}
+.bottom-nav button.active{background:none;box-shadow:none;color:var(--accent)}
+/* text */
+.text-3,.conversation time,.moment header time,.date-pill,.message-content time,.ai-note,.disclosure,.call-disclosure{color:var(--text-3)}
+.conversation p,.mini-card span,.lead,.memory-card p{color:var(--text-2)}
+.eyebrow{color:var(--text-2)}
+/* buttons: solid accent */
+.primary,.talk-button,.composer .send,.story-next,.game-done{background:var(--accent);color:var(--on-accent);box-shadow:none}
+.mine .bubble{background:var(--accent);color:var(--on-accent)}
+.bubble{background:var(--surface-2);border:0;border-radius:20px 20px 20px 6px;font-size:16px;line-height:1.5}
+.mine .bubble{border-radius:20px 20px 6px 20px}
+.bubble.streaming{color:var(--text)}
+.primary{height:52px;border-radius:14px}
+.icon-button{background:var(--surface-1);border:1px solid var(--hairline);box-shadow:none}
+/* radii */
+.conversation,.mini-card,.moment,.relation,.profile-card,.plan-card,.settings,.api-settings,.data-tools,.memory-card,.character-card,.relationship-panel,.memory-intro,.presence-card{border-radius:var(--r-lg)}
+.plan-card{background:var(--surface-1);border:1px solid var(--hairline);border-left:4px solid var(--accent)}
+.plan-card button{background:var(--accent);color:var(--on-accent)}
+.character-card{background:var(--surface-1)}
+.character-card.selected{border:2px solid var(--accent);background:var(--surface-1)}
+.brand-mark{background:var(--accent)}
+.relation-progress i{background:var(--accent)}
+/* touch targets */
+.icon-button,.composer button,.attachment-button,.call-back{min-width:44px;min-height:44px}
+.composer button{width:44px;height:44px;border-radius:22px}
+.composer input{min-height:44px;border-radius:22px;background:var(--surface-2);font-size:16px}
+.message-actions button,.quick-replies button,.memory-actions button,.memory-signal button{min-height:44px}
+.quick-replies button{background:var(--surface-2);color:var(--text-2);font-size:13px;min-height:36px;border-radius:var(--r-pill)}
+.memory-signal{font-size:13px;color:var(--text-2)}
+/* sizes */
+.topbar h1{font:600 32px/1.2 var(--font-ui);letter-spacing:-.02em}
+.presence-copy h2{font:600 20px/26px var(--font-ui)}
+.conversation strong,.chat-header strong{font-size:16px}
+.settings button{min-height:52px}
+.profile-card h2{font:600 20px var(--font-ui)}
+.welcome h1,.choose h1{font-family:var(--font-ui);font-weight:600;letter-spacing:-.02em}
+.welcome h1{font-size:40px}
+@media(prefers-reduced-motion:no-preference){button:active{transform:scale(.97);transition:transform .1s}}
+/* ---- Home (design review round 1) ---- */
+.message-home.screen{padding:0 20px calc(56px + env(safe-area-inset-bottom) + 32px)}
+.desktop-home .dashboard-widget{background:none!important;border:0!important;box-shadow:none!important;backdrop-filter:none;overflow:visible;border-radius:0}
+.dashboard-widget .desktop-widgets{display:grid!important;grid-template-columns:1fr 1fr!important;gap:12px!important}
+.dashboard-widget .clock-widget,.dashboard-widget .weather-widget{height:auto!important;min-height:140px!important;max-height:none!important;padding:16px!important;border-radius:20px!important;background:var(--surface-1)!important;border:1px solid var(--hairline)!important;box-shadow:none!important}
+.dashboard-widget .weather-widget{border-left:1px solid var(--hairline)!important;gap:8px}
+.weather-widget .weather-retry{display:none!important}
+.weather-widget .weather-actions{flex-direction:column;gap:8px}
+.weather-widget .weather-actions>button,.dashboard-widget .weather-actions>button{min-height:44px;width:100%}
+.clock-widget time{font-size:40px!important;line-height:44px!important;font-weight:600!important;margin-left:0!important;width:100%!important;letter-spacing:-.02em!important}
+.clock-live-dot{display:none}
+.desktop-section-line{display:none}
+.desktop-section-heading{margin:24px 0 12px;font-size:13px;font-weight:600;letter-spacing:0;color:var(--text-3)}
+.desktop-bot{background:var(--surface-1)!important;border:1px solid var(--hairline)!important;border-radius:20px!important;box-shadow:none!important;backdrop-filter:none;padding:16px!important;min-height:112px}
+.desktop-bot>.avatar{width:64px;height:64px;border-radius:20px;box-shadow:none}
+.desktop-bot-copy p{font-size:15px!important;color:var(--text-2)!important}
+.desktop-bot-copy>small{display:none!important}
+.desktop-bot-title strong{font-size:20px!important;line-height:26px}
+.desktop-bot-title>span{background:var(--surface-2);border:0!important;border-radius:999px!important;padding:2px 10px!important;color:var(--text-2)!important}
+.desktop-bot-chevron{width:36px!important;height:36px!important;padding:9px;border-radius:50%;background:var(--brand);color:var(--on-accent)!important}
+.desktop-app-icon{width:56px!important;height:56px!important;border-radius:16px!important;background:var(--surface-2)!important;border:0!important;box-shadow:none!important;color:var(--text-2)!important}
+.desktop-app-icon svg{width:24px;height:24px;color:var(--text-2)!important}
+.desktop-app:hover .desktop-app-icon{transform:none;box-shadow:none}
+.desktop-app>span:last-child{font-size:13px;color:var(--text)}
+.desktop-partners-toggle{min-height:44px;color:var(--text-2)}
+.desktop-home-note{color:var(--text-3)}
+.bottom-nav{background:var(--bg)!important;backdrop-filter:none}
+.bottom-nav button.active,.bottom-nav button.active span,.bottom-nav button.active svg{color:var(--accent)!important}
+.bottom-nav button span{font-size:12px}
+/* ---- Home round 3 ---- */
+.dashboard-widget .clock-widget,.dashboard-widget .weather-widget{min-height:0!important;height:auto!important;justify-content:center;align-items:flex-start;text-align:left}
+.dashboard-widget .clock-widget p{margin:4px 0 0;font-size:13px;color:var(--text-2)}
+.dashboard-widget .weather-widget{align-items:stretch}
+.dashboard-widget .weather-widget svg{width:24px;height:24px}
+.dashboard-widget .weather-widget :is(p,span,small){font-size:13px}
+.dashboard-widget .weather-actions svg{width:16px;height:16px}
+.desktop-app-grid{gap:14px 14px!important}
+.desktop-app{gap:8px}
+.dashboard-widget .weather-placeholder{flex:none;min-height:0!important;gap:4px;padding:0}
+.dashboard-widget .weather-placeholder p{line-height:1.4}
+.dashboard-widget .weather-widget-header{min-height:0}
+.dashboard-widget .weather-actions{margin-top:8px}
+/* ---- Chat ---- */
+.chat-screen .chat-header,.chat-screen>header.chat-header.glass{border-radius:0!important;background:var(--bg);backdrop-filter:none;border-radius:0;border:0;border-bottom:1px solid var(--hairline);box-shadow:none;min-height:56px}
+.chat-screen .chat-header .icon-button{width:44px;height:44px;border:0;background:transparent}
+.chat-screen .chat-header strong{font-size:17px;line-height:22px}
+.chat-screen .message-row.mine .bubble,.chat-screen .mine .bubble{background:var(--brand)!important;color:var(--on-accent)!important;box-shadow:none!important;border-radius:20px 20px 6px 20px}
+.chat-screen .message-row:not(.mine) .bubble{background:var(--surface-2)!important;border:0!important;box-shadow:none!important;border-radius:20px 20px 20px 6px;color:var(--text)}
+.message-content time{font-size:12px;color:var(--text-3)}
+.chat-screen .composer{background:var(--bg);backdrop-filter:none;border-top:1px solid var(--hairline)}
+.chat-screen .composer .send{width:44px;height:44px;border-radius:50%;background:var(--brand)!important;color:var(--on-accent)!important;box-shadow:none}
+.chat-screen .composer .send:disabled{opacity:.4}
+.chat-screen .composer .send svg{color:var(--on-accent)}
+.chat-screen .composer input{background:var(--surface-2)!important;border:0!important;font-size:16px}
+.chat-screen .composer button:not(.send){border:1px solid var(--hairline);background:var(--surface-2)}
+.chat-screen .composer .attachment-button,.chat-screen .composer button:has(svg.lucide-plus){border-radius:50%}
+.chat-screen .quick-replies button,.chat-screen .chat-mode-trigger{min-height:36px;border-radius:999px;background:var(--surface-2)!important;border:0!important;color:var(--text-2);font-size:13px}
+.chat-screen .chat-mode-trigger{color:var(--brand)}
+/* ---- Chat round 2 ---- */
+.chat-screen .messages{padding:20px 16px 24px!important}
+.chat-screen .message-row>.avatar{width:36px;height:36px;border-radius:11px;margin-top:0}
+.chat-screen .message-row:not(.mine) .bubble{border:1px solid var(--hairline)!important}
+.chat-identity small{display:block;font-size:12px;line-height:16px;color:var(--text-3);font-weight:400}
+.chat-screen .composer{display:flex;align-items:center;gap:8px;padding:8px 12px calc(8px + env(safe-area-inset-bottom))}
+.chat-screen .composer input{flex:1;min-width:0}
+.chat-screen .composer button{flex:none;width:44px;height:44px;border-radius:50%;background:var(--surface-2)!important;border:0!important;box-shadow:none!important;color:var(--text)}
+.chat-screen .composer .send{background:var(--brand)!important;color:var(--on-accent)!important}
+.chat-screen .composer .send svg{color:var(--on-accent)!important}
+.chat-screen .chat-mode-trigger{color:var(--brand)!important;background:var(--surface-2)!important}
+.chat-screen .chat-mode-trigger *{color:var(--brand)}
+.chat-screen .quick-replies{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 24px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 24px),transparent);padding-right:24px}
+.dashboard-widget .clock-widget,.dashboard-widget .weather-widget{padding:14px 16px!important}
+/* ---- Memory / Me ---- */
+.memory-toolbar button,.profile-plan button,.plan-card .primary,.plan-card button{background:var(--brand)!important;color:var(--on-accent)!important;border:0!important;box-shadow:none!important;min-height:44px;border-radius:12px}
+.plan-card,.profile-plan,[class*=plan-card]{background:var(--surface-1)!important;border:1px solid var(--hairline)!important;border-left:4px solid var(--brand)!important;box-shadow:none!important}
+.managed-memory,.profile-settings,.profile-card{background:var(--surface-1)!important;border:1px solid var(--hairline)!important;box-shadow:none!important;backdrop-filter:none}
+.profile-setting-row{min-height:52px}
+.profile-setting-row>svg:first-child{color:var(--text-2)!important}
+/* ---- Round 3: tabs ---- */
+.topbar:not(.topbar-home) .eyebrow{display:none}
+.topbar:not(.topbar-home){padding-bottom:8px}
+.chat-screen .message-row:not(.mine) .bubble{padding:10px 14px!important}
+.chat-screen .mine .bubble{padding:10px 14px!important}
+/* memory */
+.memory-page .memory-intro,.memory-page>p:first-of-type{margin-top:0}
+.memory-search,.memory-search-field,.memory-search-field input,.memory-filter-bar select,.memory-filter-chip,.memory-filter-bar button{background:var(--surface-2)!important;border:0!important;min-height:44px;font-size:14px;box-shadow:none!important}
+.managed-memory,.memory-card{border-radius:20px!important;margin-bottom:12px}
+.managed-memory .memory-details,.managed-memory summary,.memory-details,.memory-muted-label{color:var(--text-2)!important;font-size:13px}
+/* reminders */
+.reminders-intro h2{display:none}
+.reminders-intro{margin:0 0 16px}
+.reminder-smart-entry{border-radius:20px!important}
+.reminder-smart-entry>svg:last-child{color:var(--text-3)!important}
+.reminder-empty-copy{padding:24px!important;background:var(--surface-1)!important;border:1px solid var(--hairline)!important;border-style:solid!important;border-radius:20px;min-height:120px;display:grid;place-items:center;color:var(--text-2)!important;font-size:14px}
+/* profile */
+.profile-group>h3{margin:24px 0 8px!important;font-size:13px;font-weight:600;color:var(--text-3)!important;letter-spacing:0}
+.profile-setting-row{min-height:54px}
+.profile-setting-row>svg:first-child{color:var(--text-2)!important}
+.plan-card,.profile-plan{background:var(--surface-1)!important;background-image:none!important}
+.plan-card h3,.plan-card h2{font-size:20px!important}
+.screen{padding-bottom:calc(56px + env(safe-area-inset-bottom) + 32px)}
+/* ---- Round 4 ---- */
+.reminder-empty-copy{display:flex!important;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:var(--text-3)}
+.reminder-empty-copy p{margin:0;font-size:14px;color:var(--text-2)}
+.plan-card{box-shadow:inset 4px 0 0 var(--brand)!important;border-left-width:1px!important}
+.profile-group .profile-settings:has(+ *){border-bottom-left-radius:0;border-bottom-right-radius:0;margin-bottom:0}
+.profile-group .profile-settings + *:not(.profile-inline-panel){margin-top:-1px;border-top-left-radius:0!important;border-top-right-radius:0!important}
+/* ---- Onboarding / choose ---- */
+.character-card .radio{background:transparent!important;border:2px solid var(--text-3)!important;color:transparent!important;width:24px;height:24px}
+.character-card.selected .radio{background:var(--brand)!important;border-color:var(--brand)!important;color:var(--on-accent)!important}
+.character-card.selected{border:2px solid var(--brand)!important}
+.character-card div>span{font-size:13px}
+.character-card p{font-size:14px;color:var(--text-2)}
+.text-button{background:var(--surface-2)!important;border:0!important;box-shadow:none!important;min-height:44px}
+.onboarding .eyebrow{color:var(--text-2)}
+.welcome h1 em{color:var(--brand)}
+/* ---- Onboarding round 2 ---- */
+.onboarding .brand{position:sticky;top:0;z-index:5;background:var(--bg);margin:0 -18px;padding:calc(env(safe-area-inset-top) + 16px) 18px 8px}
+.onboarding{padding-top:0!important}
+.onboarding .text-button:not(.decline-link){background:none!important;min-height:44px;padding:0 4px;align-self:flex-start;color:var(--text-2)}
+.onboarding .choose{padding-bottom:calc(88px + env(safe-area-inset-bottom))}
+.onboarding .choose>p:not(.eyebrow){margin:0 0 12px;color:var(--text-2);font-size:13px}
+.onboarding .choose>.primary{position:sticky;bottom:calc(16px + env(safe-area-inset-bottom));z-index:4}
+.character-card strong{font-size:17px!important;font-weight:600!important}
+.safety-consent input[type=checkbox]{appearance:none;-webkit-appearance:none;width:24px;height:24px;border-radius:6px;background:var(--surface-2);border:1.5px solid var(--text-3);display:inline-grid;place-content:center;flex:none;margin:0}
+.safety-consent input[type=checkbox]:checked{background:var(--brand);border-color:var(--brand)}
+.safety-consent input[type=checkbox]:checked::after{content:"";width:6px;height:11px;border:solid var(--on-accent);border-width:0 2.5px 2.5px 0;transform:rotate(45deg) translate(-1px,-1px)}
+.safety-consent label{display:flex;align-items:center;gap:12px;min-height:44px}
+.decline-link{background:none!important;border:0!important;box-shadow:none!important;color:var(--text-2)!important;font-size:14px!important;font-weight:400!important;width:100%;min-height:44px;margin:4px 0 0!important;justify-content:center}
+/* ---- Onboarding round 3 ---- */
+.onboarding .brand{background:var(--bg)!important}
+.onboarding .brand::after{content:"";position:absolute;left:0;right:0;top:100%;height:12px;background:linear-gradient(var(--bg),transparent);pointer-events:none}
+.safety-consent{display:flex;flex-direction:column;gap:8px}
+.safety-consent label{margin:0!important;min-height:44px}
+.onboarding-flow .primary:disabled,.safety-consent .primary:disabled{background:#6B5E96!important;color:#1A1626!important;opacity:1!important}
+/* ---- Onboarding round 3b ---- */
+.safety-consent{gap:0!important}
+.safety-consent label+label{margin-top:8px!important}
+.safety-consent input[type=checkbox]{background:var(--surface-2)!important;border:1.5px solid var(--text-3)!important}
+.safety-consent input[type=checkbox]:checked{background:var(--brand)!important;border-color:var(--brand)!important}
+.safety-consent .primary{margin-top:16px}
+/* ---- Light theme ---- */
+html[data-theme=light] .bottom-nav{background:rgba(255,255,255,.94)!important}
+html[data-theme=light] .chat-screen .message-row:not(.mine) .bubble{border:1px solid rgba(20,17,31,.08)!important}
+html[data-theme=light] .onboarding-flow .primary:disabled,html[data-theme=light] .safety-consent .primary:disabled{background:#CFC6EE!important;color:#4A4560!important}
+html[data-theme=light] .onboarding .brand{background:var(--bg)!important}
+html[data-theme=light] .reminder-count{background:#74549B1F!important;color:#5B3F82!important}
+html[data-theme=light] .reminder-smart-entry>svg:first-child,html[data-theme=light] .reminder-smart-entry svg:first-of-type{color:var(--brand)!important}
+html[data-theme=light] .desktop-bot-chevron{color:var(--on-accent)!important}
+html[data-theme=light],html[data-theme=light] body{background:var(--bg)!important}
+html[data-theme=light] .chat-screen .composer input{background:var(--surface-2)!important;color:var(--text)!important}
+/* ---- Light round 2 ---- */
+html[data-theme=light] .desktop-bot-chevron{color:#FFFFFF!important;stroke:#FFFFFF!important}
+html[data-theme=light] .weather-placeholder>svg,html[data-theme=light] .weather-widget>svg,html[data-theme=light] .weather-widget svg:first-of-type{color:#74549B!important}
+html[data-theme=light] .desktop-bot-title>span{background:#EEEEF2!important;color:#50535C!important}
+html[data-theme=light] :is(.clock-widget,.weather-widget,.desktop-bot,.moment,.managed-memory,.profile-card,.profile-settings,.plan-card,.relation,.memory-controls,.reminder-settings-card,.reminder-time-item,.memory-card){background:#FFFFFF!important;border:1px solid var(--hairline)!important;box-shadow:none!important}
+html[data-theme=light] .reminder-smart-entry>svg:first-child,html[data-theme=light] .reminder-smart-entry>svg:first-of-type{color:#74549B!important;stroke:#74549B!important}
+html[data-theme=light] .reminder-count{background:#EEEEF2!important;color:#50535C!important}
+html[data-theme=light] .profile-plan button,html[data-theme=light] .plan-card button{background:#74549B!important;color:#FFFFFF!important}
+html[data-theme=light] .plan-card,html[data-theme=light] .profile-plan{box-shadow:inset 4px 0 0 #74549B!important}
+html[data-theme=light] .profile-group .profile-settings:has(+ *){border-bottom-left-radius:0!important;border-bottom-right-radius:0!important;border-bottom-color:transparent!important}
+html[data-theme=light] .profile-group .profile-settings + *:not(.profile-inline-panel){margin-top:0!important;border-top-left-radius:0!important;border-top-right-radius:0!important;border-top:1px solid var(--hairline)!important}
+html[data-theme=light] .chat-screen .chat-header .icon-button{background:transparent!important;box-shadow:none!important;border:0!important}
+html[data-theme=light] .chat-screen .chat-header,html[data-theme=light] .chat-screen .chat-header strong{color:#202124!important}
+html[data-theme=light] .memory-search,html[data-theme=light] .memory-search-field,html[data-theme=light] .memory-search-field input,html[data-theme=light] .memory-filter-bar select,html[data-theme=light] .memory-filter-chip,html[data-theme=light] .memory-filter-bar button{background:#FFFFFF!important;border:1px solid var(--hairline)!important}
+html[data-theme=light] .memory-toolbar button{color:#FFFFFF!important}
+html[data-theme=light] .profile-screen .plan-card>button,html[data-theme=light] .plan-card>button{background:#74549B!important;color:#FFFFFF!important;border-color:transparent!important}
+html[data-theme=light] .plan-card button svg{color:#FFFFFF!important}
+html[data-theme=light] .my-reminders .section-title span{background:#EEEEF2!important;color:#50535C!important}
+.topbar{background:transparent!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+html[data-theme=light] .safety-consent .decline-link,html[data-theme=light] .onboarding-flow .decline-link{background:transparent!important;box-shadow:none!important;border:0!important;color:var(--text-2)!important}
+html[data-theme=light] .safety-consent input[type=checkbox]{background:#FFFFFF!important;border:1.5px solid #686A72!important}
+html[data-theme=light] .safety-consent input[type=checkbox]:checked{background:#74549B!important;border-color:#74549B!important}
+html,body,#root{background:var(--bg)!important}
+.language-settings p{color:var(--text-2)!important}
+.language-settings label{color:var(--text-2)!important}
+html[data-theme=light] .language-settings select{background:#FFFFFF!important;color:var(--text)!important;border-color:var(--hairline)!important;color-scheme:light}
+html[data-theme=light] .character-stack .character-card:nth-child(1) strong+span{color:#1E7F5C!important}
+html[data-theme=light] .character-stack .character-card:nth-child(2) strong+span{color:#A8560F!important}
+html[data-theme=light] .character-stack .character-card:nth-child(3) strong+span{color:#5B3FA0!important}
+html[data-theme=light] .brand-mark{color:#FFFFFF!important;background:#74549B!important}
+html[data-theme=light] .character-card.selected{border:2px solid #74549B!important}
+html[data-theme=light] .onboarding .text-button:not(.decline-link){background:transparent!important;box-shadow:none!important;border:0!important}
+html[data-theme=light] .call-controls button{background:transparent!important;box-shadow:none!important;border:0!important;color:var(--text-2)!important}
+html[data-theme=light] .call-controls button svg{background:#fff;color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+html[data-theme=light] .call-controls button.active svg,html[data-theme=light] .call-controls .call-mic.listening svg{background:#74549B;color:#fff}
+html[data-theme=light] .call-person time{color:var(--text-2)}
+html[data-theme=light] .call-person p{color:var(--text-2)}
+html[data-theme=light] .hangup{color:#C0392B}
+html[data-theme=light] .call-avatar{background:linear-gradient(145deg,color-mix(in srgb,var(--accent) 80%,white),color-mix(in srgb,var(--accent) 45%,white));color:#202124}
+/* round 4: chat header, more panel, call screen */
+.chat-identity strong{color:var(--text)!important}
+.chat-identity small{font-size:12px;color:var(--text-3)!important}
+.chat-more-options>button>span{box-shadow:none!important;background:var(--surface-1)!important;border:1px solid var(--hairline)!important}
+html[data-theme=light] .chat-more-options>button>span{background:#fff!important}
+.chat-more-options>button{font-size:13px!important}
+html[data-theme=light] .chat-more-options>button{color:#50535C!important}
+.chat-screen:has(.chat-more-panel) .composer{padding-bottom:0!important;margin-bottom:0!important}
+.call-back,.call-controls button svg{box-shadow:none!important}
+html[data-theme=light] .call-back{background:#fff!important;border:1px solid var(--hairline)!important;box-shadow:none!important}
+html[data-theme=light] .call-controls button svg{box-shadow:none!important;border:1px solid var(--hairline)}
+.call-controls .call-mic svg{width:64px;height:64px;padding:20px;background:#74549B!important;color:#fff!important;border:0!important}
+.call-controls .call-mic.listening svg{background:#5B3FA0!important}
+.hangup .hangup-icon{width:58px;height:58px;padding:15px;border-radius:50%;background:#e55360;color:#fff;box-shadow:0 12px 35px rgba(229,83,96,.3);transform:rotate(135deg)}
+.call-caption{min-height:96px!important;height:auto;gap:4px;padding-top:12px;padding-bottom:12px;justify-content:center}
+.call-caption p,.call-caption span{margin:0!important}
+html[data-theme=light] .call-avatar{background:linear-gradient(145deg,#B5E8D5,#7FBFA8)!important;color:#12332A!important}
+html[data-theme=light] .chat-screen .chat-header .chat-identity strong{color:#202124!important}
+html[data-theme=light] .chat-screen .chat-header .chat-identity small{color:#686A72!important}
+html[data-theme=light] .call-back{box-shadow:none!important}
+.desktop-bot-copy p{display:-webkit-box!important;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;white-space:normal!important;text-overflow:clip!important}
+.desktop-bot-title{flex-wrap:wrap}
+.bottom-nav button span{white-space:nowrap}
