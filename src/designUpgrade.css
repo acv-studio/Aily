@@ -262,3 +262,17 @@ html[data-theme=light] .call-back{box-shadow:none!important}
 .desktop-bot-copy p{display:-webkit-box!important;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;white-space:normal!important;text-overflow:clip!important}
 .desktop-bot-title{flex-wrap:wrap}
 .bottom-nav button span{white-space:nowrap}
+/* Diary + shared tool pages on design tokens (Colo spec: page --bg, top bar --bg + hairline, outer card --surface-1, editor flattened, fields --surface-2 borderless). Dark only; the light block in personalTools.css/tools-theme.css is the accepted look. */
+html:not([data-theme=light]) .desktop-tools-dialog.tools-surface:not(.photo-organizer-shell):not(.ledger-shell):not(.album-shell):not(.wardrobe-shell):not(.skincare-shell):not(.music-shell){
+  --tools-bg:var(--bg);--tools-card:var(--surface-1);--tools-input:var(--surface-2);
+  --tools-ink:var(--text);--tools-muted:var(--text-2);--tools-line:var(--hairline);
+  --tools-accent:var(--brand);--tools-soft:var(--surface-2);
+}
+html:not([data-theme=light]) .desktop-tools-dialog.tools-surface:not(.photo-organizer-shell):not(.ledger-shell):not(.album-shell):not(.wardrobe-shell):not(.skincare-shell):not(.music-shell) .desktop-tools-header{background:var(--bg)!important}
+html:not([data-theme=light]) .desktop-tools-dialog.tools-surface:not(.photo-organizer-shell):not(.ledger-shell):not(.album-shell):not(.wardrobe-shell):not(.skincare-shell):not(.music-shell) .desktop-tools-header>button{background:transparent!important}
+html:not([data-theme=light]) .personal-tools{
+  --pt-bg:var(--surface-1);--pt-surface:var(--surface-1);--pt-input:var(--surface-2);
+  --pt-fg:var(--text);--pt-muted:var(--text-2);--pt-border:var(--hairline);--pt-accent:var(--brand);--pt-soft:var(--surface-2);
+}
+html:not([data-theme=light]) .personal-tools .personal-editor{border:0;border-radius:0;padding:0;background:transparent}
+html:not([data-theme=light]) .desktop-tools-dialog.tools-surface:not(.photo-organizer-shell):not(.ledger-shell):not(.album-shell):not(.wardrobe-shell):not(.skincare-shell):not(.music-shell) .personal-tools :is(input,textarea,select){border-color:transparent!important;background:var(--surface-2)!important}
